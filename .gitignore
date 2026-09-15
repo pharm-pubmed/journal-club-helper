@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# build output
+.output/
+.wxt/
+dist/
+*.zip
+
+# tests
+coverage/
+playwright-report/
+test-results/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# editor / os
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
