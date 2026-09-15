@@ -1,0 +1,55 @@
+{
+  "id": "case-control",
+  "title": "Case-control study",
+  "version": 1,
+  "items": [
+    {
+      "id": "case-control-case-definition",
+      "concept": "case-definition",
+      "question": "Can you tell exactly how a case was defined, and was that same definition applied to everyone considered for the study?",
+      "why": "A loose or shifting case definition mixes people who have the condition with people who do not, which waters down any real difference in exposure between the groups."
+    },
+    {
+      "id": "case-control-control-selection",
+      "concept": "control-selection",
+      "question": "Do the controls come from the same population as the cases, so that a control who developed the condition would have been enrolled as a case?",
+      "why": "Controls drawn from elsewhere carry a different background level of exposure, and the odds ratio then reflects that mismatch rather than any link with the condition."
+    },
+    {
+      "id": "case-control-exposure-measurement",
+      "concept": "exposure-measurement",
+      "question": "Was exposure established the same way for cases and controls, preferably from records made before anyone knew who would become a case?",
+      "why": "People who are already ill search their history for explanations and report past exposures more thoroughly than healthy controls, so a difference in remembering looks exactly like a difference in exposure."
+    },
+    {
+      "id": "case-control-assessor-blinding",
+      "concept": "assessor-blinding",
+      "question": "Do you know whether the people collecting the exposure information knew which participants were cases?",
+      "why": "An interviewer who knows the diagnosis probes harder in one group, and that extra probing produces extra exposures without any real difference existing."
+    },
+    {
+      "id": "case-control-matching",
+      "concept": "matching-and-adjustment",
+      "question": "Does the abstract say which variables cases and controls were matched or adjusted for, and does that list cover the obvious competing explanations?",
+      "why": "Without accounting for factors such as age, smoking and social circumstances, an apparent link may simply track the company the exposure keeps."
+    },
+    {
+      "id": "case-control-participation",
+      "concept": "participation-rate",
+      "question": "Can you see how many of the people invited actually took part, and was participation similar among cases and controls?",
+      "why": "Those who agree to take part differ from those who refuse, and when that difference is larger on one side the measured exposure gap partly reflects who was willing to answer."
+    },
+    {
+      "id": "case-control-temporality",
+      "concept": "temporality",
+      "question": "Is it clear that the exposure came before the condition started, rather than being a consequence of early disease or of its treatment?",
+      "why": "Early symptoms change behaviour and prescribing, so an exposure recorded close to diagnosis can be an effect of the condition dressed up as its cause."
+    },
+    {
+      "id": "case-control-effect-measure",
+      "concept": "effect-measure-interpretation",
+      "question": "Does the report stay with an odds ratio, rather than presenting a risk or a rate that this design cannot actually measure?",
+      "why": "The number of cases and controls is fixed by the investigators, so the study says nothing about how common the outcome is, and reading its odds ratio as a risk overstates the effect when the outcome is frequent."
+    }
+  ]
+}

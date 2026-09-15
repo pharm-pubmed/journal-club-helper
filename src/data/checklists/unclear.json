@@ -1,0 +1,49 @@
+{
+  "id": "unclear",
+  "title": "General appraisal",
+  "version": 1,
+  "items": [
+    {
+      "id": "unclear-question",
+      "concept": "focused-question",
+      "question": "Can you state, from the abstract alone, which people, which comparison and which outcome the study set out to examine?",
+      "why": "A question you cannot restate is a question the study cannot be judged against, and vague aims leave room to present whichever result came out best."
+    },
+    {
+      "id": "unclear-design-fit",
+      "concept": "design-appropriateness",
+      "question": "Does the design the authors chose match the question they are asking, given that only some designs can support a claim about cause?",
+      "why": "Observational data can show that two things travel together but cannot rule out that something else drives both, so a causal claim built on the wrong design is unsupported however large the sample."
+    },
+    {
+      "id": "unclear-selection",
+      "concept": "selection",
+      "question": "Can you tell where the participants came from and how they were selected into the study?",
+      "why": "Every selection step decides who ends up being compared with whom, so when that step is invisible you cannot tell whether the groups were comparable or whom the findings describe."
+    },
+    {
+      "id": "unclear-measurement",
+      "concept": "measurement",
+      "question": "Does the abstract describe how the main exposure or intervention and the main outcome were measured, and was that the same for everyone?",
+      "why": "Measurement that varies between groups creates differences on paper that never existed in the patients, and a vague outcome definition lets a modest finding be described as a major one."
+    },
+    {
+      "id": "unclear-confounding",
+      "concept": "confounding",
+      "question": "Can you name another explanation for the reported finding that the study does not appear to have ruled out?",
+      "why": "If a plausible competing explanation survives, the reported association may belong to that factor instead, and naming it is the quickest test of how much the conclusion rests on."
+    },
+    {
+      "id": "unclear-completeness",
+      "concept": "completeness",
+      "question": "Do the numbers account for everyone who entered the study, including those who left, were excluded or have missing data?",
+      "why": "Participants go missing for reasons connected to how they were doing, so an analysis of those who remained answers a narrower question than the one the study set out to ask."
+    },
+    {
+      "id": "unclear-reporting",
+      "concept": "reporting",
+      "question": "Does the abstract give you actual numbers with a measure of uncertainty, rather than describing the results only as significant or improved?",
+      "why": "A word like significant says nothing about how large an effect is, and a result reported without its size and its interval cannot be weighed against harms, cost or effort."
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "id": "diagnostic",
+  "title": "Diagnostic accuracy study",
+  "version": 1,
+  "items": [
+    {
+      "id": "diagnostic-patient-spectrum",
+      "concept": "patient-spectrum",
+      "question": "Does the sample look like the mix of people in whom this test would really be used, rather than obvious cases set against healthy volunteers?",
+      "why": "Any test separates clear extremes better than it separates the ambiguous middle, so studying advanced cases against healthy controls flatters both sensitivity and specificity."
+    },
+    {
+      "id": "diagnostic-reference-standard",
+      "concept": "reference-standard",
+      "question": "Can you tell what was used as the comparison standard, and is it strong enough to count as the truth for this condition?",
+      "why": "Every mistake in the comparison standard is charged to the test under study, so a weak standard can make an accurate test look wrong, or a poor test look better than it is."
+    },
+    {
+      "id": "diagnostic-independence",
+      "concept": "test-independence",
+      "question": "Do you know whether whoever read the new test could see the comparison standard result, and whether the reverse was also prevented?",
+      "why": "Interpreters who have seen the other result drift toward agreement, which manufactures accuracy that would never appear in day-to-day practice."
+    },
+    {
+      "id": "diagnostic-verification",
+      "concept": "complete-verification",
+      "question": "Can you see that every participant was checked against the same comparison standard, including those whose test came back negative?",
+      "why": "When only positive results are confirmed, false negatives are never counted, and sensitivity ends up calculated from a group trimmed of the test's own misses."
+    },
+    {
+      "id": "diagnostic-threshold",
+      "concept": "pre-specified-threshold",
+      "question": "Does the abstract indicate that the cut-off separating a positive from a negative result was fixed in advance rather than chosen after the data were seen?",
+      "why": "A threshold tuned on the same sample it is reported from performs worse in the next group of patients, sometimes considerably worse."
+    },
+    {
+      "id": "diagnostic-indeterminate",
+      "concept": "indeterminate-results",
+      "question": "Can you tell how many results were indeterminate, failed or missing, and how they were handled in the analysis?",
+      "why": "Quietly dropping uninterpretable results removes the hardest patients from the denominator, so a test that often fails in practice looks dependable on paper."
+    },
+    {
+      "id": "diagnostic-precision",
+      "concept": "accuracy-with-precision",
+      "question": "Are sensitivity and specificity reported with confidence intervals, and can you recover the raw counts behind them?",
+      "why": "Accuracy estimated from a few dozen patients can move by tens of percentage points, and a single figure with no interval hides how unstable it is."
+    },
+    {
+      "id": "diagnostic-prevalence",
+      "concept": "predictive-values",
+      "question": "Does the report make clear how common the condition was in the sample, since that governs what a positive result actually means?",
+      "why": "Sensitivity and specificity stay roughly steady while predictive values move with prevalence, so a test that shines in a high-prevalence sample can return mostly false positives where the condition is rare."
+    }
+  ]
+}

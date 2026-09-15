@@ -1,0 +1,49 @@
+{
+  "id": "cross-sectional",
+  "title": "Cross-sectional study",
+  "version": 1,
+  "items": [
+    {
+      "id": "cross-sectional-sampling-frame",
+      "concept": "sampling-frame",
+      "question": "Can you tell who was eligible and how the sample was drawn from that group, or were participants simply whoever happened to be available?",
+      "why": "A convenience sample over-represents whoever is easiest to reach, so the figure it produces describes that subgroup rather than the population named in the title."
+    },
+    {
+      "id": "cross-sectional-response-rate",
+      "concept": "response-rate",
+      "question": "Does the abstract give the response or participation rate, and is it high enough that the people who declined are unlikely to change the picture?",
+      "why": "Non-responders usually differ from responders on exactly the things being measured, so a low response rate can move an estimate much further than its confidence interval suggests."
+    },
+    {
+      "id": "cross-sectional-measurement",
+      "concept": "measurement-validity",
+      "question": "Do you know what questions, instruments or tests produced the measurements, and whether they have been validated?",
+      "why": "A questionnaire or cut-off that misclassifies people spreads that error through every estimate, and a single-occasion measurement can capture a passing state rather than a stable characteristic."
+    },
+    {
+      "id": "cross-sectional-confounding",
+      "concept": "confounding",
+      "question": "Does the analysis account for the obvious alternative explanations, or are the associations presented as plain unadjusted comparisons?",
+      "why": "Unadjusted survey associations largely reflect how characteristics cluster together, so the reported link may belong to a third factor shared by both variables."
+    },
+    {
+      "id": "cross-sectional-temporality",
+      "concept": "temporality",
+      "question": "Since exposure and outcome were captured at the same moment, can you tell which of the two came first?",
+      "why": "A snapshot cannot put the two in order, so the association is equally compatible with the exposure causing the outcome, the outcome causing the exposure, or neither."
+    },
+    {
+      "id": "cross-sectional-causal-language",
+      "concept": "prevalence-versus-causation",
+      "question": "Do the conclusions stay inside what a snapshot can support, or do they slide into claims about cause, risk or prevention?",
+      "why": "This design estimates how common something is and what it travels with; wording about causing or preventing promises more than the data can deliver."
+    },
+    {
+      "id": "cross-sectional-precision",
+      "concept": "precision",
+      "question": "Is the sample large enough, and are the estimates reported with confidence intervals rather than as bare percentages?",
+      "why": "A percentage from a small survey can shift by several points on a handful of extra respondents, and without an interval you cannot see how loosely the number is pinned down."
+    }
+  ]
+}

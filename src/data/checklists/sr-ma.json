@@ -1,0 +1,55 @@
+{
+  "id": "sr-ma",
+  "title": "Systematic review and meta-analysis",
+  "version": 1,
+  "items": [
+    {
+      "id": "sr-ma-question",
+      "concept": "focused-question",
+      "question": "Does the review state one clear question, with the population, intervention, comparison and outcome defined before the search began?",
+      "why": "When eligibility rules are not fixed in advance, studies can be let in or kept out once their results are known, which shapes the pooled answer by hand."
+    },
+    {
+      "id": "sr-ma-search",
+      "concept": "search-comprehensiveness",
+      "question": "Can you tell which databases and other sources were searched, over what period, and whether the search went beyond a single database?",
+      "why": "A search limited to one database and to published reports in one language misses studies systematically rather than randomly, and the missed ones are disproportionately the negative ones."
+    },
+    {
+      "id": "sr-ma-selection-process",
+      "concept": "duplicate-selection",
+      "question": "Does the abstract say whether two or more reviewers screened the studies and pulled out the data independently?",
+      "why": "A lone reviewer makes silent slips in both directions, and disagreements that never surface cannot be resolved, so those errors travel straight into the pooled estimate."
+    },
+    {
+      "id": "sr-ma-study-quality",
+      "concept": "study-quality",
+      "question": "Can you see that the included studies were appraised for how well they were conducted, and that the appraisal feeds into the conclusions?",
+      "why": "Pooling turns several weak studies into one precise-looking number, and when the underlying studies share a flaw the summary reproduces that flaw with tighter confidence intervals."
+    },
+    {
+      "id": "sr-ma-heterogeneity",
+      "concept": "heterogeneity",
+      "question": "Can you see how much the individual study results differed from one another, and is an explanation offered when they differed a lot?",
+      "why": "Widely scattered results mean the studies were not estimating one common effect, so an average across them describes something that exists in no single setting."
+    },
+    {
+      "id": "sr-ma-pooling",
+      "concept": "appropriateness-of-pooling",
+      "question": "Do the included studies look similar enough in population, intervention and outcome definition for a single combined number to mean anything?",
+      "why": "Averaging studies that asked different questions produces a figure that answers none of them, while the narrow interval around it hides how mixed the ingredients were."
+    },
+    {
+      "id": "sr-ma-publication-bias",
+      "concept": "publication-bias",
+      "question": "Does the review confront the possibility that finished studies with unwelcome results were never published, or that small negative ones are missing?",
+      "why": "Studies with disappointing results appear later, in smaller journals, or not at all, so a synthesis of what is easy to find tends to overstate benefit."
+    },
+    {
+      "id": "sr-ma-certainty",
+      "concept": "certainty-of-evidence",
+      "question": "Does the review tell you how much confidence the pooled result deserves, given the quality, the consistency and the precision of what went into it?",
+      "why": "A summary estimate inherits the weaknesses of its inputs, and a review that reports the number without commenting on its trustworthiness invites it to be read as settled."
+    }
+  ]
+}

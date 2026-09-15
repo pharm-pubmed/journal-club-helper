@@ -1,0 +1,62 @@
+{
+  "id": "rct",
+  "title": "Randomized controlled trial",
+  "version": 1,
+  "note": "A non-randomized trial is appraised with these same items: the randomization and allocation concealment questions will usually be answered No, which weakens the comparison between groups rather than making the study worthless.",
+  "items": [
+    {
+      "id": "rct-randomization",
+      "concept": "randomization-method",
+      "question": "Can you tell how participants were assigned to the groups, and does the method described rely on chance rather than on a predictable order?",
+      "why": "Assignment that staff can anticipate lets healthier or sicker people drift into one arm, so a difference at the end may be a difference in who was enrolled rather than an effect of the treatment."
+    },
+    {
+      "id": "rct-allocation-concealment",
+      "concept": "allocation-concealment",
+      "question": "Does the abstract tell you whether the people enrolling each participant could have known which group that person was about to get?",
+      "why": "When recruiters can see the next assignment coming, they can delay, steer or skip a borderline patient, which quietly undoes the balance that random assignment was meant to create."
+    },
+    {
+      "id": "rct-blinding",
+      "concept": "blinding",
+      "question": "Do you know who was kept unaware of the assigned group: the participants, the treating clinicians, the outcome assessors, or none of them?",
+      "why": "People who know what they received report symptoms differently, and assessors who know the group tend to judge subjective outcomes in the expected direction. Deaths and other hard endpoints are far less vulnerable than scores and judgement calls."
+    },
+    {
+      "id": "rct-baseline-comparability",
+      "concept": "baseline-comparability",
+      "question": "Does the abstract show that the groups started out alike in the characteristics that drive the outcome, such as age, severity and prior treatment?",
+      "why": "A visible imbalance at the start means the groups were not exchangeable, so part of the difference measured later may simply be that head start showing through."
+    },
+    {
+      "id": "rct-follow-up",
+      "concept": "follow-up-completeness",
+      "question": "Can you see how many participants were followed to the end, and whether the losses were similar in size and in reason across the groups?",
+      "why": "Participants who disappear are rarely a random slice of the trial, so heavy or lopsided attrition leaves you comparing two groups that randomization never created."
+    },
+    {
+      "id": "rct-intention-to-treat",
+      "concept": "intention-to-treat",
+      "question": "Does the abstract say whether participants were analysed in the group they were assigned to, even if they stopped, switched or never started that treatment?",
+      "why": "Counting only the people who completed the assigned treatment turns a randomized comparison back into an observational one, because staying on a treatment is itself tied to prognosis."
+    },
+    {
+      "id": "rct-primary-outcome",
+      "concept": "pre-specified-outcome",
+      "question": "Is one primary outcome named and defined precisely enough that you could check it against the registered protocol?",
+      "why": "When many outcomes and time points are measured, whichever one reached significance can be promoted to the headline afterwards, and the reported benefit then looks larger and more certain than it is."
+    },
+    {
+      "id": "rct-funding",
+      "concept": "funding-and-conflicts",
+      "question": "Do you know who funded the trial and what part the sponsor played in its design, analysis and reporting?",
+      "why": "A sponsor with a stake in the answer can shape the dose, the comparator and which analyses reach print, and an abstract that omits funding leaves you unable to weigh that."
+    },
+    {
+      "id": "rct-applicability",
+      "concept": "applicability",
+      "question": "Are the participants, the dose and the comparison close enough to the patients and the usual care you know for the result to carry over?",
+      "why": "Trials tend to enrol younger, healthier and more adherent volunteers than the people seen in practice, and the control arm may not match usual care, so the size of the effect need not transfer."
+    }
+  ]
+}
