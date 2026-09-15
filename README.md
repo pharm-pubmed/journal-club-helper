@@ -23,7 +23,38 @@ Pre-alpha. Work is tracked in GitHub issues and milestones (v0.1 MVP → v0.2 Pa
 
 ## Development
 
-Tooling is set up in the "Project scaffold" issue. Planned stack: WXT, TypeScript, Preact, Vitest, Playwright, pnpm. Until the scaffold lands there is nothing to build.
+Requires Node 22 and pnpm 9 (`corepack enable` gives you the pinned version).
+
+```bash
+pnpm install       # also runs `wxt prepare` to generate .wxt/tsconfig.json
+pnpm dev           # WXT dev server with HMR
+pnpm build         # production build into .output/chrome-mv3
+pnpm zip           # store-ready zip
+pnpm test          # Vitest, unit tests for src/lib
+pnpm lint          # ESLint
+pnpm typecheck     # wxt prepare && tsc --noEmit
+pnpm check:manifest  # fails if the built manifest's permissions drift from the spec
+```
+
+Load the unpacked extension from `.output/chrome-mv3`.
+
+Stack: WXT, TypeScript (strict), Preact, Vitest, pnpm. Playwright smoke tests come later.
+
+### Layout
+
+| Path                   | What lives there                                                                 |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `src/lib/`             | Pure logic. No DOM, no `chrome.*`, unit-tested. This is where the product lives. |
+| `src/entrypoints/`     | Content script, background worker, side panel, options page.                     |
+| `src/ui/`              | Preact components for the side panel and the options page.                       |
+| `src/data/checklists/` | The validity checklists as JSON, so wording changes need no code change.         |
+| `tests/`               | Vitest specs and HTML fixtures of real PubMed pages.                             |
+
+### Two conventions worth knowing
+
+**All cross-module types live in `src/lib/types.ts`.** The module that owns the behaviour re-exports the types it owns, so `import type { DesignClassification } from './design-classifier'` and `from './types'` are the same type. This keeps the lib modules independent of each other.
+
+**The permission set is frozen.** `scripts/check-manifest.mjs` runs in CI and fails the build if the manifest's permission arrays change at all. Widening them is a product decision, not a refactor.
 
 ## Permissions
 
