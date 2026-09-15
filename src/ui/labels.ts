@@ -12,6 +12,16 @@ export const DESIGN_LABELS: Record<StudyDesign, string> = {
   unclear: 'Not detected',
 };
 
+/**
+ * Labels for the design override <select> (issue #8). Identical to DESIGN_LABELS
+ * except for `unclear`: "Not detected" describes what the classifier did and
+ * reads wrong as something the user deliberately picks.
+ */
+export const DESIGN_OPTION_LABELS: Record<StudyDesign, string> = {
+  ...DESIGN_LABELS,
+  unclear: 'Unclear / other',
+};
+
 export const SUBTYPE_LABELS: Record<string, string> = {
   parallel: 'parallel',
   crossover: 'crossover',

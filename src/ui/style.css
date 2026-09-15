@@ -1,4 +1,297 @@
-/* Placeholder until issue #6. */
+/**
+ * Design tokens and side panel layout (issue #6).
+ *
+ * No framework and no external fonts (spec §5). Every colour, space and size is
+ * a custom property on :root so the tab bodies added by later issues — and the
+ * options page, which loads this same file — inherit one palette. Light and
+ * dark come from prefers-color-scheme; nothing else switches theme.
+ */
+
 :root {
   color-scheme: light dark;
+
+  --jc-font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --jc-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --jc-size-sm: 12px;
+  --jc-size: 13px;
+  --jc-size-lg: 15px;
+  --jc-line: 1.5;
+
+  --jc-space-1: 4px;
+  --jc-space-2: 8px;
+  --jc-space-3: 12px;
+  --jc-space-4: 16px;
+  --jc-space-5: 24px;
+
+  --jc-radius: 6px;
+  --jc-radius-sm: 4px;
+
+  --jc-bg: #ffffff;
+  --jc-surface: #f4f6f8;
+  --jc-surface-hover: #e9edf1;
+  --jc-border: #d6dbe0;
+  --jc-border-strong: #b3bac1;
+  --jc-text: #1a1d21;
+  --jc-text-muted: #596069;
+  --jc-accent: #1a5fb4;
+  --jc-accent-contrast: #ffffff;
+  --jc-accent-soft: #e6eefa;
+  --jc-danger: #b3261e;
+  --jc-warning: #8a5300;
+  --jc-focus: #1a5fb4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --jc-bg: #16181b;
+    --jc-surface: #1f2226;
+    --jc-surface-hover: #292d33;
+    --jc-border: #33383e;
+    --jc-border-strong: #4a515a;
+    --jc-text: #e5e8ea;
+    --jc-text-muted: #9ba3ac;
+    --jc-accent: #79b0f0;
+    --jc-accent-contrast: #10243d;
+    --jc-accent-soft: #1c2b3d;
+    --jc-danger: #f08a80;
+    --jc-warning: #e0a458;
+    --jc-focus: #79b0f0;
+  }
+}
+
+/* ------------------------------------------------------------------- base */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  /* The side panel can be dragged narrow; 320px is the floor we support. */
+  min-width: 320px;
+  background: var(--jc-bg);
+  color: var(--jc-text);
+  font-family: var(--jc-font-sans);
+  font-size: var(--jc-size);
+  line-height: var(--jc-line);
+  -webkit-text-size-adjust: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--jc-focus);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--jc-accent);
+}
+
+/* ------------------------------------------------------------------ shell */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.panel__body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tabpanel {
+  flex: 1 1 auto;
+  padding: var(--jc-space-3) var(--jc-space-4);
+}
+
+.tabpanel:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ----------------------------------------------------------------- header */
+
+.header {
+  padding: var(--jc-space-3) var(--jc-space-4);
+  background: var(--jc-surface);
+  border-bottom: 1px solid var(--jc-border);
+}
+
+.header__title {
+  margin: 0;
+  font-size: var(--jc-size-lg);
+  font-weight: 600;
+  line-height: 1.35;
+  /* Long article titles must not push the panel wider than it is. */
+  overflow-wrap: anywhere;
+}
+
+.header__citation {
+  margin: var(--jc-space-1) 0 0;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.header__link {
+  color: inherit;
+}
+
+.header__slot {
+  margin-top: var(--jc-space-2);
+}
+
+.header__slot:empty {
+  display: none;
+}
+
+/* ------------------------------------------------------------------- tabs */
+
+.tabs {
+  display: flex;
+  gap: var(--jc-space-1);
+  padding: 0 var(--jc-space-2);
+  background: var(--jc-surface);
+  border-bottom: 1px solid var(--jc-border);
+}
+
+.tabs__tab {
+  flex: 1 1 auto;
+  min-width: 0;
+  appearance: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: var(--jc-space-2) var(--jc-space-1);
+  background: none;
+  color: var(--jc-text-muted);
+  font: inherit;
+  font-size: var(--jc-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tabs__tab:hover {
+  color: var(--jc-text);
+}
+
+.tabs__tab[aria-selected='true'] {
+  color: var(--jc-accent);
+  border-bottom-color: var(--jc-accent);
+}
+
+.tabs__tab:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ------------------------------------------------------------ empty state */
+
+.empty {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--jc-space-2);
+  padding: var(--jc-space-5) var(--jc-space-4);
+  text-align: center;
+}
+
+.empty__title {
+  margin: 0;
+  font-size: var(--jc-size);
+  font-weight: 600;
+}
+
+.empty--error .empty__title {
+  color: var(--jc-danger);
+}
+
+.empty__hint {
+  margin: 0;
+  max-width: 36ch;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+/* ----------------------------------------------------------- placeholders */
+
+.placeholder__title {
+  margin: 0 0 var(--jc-space-1);
+  font-size: var(--jc-size);
+  font-weight: 600;
+}
+
+.placeholder__note {
+  margin: 0;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+/* --------------------------------------------------------------- controls */
+
+.button {
+  appearance: none;
+  padding: var(--jc-space-1) var(--jc-space-3);
+  border: 1px solid var(--jc-border-strong);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+  color: var(--jc-text);
+  font: inherit;
+  font-size: var(--jc-size-sm);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--jc-surface-hover);
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--jc-space-1);
+  border: 0;
+  border-radius: var(--jc-radius-sm);
+  background: none;
+  color: var(--jc-text-muted);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: var(--jc-surface-hover);
+  color: var(--jc-text);
+}
+
+.icon {
+  display: block;
+}
+
+/* ----------------------------------------------------------------- footer */
+
+.footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--jc-space-2);
+  padding: var(--jc-space-1) var(--jc-space-2) var(--jc-space-1) var(--jc-space-4);
+  background: var(--jc-surface);
+  border-top: 1px solid var(--jc-border);
+}
+
+.footer__note {
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
 }

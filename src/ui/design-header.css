@@ -1,0 +1,118 @@
+/**
+ * The study design block in the panel header (issue #8).
+ *
+ * Imported by DesignHeader.tsx. Every colour, size and space is a token from
+ * style.css so the block inherits the panel palette in light and dark; nothing
+ * here redefines a custom property.
+ */
+
+.design {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jc-space-1);
+}
+
+/* --------------------------------------------------------------- the verdict */
+
+.design__line {
+  margin: 0;
+  font-size: var(--jc-size-sm);
+  line-height: 1.45;
+  /* Design names are long and the panel floor is 320px. */
+  overflow-wrap: anywhere;
+}
+
+.design__key {
+  color: var(--jc-text-muted);
+}
+
+.design__name {
+  font-size: var(--jc-size);
+  font-weight: 600;
+}
+
+.design__badge {
+  color: var(--jc-text-muted);
+}
+
+/* A manual choice must not read like a detection. */
+.design__badge--manual {
+  color: var(--jc-accent);
+  font-weight: 600;
+}
+
+.design__hint {
+  margin: 0;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+/* -------------------------------------------------------------- the evidence */
+
+.design__evidence {
+  font-size: var(--jc-size-sm);
+}
+
+.design__evidence-summary {
+  width: fit-content;
+  color: var(--jc-text-muted);
+  cursor: pointer;
+}
+
+.design__evidence-summary:hover {
+  color: var(--jc-text);
+}
+
+.design__evidence-note {
+  margin: var(--jc-space-1) 0 0;
+  color: var(--jc-text-muted);
+}
+
+.design__evidence-list {
+  margin: var(--jc-space-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.design__evidence-item {
+  color: var(--jc-text-muted);
+  /* Verbatim phrases from the abstract can be long and hyphenated. */
+  overflow-wrap: anywhere;
+}
+
+.design__evidence-value {
+  color: var(--jc-text);
+  font-weight: 600;
+}
+
+/* -------------------------------------------------------------- the override */
+
+.design__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--jc-space-2);
+  margin-top: var(--jc-space-1);
+}
+
+.design__label {
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+.design__select {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: var(--jc-space-1) var(--jc-space-2);
+  border: 1px solid var(--jc-border-strong);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+  color: var(--jc-text);
+  font: inherit;
+  font-size: var(--jc-size-sm);
+  cursor: pointer;
+}
+
+.design__reset {
+  flex: 0 0 auto;
+}
