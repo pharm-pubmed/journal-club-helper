@@ -1,0 +1,172 @@
+/**
+ * Export tab (issue #20). Every colour, space and size is a --jc-* token from
+ * style.css; no shared class (.button, .tabpanel) is restyled here.
+ *
+ * The floor is a 320px side panel. Two things follow, and both are load-bearing:
+ * the three action buttons wrap instead of overflowing, and the preview is its
+ * own scroll container — a Markdown table is wider than the panel, and the panel
+ * itself must never scroll sideways.
+ */
+
+.export {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jc-space-3);
+  /* Without this a wide preview line could stretch the column. */
+  min-width: 0;
+}
+
+.export__title {
+  margin: 0;
+  font-size: var(--jc-size);
+  font-weight: 600;
+}
+
+.export__empty {
+  margin: 0;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+/* ----------------------------------------------------------- bottom line */
+
+.export__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jc-space-1);
+  min-width: 0;
+}
+
+.export__label {
+  font-size: var(--jc-size-sm);
+  font-weight: 600;
+}
+
+.export__hint {
+  margin: 0;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.export__textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: var(--jc-space-2);
+  border: 1px solid var(--jc-border-strong);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+  color: var(--jc-text);
+  font: inherit;
+  font-size: var(--jc-size);
+  resize: vertical;
+}
+
+/* ---------------------------------------------------------------- actions */
+
+.export__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jc-space-2);
+}
+
+/* Two buttons fit a 320px panel and the third wraps onto its own row; below
+   that each one takes the full width rather than being clipped. */
+.export__button {
+  flex: 1 1 auto;
+  min-width: 8.5rem;
+  padding: var(--jc-space-2) var(--jc-space-3);
+  white-space: nowrap;
+}
+
+.export__button--primary {
+  border-color: var(--jc-accent);
+  background: var(--jc-accent);
+  color: var(--jc-accent-contrast);
+  font-weight: 700;
+}
+
+.export__button--primary:hover {
+  background: var(--jc-accent);
+  filter: brightness(1.1);
+}
+
+/* ----------------------------------------------------------------- status */
+
+.export__status {
+  /* One line is reserved so the preview does not jump when "Copied" appears. */
+  min-height: calc(var(--jc-size-sm) * var(--jc-line));
+  margin: 0;
+  font-size: var(--jc-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.export__status--ok {
+  color: var(--jc-accent);
+  font-weight: 600;
+}
+
+/* A denied clipboard carries instructions for copying by hand, so it is given
+   a block of its own rather than a line of red text. */
+.export__status--error {
+  padding: var(--jc-space-2);
+  border-radius: var(--jc-radius-sm);
+  border-left: 3px solid var(--jc-danger);
+  background: var(--jc-surface);
+  color: var(--jc-text);
+}
+
+/* ---------------------------------------------------------------- preview */
+
+.export__preview-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--jc-space-2);
+  margin-bottom: calc(-1 * var(--jc-space-2));
+}
+
+.export__preview-label {
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  font-weight: 600;
+}
+
+.export__wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jc-space-1);
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  white-space: nowrap;
+}
+
+.export__preview {
+  /* Tall enough to show the shape of the summary, short enough that the buttons
+     above it stay on screen while the user scrolls the text. */
+  max-height: 24rem;
+  min-width: 0;
+  margin: 0;
+  padding: var(--jc-space-2);
+  border: 1px solid var(--jc-border);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-surface);
+  color: var(--jc-text);
+  font-family: var(--jc-font-mono);
+  font-size: var(--jc-size-sm);
+  line-height: 1.45;
+  /* The literal text, in its own scroll box: the panel never scrolls sideways. */
+  white-space: pre;
+  overflow: auto;
+  overscroll-behavior: contain;
+  tab-size: 2;
+}
+
+/* Soft wrapping for reading in a narrow panel. It changes where the lines break
+   on screen and nothing about the text that gets copied. */
+.export__preview--wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,574 @@
+/**
+ * PICO tab (issue #17). Every space, radius and neutral colour is a token from
+ * style.css; no shared class is restyled here.
+ *
+ * The one thing this file adds to the palette is a highlight colour per PICO
+ * field, declared as custom properties on `.pico` so they stay out of :root.
+ * Hue alone is never the signal: every mark also carries its letter, so the four
+ * fields stay apart in greyscale, for a colour-blind reader, and in forced
+ * colours where the backgrounds are dropped entirely.
+ *
+ * The floor is a 320px side panel, which leaves about 288px inside .tabpanel.
+ * Everything below wraps; nothing in this tab may make the panel scroll
+ * sideways, which is why the abstract is one column and the chooser is clamped
+ * to the width of the abstract box.
+ */
+
+.pico {
+  --pico-p-soft: #d8e7fa;
+  --pico-p-line: #1a5fb4;
+  --pico-i-soft: #d3ecdb;
+  --pico-i-line: #1b6b3a;
+  --pico-c-soft: #fae5c6;
+  --pico-c-line: #8a5300;
+  --pico-o-soft: #e6dcf5;
+  --pico-o-line: #5f3aa8;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--jc-space-2);
+}
+
+@media (prefers-color-scheme: dark) {
+  .pico {
+    --pico-p-soft: #1d3550;
+    --pico-p-line: #79b0f0;
+    --pico-i-soft: #1b3a29;
+    --pico-i-line: #6fc08d;
+    --pico-c-soft: #3d2e14;
+    --pico-c-line: #e0a458;
+    --pico-o-soft: #2e2447;
+    --pico-o-line: #b39bea;
+  }
+}
+
+.pico__title {
+  margin: 0;
+  font-size: var(--jc-size);
+  font-weight: 600;
+}
+
+.pico__intro,
+.pico__empty {
+  margin: 0;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.pico__empty {
+  padding: var(--jc-space-2);
+  border: 1px solid var(--jc-border);
+  border-left: 3px solid var(--jc-border-strong);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-surface);
+}
+
+/* The live region is always in the DOM — a status a screen reader is to
+   announce cannot be created at the moment it is filled — and an empty <p>
+   builds no line box, so it costs no height until it has something to say. */
+.pico__status {
+  margin: 0;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------- the four fields */
+
+.pico__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jc-space-2);
+}
+
+.pico-field {
+  min-width: 0;
+}
+
+.pico-field__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--jc-space-2);
+  margin-bottom: var(--jc-space-1);
+}
+
+.pico-field__label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--jc-space-1);
+  min-width: 0;
+  font-size: var(--jc-size-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* The same letter that tags every mark, so a field and its highlights read as
+   one pair without relying on the colour. */
+.pico-field__letter {
+  flex: none;
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 var(--jc-space-1);
+  border-radius: var(--jc-radius-sm);
+  font-size: var(--jc-size-sm);
+  font-weight: 700;
+  text-align: center;
+}
+
+.pico-field--p .pico-field__letter {
+  background: var(--pico-p-soft);
+  color: var(--pico-p-line);
+}
+
+.pico-field--i .pico-field__letter {
+  background: var(--pico-i-soft);
+  color: var(--pico-i-line);
+}
+
+.pico-field--c .pico-field__letter {
+  background: var(--pico-c-soft);
+  color: var(--pico-c-line);
+}
+
+.pico-field--o .pico-field__letter {
+  background: var(--pico-o-soft);
+  color: var(--pico-o-line);
+}
+
+.pico-field__clear {
+  flex: none;
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--jc-accent);
+  font: inherit;
+  font-size: var(--jc-size-sm);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Height is set from JS on every value change (click-to-fill included), so the
+   box must not scroll and must not be dragged out of step with its content. */
+.pico-field__input {
+  display: block;
+  width: 100%;
+  padding: var(--jc-space-2);
+  border: 1px solid var(--jc-border-strong);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+  color: var(--jc-text);
+  font: inherit;
+  font-size: var(--jc-size-sm);
+  line-height: var(--jc-line);
+  overflow-y: hidden;
+  resize: none;
+}
+
+.pico-field--p .pico-field__input:focus-visible {
+  border-color: var(--pico-p-line);
+}
+
+.pico-field--i .pico-field__input:focus-visible {
+  border-color: var(--pico-i-line);
+}
+
+.pico-field--c .pico-field__input:focus-visible {
+  border-color: var(--pico-c-line);
+}
+
+.pico-field--o .pico-field__input:focus-visible {
+  border-color: var(--pico-o-line);
+}
+
+/* -------------------------------------------------------------- viewer shell */
+
+.pico-viewer {
+  border: 1px solid var(--jc-border);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-surface);
+}
+
+.pico-viewer__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--jc-space-1) var(--jc-space-2);
+  padding: var(--jc-space-2);
+}
+
+.pico-viewer__toggle {
+  display: flex;
+  align-items: baseline;
+  gap: var(--jc-space-1);
+  min-width: 0;
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--jc-text);
+  font: inherit;
+  font-size: var(--jc-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pico-viewer__chevron {
+  color: var(--jc-text-muted);
+}
+
+.pico-viewer__switch {
+  display: flex;
+  align-items: center;
+  gap: var(--jc-space-1);
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  cursor: pointer;
+}
+
+.pico-viewer__checkbox {
+  margin: 0;
+  accent-color: var(--jc-accent);
+}
+
+.pico-viewer__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jc-space-2);
+  padding: 0 var(--jc-space-2) var(--jc-space-2);
+}
+
+/* `display: flex` above would otherwise beat the UA rule for [hidden]. */
+.pico-viewer__body[hidden] {
+  display: none;
+}
+
+.pico-viewer__note {
+  margin: 0;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+/* ------------------------------------------------------------------- legend */
+
+.pico-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jc-space-1) var(--jc-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--jc-size-sm);
+}
+
+.pico-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--jc-space-1);
+  min-width: 0;
+  color: var(--jc-text-muted);
+}
+
+.pico-legend__swatch {
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 var(--jc-space-1);
+  border-bottom: 2px solid transparent;
+  border-radius: var(--jc-radius-sm);
+  font-weight: 700;
+  text-align: center;
+}
+
+.pico-legend__item--p .pico-legend__swatch {
+  background: var(--pico-p-soft);
+  border-bottom-color: var(--pico-p-line);
+  color: var(--pico-p-line);
+}
+
+.pico-legend__item--i .pico-legend__swatch {
+  background: var(--pico-i-soft);
+  border-bottom-color: var(--pico-i-line);
+  color: var(--pico-i-line);
+}
+
+.pico-legend__item--c .pico-legend__swatch {
+  background: var(--pico-c-soft);
+  border-bottom-color: var(--pico-c-line);
+  color: var(--pico-c-line);
+}
+
+.pico-legend__item--o .pico-legend__swatch {
+  background: var(--pico-o-soft);
+  border-bottom-color: var(--pico-o-line);
+  color: var(--pico-o-line);
+}
+
+.pico-legend__count {
+  color: var(--jc-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------- help */
+
+.pico-help {
+  font-size: var(--jc-size-sm);
+}
+
+.pico-help__summary {
+  color: var(--jc-accent);
+  cursor: pointer;
+}
+
+.pico-help__list {
+  margin: var(--jc-space-1) 0 0;
+  padding-left: var(--jc-space-4);
+  color: var(--jc-text-muted);
+}
+
+/* -------------------------------------------------------------- title offer */
+
+/* The title is not part of the abstract, so its candidates carry no offsets and
+   cannot be highlighted. They are offered here instead of being dropped. */
+.pico-title-offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--jc-space-1) var(--jc-space-2);
+  padding: var(--jc-space-2);
+  border: 1px solid var(--jc-border);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+}
+
+.pico-title-offer__text {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: var(--jc-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.pico-title-offer__label {
+  margin-right: var(--jc-space-1);
+  color: var(--jc-text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pico-title-offer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jc-space-1);
+}
+
+/* ----------------------------------------------------------------- abstract */
+
+/* Positioned so the chooser can be placed against a phrase. Nothing here
+   scrolls on its own: the panel scrolls as a whole, which keeps the chooser
+   glued to the words it belongs to. */
+.pico-abstract {
+  position: relative;
+  padding: var(--jc-space-2);
+  border: 1px solid var(--jc-border);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+}
+
+.pico-abstract:focus-visible {
+  outline-offset: -2px;
+}
+
+.pico-abstract__section + .pico-abstract__section {
+  margin-top: var(--jc-space-3);
+}
+
+.pico-abstract__label {
+  margin: 0 0 var(--jc-space-1);
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+
+/* pre-wrap keeps the "\n\n" breaks of a structured abstract readable without
+   any parsing, and lets a mark that happens to span a break still render. */
+.pico-abstract__text {
+  margin: 0;
+  font-size: var(--jc-size-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* -------------------------------------------------------------------- marks */
+
+/* A <mark> stays inline, so a 120-character phrase wraps across lines like the
+   text around it. A <button> would be an atomic inline box and would overflow
+   the column instead, which is why the button role is put on the mark. */
+.pico-mark {
+  border-radius: var(--jc-radius-sm);
+  color: var(--jc-text);
+  cursor: pointer;
+}
+
+.pico-mark:hover {
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.pico-mark__tag {
+  padding-left: 1px;
+  font-size: 0.75em;
+  font-weight: 700;
+  vertical-align: super;
+}
+
+.pico-mark--p {
+  background: var(--pico-p-soft);
+  box-shadow: inset 0 -2px 0 var(--pico-p-line);
+}
+
+.pico-mark--p .pico-mark__tag {
+  color: var(--pico-p-line);
+}
+
+.pico-mark--i {
+  background: var(--pico-i-soft);
+  box-shadow: inset 0 -2px 0 var(--pico-i-line);
+}
+
+.pico-mark--i .pico-mark__tag {
+  color: var(--pico-i-line);
+}
+
+.pico-mark--c {
+  background: var(--pico-c-soft);
+  box-shadow: inset 0 -2px 0 var(--pico-c-line);
+}
+
+.pico-mark--c .pico-mark__tag {
+  color: var(--pico-c-line);
+}
+
+.pico-mark--o {
+  background: var(--pico-o-soft);
+  box-shadow: inset 0 -2px 0 var(--pico-o-line);
+}
+
+.pico-mark--o .pico-mark__tag {
+  color: var(--pico-o-line);
+}
+
+@media (forced-colors: active) {
+  .pico-mark {
+    forced-color-adjust: none;
+    background: Mark;
+    color: MarkText;
+  }
+
+  .pico-mark__tag {
+    color: MarkText;
+  }
+}
+
+/* ------------------------------------------------------------------ chooser */
+
+/* Anchored under the selection inside .pico-abstract, clamped in JS to
+   CHOOSER_WIDTH so it can never widen the panel. */
+.pico-chooser {
+  position: absolute;
+  z-index: 1;
+  width: 168px;
+  max-width: 100%;
+  padding: var(--jc-space-1) var(--jc-space-2) var(--jc-space-2);
+  border: 1px solid var(--jc-border-strong);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-surface);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 22%);
+  white-space: normal;
+}
+
+.pico-chooser__caption {
+  display: block;
+  margin-bottom: var(--jc-space-1);
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+.pico-chooser__row {
+  display: flex;
+  align-items: center;
+  gap: var(--jc-space-1);
+}
+
+.pico-chooser__close {
+  margin-left: auto;
+  appearance: none;
+  padding: 0 var(--jc-space-1);
+  border: 0;
+  background: none;
+  color: var(--jc-text-muted);
+  font: inherit;
+  font-size: var(--jc-size);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pico-chooser__close:hover {
+  color: var(--jc-text);
+}
+
+/* --------------------------------------------- one field button, used twice */
+
+.pico-choice {
+  flex: none;
+  appearance: none;
+  min-width: 26px;
+  padding: var(--jc-space-1);
+  border: 1px solid var(--jc-border-strong);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+  color: var(--jc-text);
+  font: inherit;
+  font-size: var(--jc-size-sm);
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+}
+
+.pico-choice:hover {
+  background: var(--jc-surface-hover);
+}
+
+.pico-choice--p {
+  border-color: var(--pico-p-line);
+  color: var(--pico-p-line);
+}
+
+.pico-choice--i {
+  border-color: var(--pico-i-line);
+  color: var(--pico-i-line);
+}
+
+.pico-choice--c {
+  border-color: var(--pico-c-line);
+  color: var(--pico-c-line);
+}
+
+.pico-choice--o {
+  border-color: var(--pico-o-line);
+  color: var(--pico-o-line);
+}
+
+/* The field whose candidate lost the overlapping span: the one the reader most
+   likely came here for. */
+.pico-choice--suggested {
+  border-width: 2px;
+  background: var(--jc-accent-soft);
+}
