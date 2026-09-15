@@ -21,6 +21,7 @@ PubMed の抄録ページに張り付き、臨床家（レジデント・薬剤�
 ## 2. スコープ
 
 ### v0.1 MVP（無料機能のみ・サーバーなし）
+
 1. PubMed 抄録ページで動く（`https://pubmed.ncbi.nlm.nih.gov/<PMID>/`）
 2. 研究デザインの自動判定（Publication Type + 抄録キーワード、ルールベース）
 3. PICO テンプレート（手入力。抄録からの候補ハイライトのみ）
@@ -30,18 +31,22 @@ PubMed の抄録ページに張り付き、臨床家（レジデント・薬剤�
 7. 入力内容の PMID 単位ローカル保存
 
 ### v0.2 有料機能
+
 8. AI 抽出（ユーザー自身の API キー持ち込み）: PICO 自動入力、結果数値の抽出、限界の候補、議論用の質問 3〜5 個
 9. 課金（ExtensionPay: $4/月・$29/年）と無料枠の制限
 
 ### v0.3 公開
+
 10. Chrome Web Store 掲載、プライバシーポリシー、ランディングページ 1 枚
 
 ### v1.0（公開後の反応で決める）
+
 - Google Scholar / 主要ジャーナルサイトへの対応拡張
 - PPTX 書き出し
 - チームでの共有
 
 ### やらないこと（Non-goals）
+
 - 論文の要約・平易化（既存ツールの領域）
 - 全文 PDF の解析
 - 臨床推奨・治療判断の出力
@@ -64,11 +69,14 @@ PubMed の抄録ページに張り付き、臨床家（レジデント・薬剤�
 ## 4. 機能仕様
 
 ### 4.1 対象ページの検出
+
 - URL パターン `pubmed.ncbi.nlm.nih.gov/\d+/` のみ。検索結果一覧では動かない
 - PMID は URL から取得。ページ DOM の抄録テキスト、Publication Type、MeSH は DOM から読む。DOM 構造が変わった場合に備え、E-utilities `efetch`（`db=pubmed&id=<PMID>&retmode=xml`）へのフォールバックを用意する（API キー不要、3 req/s 以内、User-Agent にツール名とメール）
 
 ### 4.2 研究デザイン判定（ルールベース）
+
 優先順位:
+
 1. Publication Type: `Randomized Controlled Trial` → RCT / `Meta-Analysis` `Systematic Review` → SR-MA / `Observational Study` + キーワードで Cohort / Case-Control / Cross-Sectional / `Clinical Trial` のみ → Non-randomized trial
 2. 抄録キーワード（`randomized`, `randomised`, `double-blind`, `prospective cohort`, `retrospective`, `case-control`, `cross-sectional`, `we searched`, `pooled`）でフォールバック
 3. どれにも当たらない → `Unclear` として全チェックリストから選ばせる
@@ -76,6 +84,7 @@ PubMed の抄録ページに張り付き、臨床家（レジデント・薬剤�
 判定ロジックは `src/lib/design-classifier.ts` に隔離し、ユニットテストを 20 件以上用意する。
 
 ### 4.3 数値検出と計算
+
 - 検出パターン（正規表現、`src/lib/number-extractor.ts`）:
   - パーセント対比: `X% vs Y%`, `X% versus Y%`, `X% and Y%`（`vs` 前後が同一アウトカム文にある場合を優先）
   - 分数対比: `a/n1 vs b/n2`, `a of n1 ... b of n2`
@@ -88,12 +97,14 @@ PubMed の抄録ページに張り付き、臨床家（レジデント・薬剤�
 - 計算ロジックは全てユニットテスト対象。既知の教科書例（CER 0.26 / EER 0.16 → NNT 10 など）で検証
 
 ### 4.4 妥当性チェックリスト
+
 - デザイン別: RCT / Cohort / Case-Control / Cross-Sectional / SR-MA / Diagnostic accuracy / Unclear（共通版）
 - 各 6〜10 項目。項目文は **自作**する。CASP / JBI / CONSORT 等の既存チェックリストは文言を転載しない（CASP は非商用ライセンス）。概念（無作為化・割付隠蔽・盲検化・ITT・追跡率・交絡・選択バイアス・出版バイアス 等）は使ってよいが、質問文はゼロから書く
 - 各項目: `Yes / No / Unclear` + 任意メモ。項目ごとに「なぜ重要か」の 1〜2 文ヘルプ（自作）
 - 項目定義は `src/data/checklists/*.json` に置き、コード変更なしで文言を直せる
 
 ### 4.5 書き出し
+
 - 1 枚サマリの構成（固定順）:
   1. Citation（著者・誌名・年・PMID・DOI）
   2. Clinical question (PICO)
@@ -106,11 +117,13 @@ PubMed の抄録ページに張り付き、臨床家（レジデント・薬剤�
 - 免責を末尾に固定で 1 行: `Generated with <name> for educational purposes. Verify against the full text.`
 
 ### 4.6 保存
+
 - `chrome.storage.local` に `appraisal:<PMID>` キーで JSON 保存。上限を超えたら古い順に削除（最大 500 件）
 - 設定は `settings` キー。API キーは `chrome.storage.local`（sync には絶対に入れない）
 - エクスポート/インポート（JSON 一括）を設定画面に用意する
 
 ### 4.7 AI 抽出（v0.2・有料）
+
 - プロバイダ: Anthropic（`anthropic-dangerous-direct-browser-access: true` ヘッダで拡張から直接呼ぶ）、OpenAI。まず Anthropic のみ実装し、抽象化して後から追加可能に
 - 送るのは抄録テキスト・タイトル・Publication Type のみ。ユーザーの入力メモは送らない
 - 出力は JSON スキーマ固定（PICO 4 欄、数値候補の配列、限界候補の配列、議論質問の配列）。パース失敗時は再試行 1 回、それでも失敗なら「手動で入力」に戻す
@@ -119,6 +132,7 @@ PubMed の抄録ページに張り付き、臨床家（レジデント・薬剤�
 - プロンプトは `src/prompts/*.md` に置き、コードから分離
 
 ### 4.8 課金（v0.2）
+
 - ExtensionPay を使う。プラン: Monthly $4 / Yearly $29。7 日間トライアルなし（無料版で試せるため）
 - 無料版の制限: AI 抽出は不可。他は無制限（NNT 計算・チェックリスト・書き出しは無料）
 - 有料判定はローカルキャッシュし、オフラインでも直近の状態で動く
@@ -134,15 +148,18 @@ PubMed の抄録ページに張り付き、臨床家（レジデント・薬剤�
 - 依存は最小。数式・正規表現・保存はすべて自前
 
 ### 権限（最小）
+
 ```
 "permissions": ["storage", "sidePanel", "activeTab"],
 "host_permissions": ["https://pubmed.ncbi.nlm.nih.gov/*"],
 "optional_host_permissions": ["https://eutils.ncbi.nlm.nih.gov/*", "https://api.anthropic.com/*", "https://api.openai.com/*"]
 ```
+
 - E-utilities と AI プロバイダはユーザーが機能を有効化したときに `permissions.request` で取得
 - `tabs`、`<all_urls>`、`scripting` は使わない（ストア審査と売却時の評価の両方に効く）
 
 ### ディレクトリ
+
 ```
 src/
   entrypoints/        # content script, sidepanel, background(最小), options
@@ -165,6 +182,7 @@ docs/                 # PRIVACY.md, STORE-LISTING.md, HANDOVER.md
 - カテゴリ: Productivity（Education と迷うが検索は Productivity の方が強い）
 
 ## 7. 分析（プライバシー優先）
+
 - MVP は外部アナリティクスを入れない
 - ローカルに「起動回数」「書き出し回数」「AI 実行回数」をカウントし、設定画面に表示（ユーザーにも見える）
 - ストアの週間アクティブユーザーとレビューを主指標にする
@@ -172,12 +190,12 @@ docs/                 # PRIVACY.md, STORE-LISTING.md, HANDOVER.md
 
 ## 8. 成功指標と判断ゲート
 
-| 時点 | 指標 | 継続条件 |
-|---|---|---|
-| 公開 30 日 | 週間アクティブ 100 / 評価 4.5 以上 | 満たさなければ掲載文と初回体験を直す |
-| 公開 90 日 | 週間アクティブ 500 / 書き出し率 30% | 満たせば v0.2 課金を出す |
-| 課金 90 日 | 有料転換 2% / 月間解約 5% 未満 | 満たせば継続・満たさなければ価格か無料枠を変える |
-| 12 ヶ月 | MRR $1,000 | 到達で売却準備開始（§10） |
+| 時点       | 指標                                | 継続条件                                         |
+| ---------- | ----------------------------------- | ------------------------------------------------ |
+| 公開 30 日 | 週間アクティブ 100 / 評価 4.5 以上  | 満たさなければ掲載文と初回体験を直す             |
+| 公開 90 日 | 週間アクティブ 500 / 書き出し率 30% | 満たせば v0.2 課金を出す                         |
+| 課金 90 日 | 有料転換 2% / 月間解約 5% 未満      | 満たせば継続・満たさなければ価格か無料枠を変える |
+| 12 ヶ月    | MRR $1,000                          | 到達で売却準備開始（§10）                        |
 
 ## 9. リスクと対策
 
