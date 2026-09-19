@@ -33,6 +33,16 @@ Load the unpacked extension from `.output/chrome-mv3` in `chrome://extensions` w
 
 CI (`.github/workflows/ci.yml`) runs lint, format, typecheck, tests with coverage, build, the manifest guard, and zip on every push to `main` and every pull request, then uploads the zip as a 14-day artifact.
 
+### Driving the extension from an agent
+
+`.mcp.json` configures the [chrome-devtools MCP server](https://github.com/ChromeDevTools/chrome-devtools-mcp), which lets a coding agent install, reload and inspect the built extension in a real Chrome rather than reasoning about it. It is committed at project scope on purpose: the UI has no component tests in CI (§4), so being able to drive a real browser is the substitute, and a new owner gets it by cloning.
+
+```bash
+pnpm build          # .output/chrome-mv3 is what gets loaded
+```
+
+It runs via `npx chrome-devtools-mcp@latest`, so it needs network on first use and a Chrome on the machine. Nothing else in the build depends on it.
+
 **Repo setting still to do by hand:** enable branch protection on `main` requiring the CI check to pass. Not scriptable from the repo, so it has to be set in GitHub settings and re-set if the repo is transferred to a new org.
 
 ### Things that will bite a new owner
@@ -119,6 +129,8 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
 - 2026-09-19 (later): **First manual pass on Chrome, and it cleared the biggest unknown.** `chrome.sidePanel.open()` survives the content-script → background hop, so the one-click open flow holds and the #1 B6 fallback is not needed. The button renders beside the Abstract heading, tab switching works without the `tabs` permission, and nothing broke at panel width.
   `activeTab` was then removed, in that order on purpose. The manifest guard failed on the change, as designed, and was updated deliberately; `activeTab` is now also on its forbidden list. Shipped permissions are `storage`, `sidePanel`, and the PubMed host permission.
   Edge and Brave are still untested (#25).
+- 2026-09-19 (later still): Adopted two things from Chrome's "build extensions with AI" guidance. `CHROMEWEBSTORE.md` now holds the per-permission justification and data-use answers a store reviewer asks for, next to the code so it cannot drift; update it in the same commit as any manifest change. `.mcp.json` adds the chrome-devtools MCP server so an agent can drive the built extension in a real browser — the substitute for the component tests §4 says are missing.
+  Writing that file surfaced one thing: `api.anthropic.com` and `api.openai.com` were declared as optional host permissions with no code able to request them. Removed until v0.2 (#34, #35). Shipped manifest is now `storage`, `sidePanel`, one PubMed host permission, and one optional host for E-utilities.
 
 ## 7. Decisions and why
 
@@ -147,6 +159,15 @@ The shipped permissions are now `storage` and `sidePanel`, plus the PubMed host 
 Removing it made `pnpm check:manifest` fail, which is the guard working: it pins the exact array, so no permission can change quietly in either direction. `activeTab` is now on the guard's forbidden list too, so it cannot come back by accident.
 
 **Deviation from the spec.** `docs/SPEC.ja.md` §5 still lists `activeTab`. That file is kept as the original product definition and is deliberately not edited; this section is the operative record of what ships. If you would rather the spec track the product, edit §5 there and say so here.
+
+### Declared permissions track the code, not the roadmap
+
+Two removals in v0.1 follow the same rule, and it is worth stating as a rule because it will come up again: **the manifest describes what this version can actually do.**
+
+- `activeTab` granted nothing the code used.
+- `api.anthropic.com` and `api.openai.com` were declared as optional host permissions before any code could request them. A reviewer asking what the extension does with `api.anthropic.com` would have found no answer in the binary. They return with #34/#35 in v0.2; `eutils.ncbi.nlm.nih.gov` stays because #23 is the near-term use.
+
+Restoring an optional host permission at a version bump is a manifest change, not a re-review of the item, so there is no cost to waiting. `CHROMEWEBSTORE.md` holds the per-permission justification a reviewer asks for and must be updated in the same commit as any manifest change.
 
 ### Billing: ask before building (#37, #36)
 

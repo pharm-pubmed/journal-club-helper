@@ -21,11 +21,11 @@ export default defineConfig({
     // below. Removed after the Chrome manual QA in #25; see HANDOVER §7.
     permissions: ['storage', 'sidePanel'],
     host_permissions: ['https://pubmed.ncbi.nlm.nih.gov/*'],
-    optional_host_permissions: [
-      'https://eutils.ncbi.nlm.nih.gov/*',
-      'https://api.anthropic.com/*',
-      'https://api.openai.com/*',
-    ],
+    // Only the host the E-utilities fallback (#23) will ask for. The AI provider
+    // hosts were declared here before any code could request them, which leaves
+    // a store reviewer asking what the extension does with api.anthropic.com and
+    // the shipped code having no answer. They come back with #34/#35 in v0.2.
+    optional_host_permissions: ['https://eutils.ncbi.nlm.nih.gov/*'],
     action: {
       default_title: 'Open Journal Club Helper',
     },

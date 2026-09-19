@@ -10,11 +10,10 @@ const EXPECTED = {
   // fewer permission is worth having at store review. See HANDOVER §7.
   permissions: ['storage', 'sidePanel'],
   host_permissions: ['https://pubmed.ncbi.nlm.nih.gov/*'],
-  optional_host_permissions: [
-    'https://eutils.ncbi.nlm.nih.gov/*',
-    'https://api.anthropic.com/*',
-    'https://api.openai.com/*',
-  ],
+  // The AI provider hosts return with the v0.2 features that request them (#34,
+  // #35). Declaring a host the code cannot reach is a question at review with no
+  // answer in the binary. See CHROMEWEBSTORE.md.
+  optional_host_permissions: ['https://eutils.ncbi.nlm.nih.gov/*'],
 };
 
 const FORBIDDEN = [
