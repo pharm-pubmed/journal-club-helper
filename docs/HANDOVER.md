@@ -35,13 +35,39 @@ CI (`.github/workflows/ci.yml`) runs lint, format, typecheck, tests with coverag
 
 ### Driving the extension from an agent
 
-`.mcp.json` configures the [chrome-devtools MCP server](https://github.com/ChromeDevTools/chrome-devtools-mcp), which lets a coding agent install, reload and inspect the built extension in a real Chrome rather than reasoning about it. It is committed at project scope on purpose: the UI has no component tests in CI (§4), so being able to drive a real browser is the substitute, and a new owner gets it by cloning.
+`.mcp.json` configures the [chrome-devtools MCP server](https://github.com/ChromeDevTools/chrome-devtools-mcp) so a coding agent can install, reload, inspect and trigger the built extension in a real browser. It is committed at project scope on purpose: the UI has no component tests in CI (§4), so a real browser is the substitute, and a new owner gets the setup by cloning.
 
 ```bash
-pnpm build          # .output/chrome-mv3 is what gets loaded
+pnpm build   # .output/chrome-mv3 is what the agent loads
 ```
 
-It runs via `npx chrome-devtools-mcp@latest`, so it needs network on first use and a Chrome on the machine. Nothing else in the build depends on it.
+**It needs a local Chrome that the server can launch itself.** Two constraints, both learned the hard way:
+
+- The extension tools only work over a **pipe connection**, i.e. a browser the MCP server started. `--autoConnect`, `--browserUrl` and `--wsEndpoint` are documented as unsupported with `--categoryExtensions` until Chrome 149. Chrome's own guidance currently suggests `--categoryExtensions --autoConnect` together; that combination does not work.
+- On WSL it must be a **Linux** Chrome. A Windows Chrome or Edge under `/mnt/c` cannot be driven this way, because the paths the server passes to the browser are Linux paths.
+
+The config resolves the binary as `${JCH_CHROME_PATH:-google-chrome}`, so it works unchanged wherever Chrome is on `PATH`. Set `JCH_CHROME_PATH` to point somewhere else.
+
+Where `sudo` is unavailable, Chrome installs fine into the home directory:
+
+```bash
+curl -fsSL -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+dpkg-deb -x /tmp/chrome.deb ~/opt/chrome-pkg
+mkdir -p ~/.local/bin
+ln -sf ~/opt/chrome-pkg/opt/google/chrome/google-chrome ~/.local/bin/google-chrome
+```
+
+**Edge and Brave still have to be checked by hand** (#25); this covers Chrome only.
+
+### Testing on Windows from WSL
+
+Edge and Brave live on the Windows side. Loading an unpacked extension from `\\wsl.localhost\...` is unreliable in Chromium, so copy the build to a Windows-local path first:
+
+```bash
+cp -r .output/chrome-mv3/. /mnt/c/Users/<user>/journal-club-helper-build/
+```
+
+Then `edge://extensions/` → Developer mode → Load unpacked.
 
 **Repo setting still to do by hand:** enable branch protection on `main` requiring the CI check to pass. Not scriptable from the repo, so it has to be set in GitHub settings and re-set if the repo is transferred to a new org.
 
@@ -131,6 +157,7 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   Edge and Brave are still untested (#25).
 - 2026-09-19 (later still): Adopted two things from Chrome's "build extensions with AI" guidance. `CHROMEWEBSTORE.md` now holds the per-permission justification and data-use answers a store reviewer asks for, next to the code so it cannot drift; update it in the same commit as any manifest change. `.mcp.json` adds the chrome-devtools MCP server so an agent can drive the built extension in a real browser — the substitute for the component tests §4 says are missing.
   Writing that file surfaced one thing: `api.anthropic.com` and `api.openai.com` were declared as optional host permissions with no code able to request them. Removed until v0.2 (#34, #35). Shipped manifest is now `storage`, `sidePanel`, one PubMed host permission, and one optional host for E-utilities.
+  The MCP server as first configured did not work: Chrome's guidance pairs `--categoryExtensions` with `--autoConnect`, but the server's own `--help` says they are incompatible until Chrome 149, and this machine had no Linux Chrome to connect to anyway. Corrected to a pipe connection with an explicit executable path; see §2. Worth remembering that a config lifted from documentation is not a verified config.
 
 ## 7. Decisions and why
 

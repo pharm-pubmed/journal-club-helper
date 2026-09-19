@@ -3,7 +3,13 @@
     "chrome-devtools": {
       "type": "stdio",
       "command": "npx",
-      "args": ["chrome-devtools-mcp@latest", "--categoryExtensions", "--autoConnect"],
+      "args": [
+        "chrome-devtools-mcp@latest",
+        "--categoryExtensions",
+        "--isolated",
+        "--executablePath",
+        "${JCH_CHROME_PATH:-google-chrome}"
+      ],
       "env": {}
     }
   }
