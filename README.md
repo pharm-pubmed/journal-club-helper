@@ -58,7 +58,9 @@ Stack: WXT, TypeScript (strict), Preact, Vitest, pnpm. Playwright smoke tests co
 
 ## Permissions
 
-Kept to the minimum in the spec: `storage`, `sidePanel`, `activeTab`, host permission for `pubmed.ncbi.nlm.nih.gov` only. E-utilities and AI providers are optional host permissions requested when the user enables the feature. No `tabs`, no `<all_urls>`, no `scripting`.
+Two: `storage` and `sidePanel`, plus a host permission for `pubmed.ncbi.nlm.nih.gov` and nothing else. E-utilities and AI providers are optional host permissions, requested only when the user turns the feature on. No `tabs`, no `<all_urls>`, no `scripting`.
+
+`activeTab` was in the spec and has been removed: `chrome.tabs.query` needs no permission at all, and `chrome.tabs.sendMessage` is already covered by the PubMed host permission, so it granted nothing the extension used.
 
 ## Disclaimer
 

@@ -48,15 +48,25 @@ Not available yet. Filled in for v0.3 (Chrome Web Store submission steps, versio
 
 ## 4. Known issues
 
-Nothing is known to be broken. These are the things that are **not yet verified**, all for the same reason: no browser was available while the v0.1 code was written, so every UI claim below rests on unit tests and headless render harnesses rather than on a loaded extension.
+Nothing is known to be broken. A manual pass on **Chrome** on 2026-09-19 cleared most of what was unverified; what is left is listed below.
 
-| #   | Not verified                                                                           | Why it matters                                                                                                                                              | Issue                   |
-| --- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| 1   | `chrome.sidePanel.open()` succeeding after the content-script → background message hop | The user gesture has to survive that hop. If it does not, the whole open flow needs the fallback in #1 B6. This is the single highest-risk unknown in v0.1. | #5, #25                 |
-| 2   | The `Journal Club` button sitting beside the Abstract heading                          | It is appended inside the heading because the heading is block-level. Renders inline in theory; never seen.                                                 | #5                      |
-| 3   | `chrome.tabs.onActivated` / `onUpdated` firing without the `tabs` permission           | Reasoned from the permission model and commented in `useArticle.ts`. If they do not fire, the panel stops following tab switches.                           | #6                      |
-| 4   | Clipboard, download and storage on Edge and Brave                                      | Chromium forks differ on clipboard permission in side panels.                                                                                               | #25                     |
-| 5   | Every layout at 320 px                                                                 | Coded and reasoned for, not looked at.                                                                                                                      | #12, #15, #17, #20, #27 |
+### Verified on Chrome, 2026-09-19
+
+Loaded unpacked against PMID 36577095 (one of the saved fixtures, so the expected values were known in advance):
+
+- `chrome.sidePanel.open()` **does** succeed after the content-script → background message hop. This was the highest-risk unknown in v0.1; the fallback drafted in #1 B6 is not needed and the flow stays a single click on the page.
+- The `Journal Club` button renders beside the Abstract heading, once.
+- `chrome.tabs.onActivated` / `onUpdated` fire without the `tabs` permission, so the panel follows tab switches and restores state on return.
+- No layout broke at panel width.
+
+`activeTab` was removed immediately afterwards, in that order deliberately — see §7.
+
+### Still unverified
+
+| #   | Not verified                                       | Why it matters                                                                                                                                                                                                                                                | Issue |
+| --- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| 1   | Anything on **Edge** and **Brave**                 | Chromium forks differ on clipboard permission inside side panels, and Brave's shields can affect content scripts. The Export tab already degrades to "select the preview and copy it yourself", so the likely failure is an annoyance rather than a dead end. | #25   |
+| 2   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                                                                                                                                                         | #27   |
 
 Two design limitations that are deliberate, not defects:
 
@@ -106,6 +116,9 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   Still outstanding for v0.1: everything in §4, plus issues #9, #24, #25, #26.
 - 2026-09-19: CI was uploading no zip artifact while reporting green — `.output` is a dot directory and `upload-artifact` skips hidden paths by default, so `.output/*.zip` matched nothing and the step warned instead of failing. Fixed, and `if-no-files-found: error` added so the next missing artifact breaks the build. Worth remembering as a class of failure: a green check is only as good as what it actually asserts.
   Every open question in #1 was decided and the issue closed; the reasoning is in §7 above. `decision-needed` is now clear across the whole backlog.
+- 2026-09-19 (later): **First manual pass on Chrome, and it cleared the biggest unknown.** `chrome.sidePanel.open()` survives the content-script → background hop, so the one-click open flow holds and the #1 B6 fallback is not needed. The button renders beside the Abstract heading, tab switching works without the `tabs` permission, and nothing broke at panel width.
+  `activeTab` was then removed, in that order on purpose. The manifest guard failed on the change, as designed, and was updated deliberately; `activeTab` is now also on its forbidden list. Shipped permissions are `storage`, `sidePanel`, and the PubMed host permission.
+  Edge and Brave are still untested (#25).
 
 ## 7. Decisions and why
 
@@ -125,11 +138,15 @@ DOM extraction is verified against three real PubMed pages that cover two differ
 
 The seam already exists: `PubMedArticle.source` is `'dom' | 'eutils'`, and `extractArticleFromDocument` returns `null` rather than throwing, which is the branch point the fallback plugs into. Breakage detection does not depend on it — `tests/lib/pipeline.test.ts` fails CI if the saved fixtures stop parsing.
 
-### `activeTab` comes out after the first manual QA (#25)
+### `activeTab` was removed (#25) — done 2026-09-19
 
-It is provably unused. `chrome.tabs.query` works with no permission at all — that is exactly why `useArticle.ts` can rely on `Tab.url` being populated only for hosts we do hold — and `chrome.tabs.sendMessage` is covered by the PubMed host permission.
+The shipped permissions are now `storage` and `sidePanel`, plus the PubMed host permission. Nothing else.
 
-It is still in the manifest only because the side panel flow has never run in a browser. Removing it first would make a QA failure ambiguous between a real bug and a missing permission. Verify, remove, verify again. `scripts/check-manifest.mjs` pins the exact array, so the removal will fail CI until the guard, `README.md`, this file and spec §5 are updated together.
+`activeTab` granted nothing the extension used: `chrome.tabs.query` works with no permission at all — that is exactly why `useArticle.ts` can rely on `Tab.url` being populated only for hosts we do hold — and `chrome.tabs.sendMessage` is covered by the host permission. It was kept until the Chrome manual QA had passed, so that a QA failure could not be ambiguous between a real bug and a missing permission. Verify, remove, verify again.
+
+Removing it made `pnpm check:manifest` fail, which is the guard working: it pins the exact array, so no permission can change quietly in either direction. `activeTab` is now on the guard's forbidden list too, so it cannot come back by accident.
+
+**Deviation from the spec.** `docs/SPEC.ja.md` §5 still lists `activeTab`. That file is kept as the original product definition and is deliberately not edited; this section is the operative record of what ships. If you would rather the spec track the product, edit §5 there and say so here.
 
 ### Billing: ask before building (#37, #36)
 

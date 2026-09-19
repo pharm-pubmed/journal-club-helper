@@ -16,7 +16,10 @@ export default defineConfig({
     description:
       'Turn a PubMed abstract into a structured critical appraisal: study design, PICO, absolute effect with NNT, and a validity checklist.',
     minimum_chrome_version: '116',
-    permissions: ['storage', 'sidePanel', 'activeTab'],
+    // activeTab was in spec §5 but is provably unused: chrome.tabs.query needs no
+    // permission at all, and tabs.sendMessage is covered by the host permission
+    // below. Removed after the Chrome manual QA in #25; see HANDOVER §7.
+    permissions: ['storage', 'sidePanel'],
     host_permissions: ['https://pubmed.ncbi.nlm.nih.gov/*'],
     optional_host_permissions: [
       'https://eutils.ncbi.nlm.nih.gov/*',

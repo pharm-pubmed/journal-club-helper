@@ -6,7 +6,9 @@ import { readFile } from 'node:fs/promises';
 const MANIFEST = '.output/chrome-mv3/manifest.json';
 
 const EXPECTED = {
-  permissions: ['storage', 'sidePanel', 'activeTab'],
+  // activeTab was dropped after the #25 manual QA: it is provably unused and one
+  // fewer permission is worth having at store review. See HANDOVER §7.
+  permissions: ['storage', 'sidePanel'],
   host_permissions: ['https://pubmed.ncbi.nlm.nih.gov/*'],
   optional_host_permissions: [
     'https://eutils.ncbi.nlm.nih.gov/*',
@@ -15,7 +17,15 @@ const EXPECTED = {
   ],
 };
 
-const FORBIDDEN = ['tabs', 'scripting', '<all_urls>', 'webRequest', 'cookies', 'history'];
+const FORBIDDEN = [
+  'tabs',
+  'scripting',
+  '<all_urls>',
+  'webRequest',
+  'cookies',
+  'history',
+  'activeTab',
+];
 
 const sorted = (xs) => [...(xs ?? [])].sort();
 const eq = (a, b) => JSON.stringify(sorted(a)) === JSON.stringify(sorted(b));
