@@ -103,4 +103,44 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
 - 2026-09-16: **v0.1 feature work complete** (issues #2–#8, #10–#22). WXT + Preact + Vitest scaffold, CI with a manifest permission guard, the full `src/lib` appraisal engine, all four side panel tabs, and the options page. 351 unit tests over 12 files; `pnpm lint`, `format:check`, `typecheck`, `test`, `build`, `check:manifest` and `zip` all pass. Build is 170 kB, zip 57 kB, and `preact` is the only runtime dependency.
   Three real bugs were caught by writing tests before the code, and are worth knowing about because each would have shipped silently: `Math.ceil(1 / ARR)` returning NNT 11 for a true ARR of 0.1 (IEEE-754); a percent-pair rescan that read `120% vs 45%` as `20% vs 45%`; and `importAll` rolling a device's usage counters backwards when merging an older backup.
   Two more were caught by running the whole chain over real saved PubMed pages rather than hand-written text (`tests/lib/pipeline.test.ts`): a plural "hazard ratios of 0.89" that the extractor ignored, and a `PARTICIPANTS` section whose wording matched no PICO cue. The BMJ cohort fixture yielded zero numbers and zero abstract-derived PICO candidates before those fixes. Keep that test.
-  Still outstanding for v0.1: everything in §4, plus issues #9, #23, #24, #25, #26.
+  Still outstanding for v0.1: everything in §4, plus issues #9, #24, #25, #26.
+- 2026-09-19: CI was uploading no zip artifact while reporting green — `.output` is a dot directory and `upload-artifact` skips hidden paths by default, so `.output/*.zip` matched nothing and the step warned instead of failing. Fixed, and `if-no-files-found: error` added so the next missing artifact breaks the build. Worth remembering as a class of failure: a green check is only as good as what it actually asserts.
+  Every open question in #1 was decided and the issue closed; the reasoning is in §7 above. `decision-needed` is now clear across the whole backlog.
+
+## 7. Decisions and why
+
+Standing product decisions, with the reasoning, so a new owner can tell a deliberate choice from an oversight and knows what would have to change to reverse one. Settled in issue #1 on 2026-09-19.
+
+### No telemetry, at all (#33)
+
+The options page tells the user that the usage counts never leave the browser, that the page makes no network request of any kind, and that they can confirm it in the Network tab in seconds. That sentence is literally true and it is worth more than the data would be.
+
+Adding even opt-in counters costs a privacy policy section, a Chrome Web Store data-use disclosure, a server to receive them — which spec §2 lists as a non-goal — and the sentence itself. Usage is counted locally (`src/lib/counters.ts`) and shown back to the user, which is all spec §7 asks for.
+
+**To reverse:** you are building a backend and rewriting the privacy claim in `OptionsPage.tsx`, the store listing and the privacy policy together. Treat it as a product change, not a feature flag.
+
+### The E-utilities fallback waits for v0.3 (#23)
+
+DOM extraction is verified against three real PubMed pages that cover two different `citation_*` meta dialects, structured and inline section labels, and pages with and without `#full-view-journal-trigger`. Shipping the fallback in the MVP would buy an optional-host-permission dialog and a 3 req/s rate limiter before anyone has used the product.
+
+The seam already exists: `PubMedArticle.source` is `'dom' | 'eutils'`, and `extractArticleFromDocument` returns `null` rather than throwing, which is the branch point the fallback plugs into. Breakage detection does not depend on it — `tests/lib/pipeline.test.ts` fails CI if the saved fixtures stop parsing.
+
+### `activeTab` comes out after the first manual QA (#25)
+
+It is provably unused. `chrome.tabs.query` works with no permission at all — that is exactly why `useArticle.ts` can rely on `Tab.url` being populated only for hosts we do hold — and `chrome.tabs.sendMessage` is covered by the PubMed host permission.
+
+It is still in the manifest only because the side panel flow has never run in a browser. Removing it first would make a QA failure ambiguous between a real bug and a missing permission. Verify, remove, verify again. `scripts/check-manifest.mjs` pins the exact array, so the removal will fail CI until the guard, `README.md`, this file and spec §5 are updated together.
+
+### Billing: ask before building (#37, #36)
+
+Spec §10 makes transferability a first-order requirement. So the first step is asking ExtensionPay whether an account transfers to a buyer, not writing code. If it does, use it and ship v0.2 quickly; if it does not, build on Stripe Checkout plus signed licence keys from the start and never migrate paying subscribers.
+
+`$4/month` and `$29/year` remain placeholders. No price appears in the code, the store listing or the landing page until #36 is picked up.
+
+### English only until after v1.0 (#41)
+
+Most of the translation cost is the 55 checklist questions and their help text, which are the core IP and were written from scratch in English. Translating them well needs the English wording to have been used in anger first; translating early risks locking in phrasing that is wrong in both languages.
+
+### The repository moves to a dedicated org before the store submission (#30, #31)
+
+Today the repository URL appears in exactly one shipped place, `src/ui/options/OptionsPage.tsx`. After submission it is also in the store listing and the published privacy policy, and changing it there means a re-review. Branch protection is a repository setting and does not survive a transfer, so re-apply it on the other side.
