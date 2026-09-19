@@ -57,11 +57,11 @@ mkdir -p ~/.local/bin
 ln -sf ~/opt/chrome-pkg/opt/google/chrome/google-chrome ~/.local/bin/google-chrome
 ```
 
-**Edge and Brave still have to be checked by hand** (#25); this covers Chrome only.
+This drives Chrome only. Edge was checked by hand (§4) and Brave is out of scope (§7).
 
 ### Testing on Windows from WSL
 
-Edge and Brave live on the Windows side. Loading an unpacked extension from `\\wsl.localhost\...` is unreliable in Chromium, so copy the build to a Windows-local path first:
+Edge lives on the Windows side. Loading an unpacked extension from `\\wsl.localhost\...` is unreliable in Chromium, so copy the build to a Windows-local path first:
 
 ```bash
 cp -r .output/chrome-mv3/. /mnt/c/Users/<user>/journal-club-helper-build/
@@ -84,7 +84,7 @@ Not available yet. Filled in for v0.3 (Chrome Web Store submission steps, versio
 
 ## 4. Known issues
 
-Nothing is known to be broken. A manual pass on **Chrome** on 2026-09-19 cleared most of what was unverified; what is left is listed below.
+Manual passes on **Chrome** and **Edge** on 2026-09-19 cleared most of what was unverified. One real defect came out of them (#43); what is still unchecked is listed below.
 
 ### Verified on Chrome, 2026-09-19
 
@@ -97,12 +97,20 @@ Loaded unpacked against PMID 36577095 (one of the saved fixtures, so the expecte
 
 `activeTab` was removed immediately afterwards, in that order deliberately — see §7.
 
+### Verified on Edge, 2026-09-19
+
+Same page, same checks. The extension loads, the button injects, the panel opens, and tab switching preserves the appraisal. `chrome.sidePanel` behaves as it does in Chrome.
+
+Edge also surfaced **#43**: once open, the panel follows the user to every tab and shows its empty state on unrelated sites. Not an Edge defect — `side_panel.default_path` makes the panel global in both browsers — but it reads as clutter in a way that reasoning about it did not convey. Deliberately not fixed blind: opening the panel is the highest-risk path in v0.1 and had only just been confirmed working.
+
 ### Still unverified
 
-| #   | Not verified                                       | Why it matters                                                                                                                                                                                                                                                | Issue |
-| --- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| 1   | Anything on **Edge** and **Brave**                 | Chromium forks differ on clipboard permission inside side panels, and Brave's shields can affect content scripts. The Export tab already degrades to "select the preview and copy it yourself", so the likely failure is an annoyance rather than a dead end. | #25   |
-| 2   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                                                                                                                                                         | #27   |
+| #   | Not verified                                       | Why it matters                                                                                                                                                                                                                                                 | Issue |
+| --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| 1   | **Clipboard copy in the side panel**, any browser  | Chromium forks differ on clipboard permission there. The Export tab is built to show a red "select the preview and copy it yourself" message on denial, so the bad outcome is not a refusal but a button that does nothing visible. Nobody has pressed it yet. | #25   |
+| 2   | Download `.md` from the Export tab                 | Same pass, same reason: not exercised.                                                                                                                                                                                                                         | #25   |
+| 3   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for.                                                                                                                                     | —     |
+| 4   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                                                                                                                                                          | #27   |
 
 Two design limitations that are deliberate, not defects:
 
@@ -157,6 +165,8 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   Edge and Brave are still untested (#25).
 - 2026-09-19 (later still): Adopted two things from Chrome's "build extensions with AI" guidance. `CHROMEWEBSTORE.md` now holds the per-permission justification and data-use answers a store reviewer asks for, next to the code so it cannot drift; update it in the same commit as any manifest change. `.mcp.json` adds the chrome-devtools MCP server so an agent can drive the built extension in a real browser — the substitute for the component tests §4 says are missing.
   Writing that file surfaced one thing: `api.anthropic.com` and `api.openai.com` were declared as optional host permissions with no code able to request them. Removed until v0.2 (#34, #35). Shipped manifest is now `storage`, `sidePanel`, one PubMed host permission, and one optional host for E-utilities.
+- 2026-09-19 (Edge): Edge passes the same checks as Chrome — loads, injects, opens the panel, keeps state across tab switches. It also surfaced #43: the panel follows the user to every tab and shows its empty state on unrelated sites, because `side_panel.default_path` makes it global. Present in Chrome too; nobody had noticed because reasoning about "the panel shows a message on other tabs" does not convey how it feels to have a panel follow you around. Left unfixed on purpose — opening the panel is the riskiest path in v0.1 and had just been confirmed working, so the change needs a browser, not an argument.
+  Brave dropped from scope (§7). Clipboard copy and `.md` download remain unexercised in any browser.
   The MCP server as first configured did not work: Chrome's guidance pairs `--categoryExtensions` with `--autoConnect`, but the server's own `--help` says they are incompatible until Chrome 149, and this machine had no Linux Chrome to connect to anyway. Corrected to a pipe connection with an explicit executable path; see §2. Worth remembering that a config lifted from documentation is not a verified config.
 
 ## 7. Decisions and why
@@ -186,6 +196,12 @@ The shipped permissions are now `storage` and `sidePanel`, plus the PubMed host 
 Removing it made `pnpm check:manifest` fail, which is the guard working: it pins the exact array, so no permission can change quietly in either direction. `activeTab` is now on the guard's forbidden list too, so it cannot come back by accident.
 
 **Deviation from the spec.** `docs/SPEC.ja.md` §5 still lists `activeTab`. That file is kept as the original product definition and is deliberately not edited; this section is the operative record of what ships. If you would rather the spec track the product, edit §5 there and say so here.
+
+### Browser support stops at Chrome and Edge (#25)
+
+Brave is not tested and not claimed. Chrome and Edge between them cover the Chromium differences worth paying for, and every hour spent on a third fork is an hour not spent on the checklist wording, which is the actual product.
+
+This is a real trade-off rather than a free one: the pitch is "no servers, no accounts, no analytics", and privacy-minded users are exactly who runs Brave. If Brave reports come in after launch, treat them as signal and test it then — nothing in the code is Chrome-specific, so the likely outcome is that it already works.
 
 ### Declared permissions track the code, not the roadmap
 
