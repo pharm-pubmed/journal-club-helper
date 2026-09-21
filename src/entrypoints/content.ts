@@ -52,6 +52,45 @@ function findAnchor(): { element: Element; inline: boolean } | null {
   return title === null ? null : { element: title, inline: false };
 }
 
+/**
+ * The panel cannot be opened from a page whose extension context has died, and
+ * the button is the only element we are allowed to put on the page — so it has
+ * to carry the explanation itself. A dead click with no feedback reads as a
+ * broken extension; "reload the page" is both true and actionable.
+ */
+function reportStale(button: HTMLButtonElement): void {
+  button.textContent = 'Reload the page';
+  button.title = 'The extension was updated. Reload this page to use the panel.';
+  button.disabled = true;
+}
+
+/**
+ * Exported so both failure paths can be tested. They are easy to get wrong and
+ * impossible to notice: a dead click looks exactly like a working one.
+ */
+export function requestPanel(button: HTMLButtonElement): void {
+  const message: OpenSidePanelMessage = { type: 'OPEN_SIDE_PANEL' };
+  try {
+    // `.catch` alone is not enough. After the extension is reloaded or updated,
+    // a page left open still runs the old content script, and sendMessage on
+    // that dead context throws synchronously instead of returning a promise —
+    // so the rejection handler never gets the chance to run.
+    const sent: unknown = chrome.runtime.sendMessage(message);
+    if (sent instanceof Promise) void sent.catch(() => reportStale(button));
+  } catch {
+    reportStale(button);
+  }
+}
+
+function readArticle(): PubMedArticle | null {
+  try {
+    return extractArticleFromDocument(document, window.location.href);
+  } catch (error) {
+    console.error('[journal-club-helper] could not read this PubMed page:', error);
+    return null;
+  }
+}
+
 function injectButton(): void {
   if (document.getElementById(BUTTON_ID) !== null) return;
   const anchor = findAnchor();
@@ -64,8 +103,7 @@ function injectButton(): void {
   button.title = 'Open the critical appraisal panel';
   button.style.cssText = BUTTON_STYLE;
   button.addEventListener('click', () => {
-    const message: OpenSidePanelMessage = { type: 'OPEN_SIDE_PANEL' };
-    void chrome.runtime.sendMessage(message).catch(() => undefined);
+    requestPanel(button);
   });
 
   if (anchor.inline) anchor.element.appendChild(button);
@@ -79,11 +117,11 @@ export default defineContentScript({
     // Search results and every other PubMed page are ignored (spec §4.1).
     if (parsePmidFromUrl(window.location.href) === null) return;
 
-    // PubMed navigates with full page loads, so one extraction per load is enough.
-    const article: PubMedArticle | null = extractArticleFromDocument(
-      document,
-      window.location.href,
-    );
+    // `extractArticleFromDocument` is written to return null rather than throw,
+    // but this runs on a page nobody here controls and one unexpected shape must
+    // not take the button down with it: the panel can say it could not read the
+    // page, whereas a reader with no button has no way in at all.
+    const article: PubMedArticle | null = readArticle();
 
     chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
       if (!hasType(message, 'GET_ARTICLE')) return false;
@@ -92,6 +130,10 @@ export default defineContentScript({
       return false;
     });
 
-    injectButton();
+    try {
+      injectButton();
+    } catch (error) {
+      console.error('[journal-club-helper] could not add the Journal Club button:', error);
+    }
   },
 });
