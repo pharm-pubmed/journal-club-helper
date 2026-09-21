@@ -103,12 +103,21 @@ Same page, same checks. The extension loads, the button injects, the panel opens
 
 Edge also surfaced **#43**: once open, the panel follows the user to every tab and shows its empty state on unrelated sites. Not an Edge defect — `side_panel.default_path` makes the panel global in both browsers — but it reads as clutter in a way that reasoning about it did not convey. Deliberately not fixed blind: opening the panel is the highest-risk path in v0.1 and had only just been confirmed working.
 
+### Verified in a browser, 2026-09-21
+
+The critical-appraisal rework and the import fixes were checked on Edge against PMID 36577095.
+
+The appraisal tab renders as designed: Critical appraisal, then internal validity, the non-inferiority group, applicability and the unscored funding panel, numbered 1-13 in one series, with no verdict control anywhere in the funding block and no horizontal scrolling at panel width. Overriding one item's source removes that item's evidence-need hint and no other.
+
+More importantly, the import paths were exercised against real storage. A counters-only backup restored the counts and kept the stored appraisal. A file with no `appraisals` array, a pre-rework export, and a file with neither appraisals nor readable counters were each refused with their own message, **and the saved count did not drop in any of them.** That is the defect the rework introduced, and it is the thing to re-test after any change to `importAll`: an error message appearing is not evidence that nothing was deleted, because the version that had the bug deleted first and reported afterwards.
+
 ### Still unverified
 
-| #   | Not verified                                       | Why it matters                                                                                                             | Issue |
-| --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----- |
-| 1   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for. | —     |
-| 2   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                      | #27   |
+| #   | Not verified                                       | Why it matters                                                                                                                                                                                                                   | Issue |
+| --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| 1   | Storage quota exhaustion                           | The archive-before-overwrite guard is covered by a test that caps a memory store, not by a real `chrome.storage.local` at its 10 MB limit. Reaching that state by hand needs roughly 160 full-size appraisals or console access. | —     |
+| 2   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for.                                                                                                       | —     |
+| 3   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                                                                                                                            | #27   |
 
 Clipboard copy and the `.md` download were both exercised on Edge and work. Reading the downloaded file end to end is what found the export defect in §7 — the file was correct in every structural respect and wrong in one sentence, which no golden-file test could have caught, because the golden encodes an empty appraisal correctly and cannot know the abstract it is describing.
 
@@ -169,6 +178,9 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   Brave dropped from scope (§7). Clipboard copy and `.md` download both confirmed working on Edge. Reading the exported file end to end is what found the export defect in §7; the structure was right and one sentence was false, which is the class of defect a golden-file test cannot reach.
 - 2026-09-21: **Critical appraisal reworked onto risk-of-bias thinking.** All seven checklists rewritten; the RCT one now follows RoB 2 domains and gains four non-inferiority checks as an additive subtype group. Sections split into internal validity and applicability, funding moved out of scoring into an unscored facts panel, and every item now declares what source can settle it, so an absence of reporting is never read as a flaw the reader has evidence for. `schemaVersion` 2; v1 appraisals are rejected rather than migrated. 420 tests.
   Two things a future editor should not undo without reading `docs/METHODOLOGY.md`: our Unclear is the _signalling-question_ kind, not RoB 2's abolished domain-level Unclear; and the VV116 regression case in `tests/lib/pipeline.test.ts` is deliberately the trial where the obvious conclusion is false.
+- 2026-09-21 (later): The rework shipped a data-loss bug and it took two review rounds to close. The export file's own version was left behind when each appraisal moved to schemaVersion 2, so a pre-rework backup passed the gate, replace mode deleted first and validated afterwards, and the store emptied while importing nothing. The second round found the same shape still open for a file whose `appraisals` was missing or not an array, and that rejecting every empty list had taken a legitimate counters-only restore with it.
+  All three are fixed, verified on Edge, and the lesson is in the order of operations: validate the whole payload before removing a single key. An error message appearing is not evidence that nothing was deleted.
+  A content-script error also appeared and was never diagnosed — it stopped once the page was reloaded, which is what clears the condition. Two things that were wrong regardless are now tested: `chrome.runtime.sendMessage` throws synchronously on a dead extension context so a lone `.catch` never runs, and a throw while reading the page used to take the button down with it.
   The MCP server as first configured did not work: Chrome's guidance pairs `--categoryExtensions` with `--autoConnect`, but the server's own `--help` says they are incompatible until Chrome 149, and this machine had no Linux Chrome to connect to anyway. Corrected to a pipe connection with an explicit executable path; see §2. Worth remembering that a config lifted from documentation is not a verified config.
 
 ## 7. Decisions and why
