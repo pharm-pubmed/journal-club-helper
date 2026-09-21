@@ -23,8 +23,11 @@ const FIXTURE_DIR = fileURLToPath(new URL('../fixtures/summary/', import.meta.ur
 const UPDATE_GOLDEN = process.env['UPDATE_GOLDEN'] === '1';
 const OPTS = { productName: PRODUCT_NAME };
 
-/** Spec §4.5: this exact sentence, not a placeholder. */
+/** Spec §4.5, verbatim. Asserts something about the paper, so it is only correct
+ * when a relative effect was actually recorded. */
 const NO_ABSOLUTE_EFFECT = 'Absolute effect not reported in the abstract.';
+/** Asserts something about the appraisal: correct when nobody has filled the numbers in. */
+const NOT_CALCULATED = 'Absolute effect not calculated in this appraisal.';
 
 function expectGolden(name: string, actual: string): void {
   const path = `${FIXTURE_DIR}${name}`;
@@ -303,7 +306,8 @@ describe('buildSummaryMarkdown', () => {
     ]) {
       expect(md).toContain(heading);
     }
-    expect(md).toContain(NO_ABSOLUTE_EFFECT);
+    expect(md).toContain(NOT_CALCULATED);
+    expect(md).not.toContain(NO_ABSOLUTE_EFFECT);
     expectGolden('empty-appraisal.md', md);
   });
 
@@ -311,9 +315,24 @@ describe('buildSummaryMarkdown', () => {
     const md = buildSummaryMarkdown(ratioOnlyAppraisal(), OPTS);
 
     expect(md).toContain('HR 0.72 (95% CI 0.61–0.85)');
+    // Here the claim is true: a hazard ratio was recorded and no absolute effect.
     expect(md).toContain(NO_ABSOLUTE_EFFECT);
+    expect(md).not.toContain(NOT_CALCULATED);
     expect(md).not.toContain('NNT');
     expectGolden('ratio-only.md', md);
+  });
+
+  // Regression: found by exporting a real appraisal of PMID 36577095, whose
+  // abstract reports "67.4% vs. 77.3%". The export claimed the abstract did not
+  // report an absolute effect, when the truth was that nobody had calculated one.
+  it('does not blame the abstract when the user simply has not filled the numbers in', () => {
+    const md = buildSummaryMarkdown(emptyAppraisal(), OPTS);
+    const text = buildSummaryText(emptyAppraisal(), OPTS);
+
+    for (const rendering of [md, text]) {
+      expect(rendering).toContain(NOT_CALCULATED);
+      expect(rendering).not.toContain('not reported in the abstract');
+    }
   });
 
   it('renders the estimated absolute effect and its warnings when an ACR was supplied', () => {
@@ -423,7 +442,8 @@ describe('buildSummaryText', () => {
     ]) {
       expect(text).toContain(heading);
     }
-    expect(text).toContain(NO_ABSOLUTE_EFFECT);
+    expect(text).toContain(NOT_CALCULATED);
+    expect(text).not.toContain(NO_ABSOLUTE_EFFECT);
     expectGolden('empty-appraisal.txt', text);
   });
 

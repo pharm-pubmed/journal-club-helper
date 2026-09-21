@@ -12,10 +12,14 @@
  *     is the complete template with the gaps visible: a summary that silently
  *     drops the validity table because nothing was answered hides exactly the
  *     part of the appraisal that was skipped.
- *  2. Where no absolute effect could be computed the export says so in words.
- *     "Absolute effect not reported in the abstract." is the one sentence this
- *     module is allowed to assert about a study, because an abstract that only
- *     reports a hazard ratio is the failure mode journal clubs keep repeating.
+ *  2. Where no absolute effect could be computed the export says so in words,
+ *     and says which of the two reasons applies. "Absolute effect not reported
+ *     in the abstract." is the one sentence this module is allowed to assert
+ *     about a study — an abstract that stops at a hazard ratio is the failure
+ *     mode journal clubs keep repeating — so it is reserved for the case where
+ *     a relative effect was actually recorded. An appraisal nobody has filled in
+ *     gets "not calculated in this appraisal" instead, which claims nothing
+ *     about the paper.
  *  3. The bottom line is copied out verbatim and never generated. Nothing in
  *     this file writes a conclusion, a recommendation or an interpretation
  *     (spec §2, §9).
@@ -52,8 +56,20 @@ export interface SummaryOptions {
 
 /* -------------------------------------------------------------- fixed copy */
 
-/** Spec §4.5. The literal sentence, not a placeholder to be reworded lightly. */
+/**
+ * Spec §4.5. The literal sentence, not a placeholder to be reworded lightly.
+ * It asserts something about the *paper*, so it is only used when that assertion
+ * is true: the appraisal recorded a relative effect and no absolute one.
+ */
 const ABSOLUTE_EFFECT_MISSING = 'Absolute effect not reported in the abstract.';
+
+/**
+ * The other reason the absolute effect can be missing: nobody worked it out yet.
+ * Saying "not reported in the abstract" there would be a false claim about the
+ * study — an abstract giving "67.4% vs 77.3%" reports everything needed — and a
+ * summary carried into a journal club must not put words in a paper's mouth.
+ */
+const ABSOLUTE_EFFECT_NOT_CALCULATED = 'Absolute effect not calculated in this appraisal.';
 
 const UNTITLED = 'Untitled';
 const NO_CITATION = 'Citation not recorded.';
@@ -255,9 +271,13 @@ function keyResultRows(numbers: NumbersState | null): Row[] {
 
   const result = numbers?.result ?? null;
   if (result === null) {
-    // No numbers at all, or a ratio with no assumed control event rate to anchor
-    // it: either way the abstract left the absolute effect unsaid.
-    rows.push({ label: null, value: ABSOLUTE_EFFECT_MISSING });
+    // A relative effect was recorded but no absolute one, so the abstract really
+    // did stop at a ratio. Without one, nothing is known about what the abstract
+    // reports — only that this appraisal has not got there yet.
+    rows.push({
+      label: null,
+      value: relative === null ? ABSOLUTE_EFFECT_NOT_CALCULATED : ABSOLUTE_EFFECT_MISSING,
+    });
     return rows;
   }
 

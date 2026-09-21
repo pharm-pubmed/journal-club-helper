@@ -19,7 +19,7 @@ No design was detected from the publication type or the abstract keywords, so th
 
 ## Key results
 
-- Absolute effect not reported in the abstract.
+- Absolute effect not calculated in this appraisal.
 
 ## Validity
 

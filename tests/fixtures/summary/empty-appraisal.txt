@@ -12,7 +12,7 @@ STUDY DESIGN
   No design was detected from the publication type or the abstract keywords, so the general checklist is used below.
 
 KEY RESULTS
-  Absolute effect not reported in the abstract.
+  Absolute effect not calculated in this appraisal.
 
 VALIDITY
   1. Can you state, from the abstract alone, which people, which comparison and which outcome the study set out to examine?

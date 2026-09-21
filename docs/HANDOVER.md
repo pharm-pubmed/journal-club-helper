@@ -108,9 +108,8 @@ Edge also surfaced **#43**: once open, the panel follows the user to every tab a
 | #   | Not verified                                       | Why it matters                                                                                                                                                                                                                                                 | Issue |
 | --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | 1   | **Clipboard copy in the side panel**, any browser  | Chromium forks differ on clipboard permission there. The Export tab is built to show a red "select the preview and copy it yourself" message on denial, so the bad outcome is not a refusal but a button that does nothing visible. Nobody has pressed it yet. | #25   |
-| 2   | Download `.md` from the Export tab                 | Same pass, same reason: not exercised.                                                                                                                                                                                                                         | #25   |
-| 3   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for.                                                                                                                                     | —     |
-| 4   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                                                                                                                                                          | #27   |
+| 2   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for.                                                                                                                                     | —     |
+| 3   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                                                                                                                                                          | #27   |
 
 Two design limitations that are deliberate, not defects:
 
@@ -166,7 +165,7 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
 - 2026-09-19 (later still): Adopted two things from Chrome's "build extensions with AI" guidance. `CHROMEWEBSTORE.md` now holds the per-permission justification and data-use answers a store reviewer asks for, next to the code so it cannot drift; update it in the same commit as any manifest change. `.mcp.json` adds the chrome-devtools MCP server so an agent can drive the built extension in a real browser — the substitute for the component tests §4 says are missing.
   Writing that file surfaced one thing: `api.anthropic.com` and `api.openai.com` were declared as optional host permissions with no code able to request them. Removed until v0.2 (#34, #35). Shipped manifest is now `storage`, `sidePanel`, one PubMed host permission, and one optional host for E-utilities.
 - 2026-09-19 (Edge): Edge passes the same checks as Chrome — loads, injects, opens the panel, keeps state across tab switches. It also surfaced #43: the panel follows the user to every tab and shows its empty state on unrelated sites, because `side_panel.default_path` makes it global. Present in Chrome too; nobody had noticed because reasoning about "the panel shows a message on other tabs" does not convey how it feels to have a panel follow you around. Left unfixed on purpose — opening the panel is the riskiest path in v0.1 and had just been confirmed working, so the change needs a browser, not an argument.
-  Brave dropped from scope (§7). Clipboard copy and `.md` download remain unexercised in any browser.
+  Brave dropped from scope (§7). `.md` download confirmed working; the exported file was read end to end, which is how the export defect in §7 was found. Clipboard copy is still unexercised.
   The MCP server as first configured did not work: Chrome's guidance pairs `--categoryExtensions` with `--autoConnect`, but the server's own `--help` says they are incompatible until Chrome 149, and this machine had no Linux Chrome to connect to anyway. Corrected to a pipe connection with an explicit executable path; see §2. Worth remembering that a config lifted from documentation is not a verified config.
 
 ## 7. Decisions and why
@@ -202,6 +201,14 @@ Removing it made `pnpm check:manifest` fail, which is the guard working: it pins
 Brave is not tested and not claimed. Chrome and Edge between them cover the Chromium differences worth paying for, and every hour spent on a third fork is an hour not spent on the checklist wording, which is the actual product.
 
 This is a real trade-off rather than a free one: the pitch is "no servers, no accounts, no analytics", and privacy-minded users are exactly who runs Brave. If Brave reports come in after launch, treat them as signal and test it then — nothing in the code is Chrome-specific, so the likely outcome is that it already works.
+
+### The export never claims something about the paper it cannot know
+
+Spec §4.5 mandates the literal sentence "Absolute effect not reported in the abstract." when no absolute effect could be computed. Shipped as written, it covered two different situations and was false in one of them: an appraisal nobody had filled in produced that sentence for PMID 36577095, whose abstract plainly reports "67.4% vs. 77.3%".
+
+The sentence is now reserved for the case it was written for — a relative effect was recorded and no absolute one, which is the failure mode journal clubs keep repeating. An appraisal with nothing entered says "Absolute effect not calculated in this appraisal." instead, which claims nothing about the study.
+
+This is a deliberate deviation from the literal spec wording, on the principle that a summary someone carries into a journal club must never put words in a paper's mouth. Found by exporting a real appraisal and reading it, not by a test.
 
 ### Declared permissions track the code, not the roadmap
 
