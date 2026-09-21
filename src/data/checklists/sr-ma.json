@@ -1,55 +1,162 @@
 {
   "id": "sr-ma",
   "title": "Systematic review and meta-analysis",
-  "version": 1,
+  "version": 2,
+  "note": "A review is a study whose participants are other studies, so it can be done well or badly in the same ways. Two questions run through all of it: was the process fixed before the results were known, and is the pooled number built from studies that belong together? An undescribed method is Unclear, not a failure.",
   "items": [
     {
-      "id": "sr-ma-question",
-      "concept": "focused-question",
-      "question": "Does the review state one clear question, with the population, intervention, comparison and outcome defined before the search began?",
-      "why": "When eligibility rules are not fixed in advance, studies can be let in or kept out once their results are known, which shapes the pooled answer by hand."
+      "id": "sr-ma-prespecified-question",
+      "concept": "prespecified-question",
+      "section": "internal-validity",
+      "question": "Were the question and the eligibility rules set down before the search began, in a protocol or registration that can be checked?",
+      "why": "When eligibility is settled after the findings are known, studies can be let in or kept out on the strength of their results, and the pooled answer is shaped by hand.",
+      "lookFor": [
+        "a registration number or published protocol, with a date before the search",
+        "population, intervention, comparator and outcome defined up front",
+        "the primary outcome named in advance, and whether the paper still leads with it",
+        "changes from the protocol, and whether they are declared and explained"
+      ],
+      "needs": "protocol-or-registry"
     },
     {
       "id": "sr-ma-search",
       "concept": "search-comprehensiveness",
-      "question": "Can you tell which databases and other sources were searched, over what period, and whether the search went beyond a single database?",
-      "why": "A search limited to one database and to published reports in one language misses studies systematically rather than randomly, and the missed ones are disproportionately the negative ones."
+      "section": "internal-validity",
+      "question": "Was the search wide enough to find the evidence, covering more than one database and reaching beyond what is easy to retrieve?",
+      "why": "A search confined to one database and to published reports in one language misses studies systematically rather than randomly, and the ones it misses are disproportionately those that found nothing.",
+      "lookFor": [
+        "the databases searched, with the dates covered and the date of the last search",
+        "the full strategy for at least one database, terms included",
+        "trial registries, conference abstracts, reference lists and contact with investigators",
+        "restrictions by language, date or publication status"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "sr-ma-selection-process",
-      "concept": "duplicate-selection",
-      "question": "Does the abstract say whether two or more reviewers screened the studies and pulled out the data independently?",
-      "why": "A lone reviewer makes silent slips in both directions, and disagreements that never surface cannot be resolved, so those errors travel straight into the pooled estimate."
+      "id": "sr-ma-duplicate-work",
+      "concept": "duplicate-screening",
+      "section": "internal-validity",
+      "question": "Did two or more people screen the records and extract the data independently, with a stated way of settling disagreements?",
+      "why": "A lone reviewer makes quiet slips in both directions and nothing catches them, so those errors travel straight into the pooled estimate.",
+      "lookFor": [
+        "independent screening at title, abstract and full-text stages",
+        "independent extraction, or one person extracting and another checking",
+        "how disagreements were resolved, and how often they arose",
+        "a flow diagram with the numbers kept and dropped at each stage"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "sr-ma-study-quality",
+      "id": "sr-ma-risk-of-bias",
       "concept": "study-quality",
-      "question": "Can you see that the included studies were appraised for how well they were conducted, and that the appraisal feeds into the conclusions?",
-      "why": "Pooling turns several weak studies into one precise-looking number, and when the underlying studies share a flaw the summary reproduces that flaw with tighter confidence intervals."
+      "section": "internal-validity",
+      "question": "Was each included study appraised for how it was conducted, and does that appraisal feed into what the review concludes?",
+      "why": "Pooling turns several weak studies into one precise-looking number, and when the studies share a flaw the summary reproduces it with a tighter interval around it.",
+      "lookFor": [
+        "a named appraisal method, applied to every included study",
+        "judgements reported study by study, not just as an average score",
+        "an analysis restricted to the soundest studies",
+        "whether the conclusion changes once the weakest studies are set aside"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "sr-ma-heterogeneity",
       "concept": "heterogeneity",
-      "question": "Can you see how much the individual study results differed from one another, and is an explanation offered when they differed a lot?",
-      "why": "Widely scattered results mean the studies were not estimating one common effect, so an average across them describes something that exists in no single setting."
+      "section": "internal-validity",
+      "question": "Was the scatter between the individual study results examined and explained, rather than only reported as a statistic?",
+      "why": "Widely differing results mean the studies were not estimating one common effect, so an average across them can describe something that exists in no single setting.",
+      "lookFor": [
+        "a forest plot showing each study's estimate and interval",
+        "a measure of inconsistency, or a prediction interval",
+        "subgroup or meta-regression analyses, and whether they were planned beforehand",
+        "one large or outlying study carrying the result"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "sr-ma-pooling",
       "concept": "appropriateness-of-pooling",
-      "question": "Do the included studies look similar enough in population, intervention and outcome definition for a single combined number to mean anything?",
-      "why": "Averaging studies that asked different questions produces a figure that answers none of them, while the narrow interval around it hides how mixed the ingredients were."
+      "section": "internal-validity",
+      "question": "Are the studies alike enough in population, intervention and outcome definition for a single combined number to mean anything?",
+      "why": "Averaging studies that asked different questions produces a figure that answers none of them, and the narrow interval around it hides how mixed the ingredients were.",
+      "lookFor": [
+        "how far the populations, doses, schedules and comparators differ",
+        "outcome definitions and time points pooled together",
+        "the model chosen, fixed or random effects, and the reason given",
+        "whether a description of the studies would have been the honest alternative"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "sr-ma-publication-bias",
-      "concept": "publication-bias",
-      "question": "Does the review confront the possibility that finished studies with unwelcome results were never published, or that small negative ones are missing?",
-      "why": "Studies with disappointing results appear later, in smaller journals, or not at all, so a synthesis of what is easy to find tends to overstate benefit."
+      "id": "sr-ma-missing-studies",
+      "concept": "small-study-effects",
+      "section": "internal-validity",
+      "question": "Did the review confront the possibility that completed studies were never published, or that the small ones report larger effects than the large ones?",
+      "why": "Studies with disappointing results appear late, in smaller journals, or not at all, so a synthesis of what is easy to find tends to overstate benefit.",
+      "lookFor": [
+        "a funnel plot or asymmetry test, with enough studies to make it meaningful",
+        "registered studies whose results never appeared",
+        "unpublished data or grey literature actually obtained",
+        "whether the smallest studies are the ones driving the pooled effect"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "sr-ma-certainty",
       "concept": "certainty-of-evidence",
-      "question": "Does the review tell you how much confidence the pooled result deserves, given the quality, the consistency and the precision of what went into it?",
-      "why": "A summary estimate inherits the weaknesses of its inputs, and a review that reports the number without commenting on its trustworthiness invites it to be read as settled."
+      "section": "internal-validity",
+      "question": "Is the confidence the pooled estimate deserves stated, taking in the soundness, the consistency, the precision and the relevance of what went into it?",
+      "why": "A summary estimate inherits the weaknesses of its inputs, and a review that reports the number without saying how much to trust it invites the reader to treat it as settled.",
+      "lookFor": [
+        "a rating per outcome, with the reasons for each downgrade",
+        "a summary table covering the outcomes that matter, not only the positive ones",
+        "absolute effects given alongside the ratio",
+        "whether the conclusion is worded more confidently than the rating allows"
+      ],
+      "needs": "full-text"
+    },
+    {
+      "id": "sr-ma-applicability",
+      "concept": "applicability",
+      "section": "applicability",
+      "question": "Do the populations, interventions and comparators inside the review match the patients and the usual care you are deciding about?",
+      "why": "A pooled estimate describes the mixture of settings that went into it, so when your patients or your comparator sit outside that mixture, the number need not carry over.",
+      "lookFor": [
+        "where and when the included studies were done",
+        "the range of doses, schedules and comparators that were pooled",
+        "outcomes that matter to patients, rather than surrogates",
+        "whether any subgroup of the included studies resembles your patients"
+      ],
+      "needs": "abstract"
     }
-  ]
+  ],
+  "info": {
+    "id": "funding",
+    "title": "Funding & conflicts",
+    "prompt": "Who funded the study, what role did the funder or sponsor have in the design, conduct, analysis and reporting, and what relevant conflicts of interest were declared?",
+    "why": "Industry funding is not itself a risk of bias, and a trial paid for by a manufacturer is not wrong for that reason. What matters is what the sponsor was in a position to do, and what was declared, so record these as facts and let the methodological items above carry the judgement.",
+    "fields": [
+      {
+        "id": "funder",
+        "label": "Funder",
+        "hint": "Who paid: name the company, agency, charity or grant. Record \"not stated\" when no funding statement is given."
+      },
+      {
+        "id": "sponsor-role",
+        "label": "Sponsor or funder role",
+        "hint": "What they did in design, conduct, data collection and custody, analysis, writing, and the decision to publish. A named funder with no role described is \"unclear\", not \"none\"."
+      },
+      {
+        "id": "author-conflicts",
+        "label": "Author conflicts declared",
+        "hint": "Payments, advisory or speaker roles, employment, stock or patents relevant to this intervention, and whether any declaration statement appears at all."
+      },
+      {
+        "id": "info-source",
+        "label": "Where this came from",
+        "hint": "Which document told you: the published abstract, the funding statement in the full text, the disclosure forms, or the registry record. Say if you only had one of them."
+      }
+    ]
+  }
 }

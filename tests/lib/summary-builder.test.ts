@@ -69,16 +69,19 @@ function numbersState(patch: Partial<NumbersState>): NumbersState {
 /** Nothing filled in at all: the worst case the template has to survive. */
 function emptyAppraisal(): Appraisal {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     pmid: '',
     createdAt: 0,
     updatedAt: 0,
     citation: { title: '', authors: [], journal: '', year: '', doi: null },
     designDetected: null,
     designOverride: null,
+    subtypeOverride: null,
     pico: { p: '', i: '', c: '', o: '' },
     numbers: null,
     validity: {},
+    sourceScope: 'abstract',
+    info: {},
     bottomLine: '',
     discussionQuestions: [],
   };
@@ -91,6 +94,10 @@ const FULL_BOTTOM_LINE =
 
 /** The note on an item whose verdict is still blank: it must not reach the export. */
 const UNANSWERED_NOTE = 'Ask the presenter whether the analysis set was intention to treat.';
+
+/** One item was looked up in the full text while the rest came from the abstract. */
+const OVERRIDDEN_ITEM_NOTE =
+  'The full text names a blinded adjudication committee for the primary endpoint.';
 
 function fullAppraisal(): Appraisal {
   // 78/300 vs 48/300 -> CER 26.0 %, EER 16.0 %, ARR 10.0 points, NNT 10.
@@ -137,24 +144,136 @@ function fullAppraisal(): Appraisal {
     }),
     validity: {
       rct: {
-        'rct-randomization': { verdict: 'yes', note: '' },
+        'rct-randomisation-sequence': { verdict: 'yes', note: '', source: null },
         'rct-allocation-concealment': {
           verdict: 'unclear',
           note: 'The abstract says "randomly assigned" and nothing about who held the sequence.',
+          source: null,
         },
-        'rct-blinding': {
+        'rct-baseline-balance': { verdict: 'yes', note: '', source: null },
+        'rct-deviations-from-intervention': {
           verdict: 'no',
           note: 'Open label. Mortality is a hard endpoint, so this matters less here than it would for a symptom score.',
+          source: null,
         },
-        'rct-baseline-comparability': { verdict: 'yes', note: '' },
-        'rct-follow-up': { verdict: 'yes', note: '' },
-        'rct-intention-to-treat': { verdict: null, note: UNANSWERED_NOTE },
-        'rct-primary-outcome': { verdict: 'yes', note: '' },
-        'rct-funding': { verdict: 'no', note: '' },
+        'rct-missing-outcome-data': { verdict: 'yes', note: '', source: null },
+        // The one item the reader went to the full text for.
+        'rct-outcome-measurement': {
+          verdict: 'yes',
+          note: OVERRIDDEN_ITEM_NOTE,
+          source: 'full-text',
+        },
+        'rct-analysis-population': { verdict: null, note: UNANSWERED_NOTE, source: null },
+        'rct-prespecification': { verdict: 'no', note: '', source: null },
         // rct-applicability is absent entirely: never opened in the UI.
       },
     },
+    info: {
+      funder: 'Medical Research Council',
+      'sponsor-role': 'No role in design, analysis or the decision to publish.',
+      'author-conflicts': 'None declared.',
+      'info-source': 'Funding statement in the full text',
+    },
     bottomLine: FULL_BOTTOM_LINE,
+  };
+}
+
+/**
+ * The trial this whole guardrail comes from, in outline: non-inferiority was met
+ * on a symptom endpoint, and the abstract then claimed it for an outcome that
+ * never happened to anybody in either arm.
+ */
+const NON_INFERIORITY_BOTTOM_LINE =
+  'Non-inferiority was met for time to sustained symptom resolution and for nothing else. ' +
+  'No participant in either arm died or progressed to severe disease, so the severe-disease ' +
+  'claim in the abstract rests on no events at all. I would not repeat it.';
+
+const NI_INTERPRETATION_NOTE =
+  'The abstract concludes the drug is non-inferior for preventing severe disease or death, ' +
+  'but no participant in either arm reached either outcome.';
+
+const NI_ANALYSIS_SETS_NOTE =
+  'The full text reports a per-protocol set alongside the randomised set; which one carried ' +
+  'the non-inferiority claim is not stated.';
+
+/** A non-inferiority trial: the general items plus the subtype-specific block. */
+function nonInferiorityAppraisal(): Appraisal {
+  return {
+    ...emptyAppraisal(),
+    // A synthetic trial. Deliberately not a real PMID: the citation below is
+    // invented, and attaching invented authors and a journal to a real record
+    // would be misinformation the moment this fixture appeared in a screenshot.
+    pmid: '99999999',
+    createdAt: 1_700_000_000_000,
+    updatedAt: 1_700_000_900_000,
+    citation: {
+      title:
+        'Oral antiviral versus standard care for time to sustained symptom resolution in mild Covid-19',
+      authors: ['Tanaka R', 'Oyelaran B', 'Petrov I', 'Whitfield C'],
+      journal: 'Lancet Infect Dis',
+      year: '2024',
+      doi: '10.1016/S1473-3099(24)00001-0',
+    },
+    designDetected: {
+      design: 'rct',
+      subtype: 'non-inferiority',
+      confidence: 'high',
+      evidence: [
+        { kind: 'publication-type', value: 'Randomized Controlled Trial' },
+        { kind: 'keyword', value: 'non-inferiority margin' },
+      ],
+    },
+    pico: {
+      p: 'Outpatient adults under 65 with mild Covid-19 and no chronic illness',
+      i: 'Five days of an oral antiviral started within 72 hours of symptom onset',
+      c: 'Standard supportive care',
+      o: 'Time to sustained resolution of five self-reported symptoms',
+    },
+    validity: {
+      rct: {
+        'rct-randomisation-sequence': { verdict: 'yes', note: '', source: null },
+        'rct-allocation-concealment': { verdict: 'unclear', note: '', source: null },
+        'rct-baseline-balance': { verdict: 'yes', note: '', source: null },
+        'rct-deviations-from-intervention': {
+          verdict: 'unclear',
+          note: 'Open label, and the abstract does not say what happened to participants who stopped early.',
+          source: null,
+        },
+        'rct-missing-outcome-data': { verdict: 'unclear', note: '', source: null },
+        'rct-outcome-measurement': {
+          verdict: 'no',
+          note: 'The symptom diary was completed by unblinded participants, and the endpoint is entirely self-reported.',
+          source: null,
+        },
+        'rct-analysis-population': {
+          verdict: 'unclear',
+          note: NI_ANALYSIS_SETS_NOTE,
+          source: 'full-text',
+        },
+        'rct-prespecification': { verdict: 'unclear', note: '', source: null },
+        'rct-ni-rationale-assay-sensitivity': { verdict: 'unclear', note: '', source: null },
+        'rct-ni-margin': { verdict: 'unclear', note: '', source: null },
+        'rct-ni-analysis-sets': { verdict: 'unclear', note: '', source: null },
+        'rct-ni-interpretation': {
+          verdict: 'no',
+          note: NI_INTERPRETATION_NOTE,
+          source: null,
+        },
+        'rct-applicability': {
+          verdict: 'no',
+          note: 'Everyone enrolled was under 65 and free of chronic illness, which is not the group we prescribe this to.',
+          source: null,
+        },
+      },
+    },
+    // The common and honest case: the money is named, what the sponsor did is not.
+    info: {
+      funder: 'Meridian Therapeutics',
+      'sponsor-role': '',
+      'author-conflicts': 'Two authors are employees of the funder.',
+      'info-source': '',
+    },
+    bottomLine: NON_INFERIORITY_BOTTOM_LINE,
   };
 }
 
@@ -237,6 +356,7 @@ function harmAppraisal(): Appraisal {
       doi: null,
     },
     designOverride: 'rct',
+    sourceScope: 'full-text',
     numbers: numbersState({
       mode: 'counts',
       inputs: {
@@ -279,7 +399,7 @@ function pipeAppraisal(): Appraisal {
     },
     validity: {
       unclear: {
-        'unclear-reporting': { verdict: 'no', note: PIPED_NOTE },
+        'unclear-precision': { verdict: 'no', note: PIPED_NOTE, source: null },
       },
     },
   };
@@ -300,7 +420,11 @@ describe('buildSummaryMarkdown', () => {
       '## Clinical question (PICO)',
       '## Study design',
       '## Key results',
-      '## Validity',
+      '## Critical appraisal',
+      '### Internal validity',
+      '### Applicability',
+      '### Funding & conflicts',
+      '### Notes on flagged items',
       '## Bottom line',
       '## Discussion questions',
     ]) {
@@ -373,7 +497,7 @@ describe('buildSummaryMarkdown', () => {
     }
     const widths = tables.filter((table) => table.length > 0).map((table) => new Set(table));
 
-    expect(widths).toHaveLength(2); // PICO and validity
+    expect(widths).toHaveLength(3); // PICO, internal validity, applicability
     expect(md).toContain('death \\| rehospitalisation');
     for (const width of widths) expect(width.size).toBe(1);
   });
@@ -389,12 +513,12 @@ describe('buildSummaryMarkdown', () => {
   it('renders unanswered checklist items as a dash and keeps their notes out of the export', () => {
     const md = buildSummaryMarkdown(fullAppraisal(), OPTS);
 
-    // rct-intention-to-treat (no verdict) and rct-applicability (never opened).
+    // rct-analysis-population (no verdict) and rct-applicability (never opened).
     expect(md.match(/\| — \|/g)).toHaveLength(2);
     expect(md).not.toContain(UNANSWERED_NOTE);
-    expect(md).toContain('Item 2 (Unclear):');
-    expect(md).toContain('Item 3 (No):');
-    expect(md).toContain('Item 8 (No): (no note)');
+    expect(md).toContain('Item 2: The abstract says "randomly assigned"');
+    expect(md).toContain('Item 4: Open label.');
+    expect(md).toContain('Item 8: (no note)');
   });
 
   it('labels a manual override as set by the user, not as a detection', () => {
@@ -422,6 +546,218 @@ describe('buildSummaryMarkdown', () => {
   });
 });
 
+/* ------------------------------------------------------- the study design line */
+
+describe('the study design block', () => {
+  it('puts the subtype on a line of its own rather than in a parenthesis', () => {
+    const md = buildSummaryMarkdown(nonInferiorityAppraisal(), OPTS);
+    const text = buildSummaryText(nonInferiorityAppraisal(), OPTS);
+
+    expect(md).toContain('**Randomized controlled trial**');
+    expect(md).toContain('Non-inferiority design');
+    expect(md).not.toContain('(non-inferiority)');
+    expect(text).toContain('  Randomized controlled trial\n  Non-inferiority design\n');
+  });
+
+  it('omits the subtype line when there is no subtype', () => {
+    const md = buildSummaryMarkdown(harmAppraisal(), OPTS);
+    const design = (md.split('## Study design')[1] ?? '').split('## Key results')[0] ?? '';
+
+    expect(design.trim().split('\n\n')).toEqual([
+      '**Randomized controlled trial**',
+      'Set manually.',
+    ]);
+  });
+
+  it('switches the subtype checks on from a manual subtype, and says it was manual', () => {
+    // Detection found a plain parallel trial; the reader knows better.
+    const a: Appraisal = { ...fullAppraisal(), subtypeOverride: 'non-inferiority' };
+    const md = buildSummaryMarkdown(a, OPTS);
+
+    expect(md).toContain('Non-inferiority design (set manually)');
+    expect(md).toContain('Detected from publication type.');
+    expect(md).toContain('### Non-inferiority-specific checks');
+    expect(md).toContain(NON_INFERIORITY_GUARDRAIL);
+  });
+
+  it('does not repeat "set manually" when the design itself was overridden', () => {
+    const a: Appraisal = { ...harmAppraisal(), subtypeOverride: 'non-inferiority' };
+    const md = buildSummaryMarkdown(a, OPTS);
+
+    expect(md).toContain('Non-inferiority design\n');
+    expect(md).not.toContain('(set manually)');
+    expect(md).toContain('### Non-inferiority-specific checks');
+  });
+});
+
+/* --------------------------------------------------------- critical appraisal */
+
+/** In the caller's words, so a reworded caution has to be re-read, not skipped. */
+const NON_INFERIORITY_GUARDRAIL = 'Carry this result no further than the outcome it was tested on.';
+const NO_EVENTS_CAUTION = 'that outcome was never put to the test';
+const ADDITIONAL_NOT_INSTEAD = 'Every item under Internal validity still applies';
+const APPLICABILITY_LEAD = 'Applicability is not internal validity.';
+const UNCLEAR_IS_A_LIMIT = 'it records a limit on what the reader could check, not a fault found';
+
+describe('the critical appraisal section', () => {
+  it('matches the golden files for a non-inferiority appraisal', () => {
+    expectGolden('non-inferiority.md', buildSummaryMarkdown(nonInferiorityAppraisal(), OPTS));
+    expectGolden('non-inferiority.txt', buildSummaryText(nonInferiorityAppraisal(), OPTS));
+  });
+
+  it('adds the subtype block without letting it replace the general items', () => {
+    const md = buildSummaryMarkdown(nonInferiorityAppraisal(), OPTS);
+    const positionOf = (needle: string): number => md.indexOf(needle);
+
+    expect(md).toContain('### Non-inferiority-specific checks');
+    expect(md).toContain(ADDITIONAL_NOT_INSTEAD);
+    expect(positionOf('### Internal validity')).toBeLessThan(
+      positionOf('### Non-inferiority-specific checks'),
+    );
+    // The general items are still numbered 1..8 above the extra block.
+    expect(md).toContain('| 8 |');
+    expect(md).toContain('| 12 |');
+  });
+
+  it('cautions that non-inferiority stops at the endpoint that was tested', () => {
+    for (const rendering of [
+      buildSummaryMarkdown(nonInferiorityAppraisal(), OPTS),
+      buildSummaryText(nonInferiorityAppraisal(), OPTS),
+    ]) {
+      expect(rendering).toContain(NON_INFERIORITY_GUARDRAIL);
+      expect(rendering).toContain('it is not a finding of equivalence');
+      expect(rendering).toContain('it is not a finding of superiority');
+      expect(rendering).toContain(NO_EVENTS_CAUTION);
+    }
+  });
+
+  it('shows no subtype block when no subtype group applies', () => {
+    for (const appraisal of [fullAppraisal(), harmAppraisal(), emptyAppraisal()]) {
+      const md = buildSummaryMarkdown(appraisal, OPTS);
+      expect(md).not.toContain('Non-inferiority-specific checks');
+      expect(md).not.toContain(NON_INFERIORITY_GUARDRAIL);
+    }
+  });
+
+  it('keeps applicability visibly apart from internal validity', () => {
+    const md = buildSummaryMarkdown(fullAppraisal(), OPTS);
+    const text = buildSummaryText(fullAppraisal(), OPTS);
+
+    expect(md.indexOf('### Internal validity')).toBeLessThan(md.indexOf('### Applicability'));
+    expect(md).toContain(APPLICABILITY_LEAD);
+    expect(text).toContain(APPLICABILITY_LEAD);
+
+    // The single rct applicability item sits under the applicability heading and
+    // nowhere else: the internal validity table stops at item 8.
+    const internal =
+      (md.split('### Internal validity')[1] ?? '').split('### Applicability')[0] ?? '';
+    const applicability = (md.split('### Applicability')[1] ?? '').split('### Funding')[0] ?? '';
+    expect(internal).toContain('| 8 |');
+    expect(internal).not.toContain('| 9 |');
+    expect(applicability).toContain('| 9 |');
+  });
+
+  it('states the source the appraisal was made from before any verdict', () => {
+    const md = buildSummaryMarkdown(fullAppraisal(), OPTS);
+    const section = md.split('## Critical appraisal')[1] ?? '';
+
+    expect(section.indexOf('Appraised from: Abstract only.')).toBeLessThan(
+      section.indexOf('### Internal validity'),
+    );
+    expect(section).toContain(UNCLEAR_IS_A_LIMIT);
+    expect(buildSummaryText(harmAppraisal(), OPTS)).toContain('Appraised from: Full text.');
+  });
+
+  it('shows a per-item source only where it departs from the appraisal default', () => {
+    const md = buildSummaryMarkdown(fullAppraisal(), OPTS);
+    const text = buildSummaryText(fullAppraisal(), OPTS);
+
+    expect(md).toContain('| Yes (source: Full text) |');
+    expect(text).toContain('Verdict: Yes (source: Full text)');
+    // Exactly one item was overridden; the other seven answers inherit silently.
+    expect(md.match(/\(source: /g)).toHaveLength(1);
+    expect(md).toContain('| Yes |');
+  });
+
+  it('does not treat an item recorded against the appraisal default as an override', () => {
+    const base = fullAppraisal();
+    const answers = base.validity['rct'] ?? {};
+    const a: Appraisal = {
+      ...base,
+      validity: {
+        rct: {
+          ...answers,
+          'rct-randomisation-sequence': { verdict: 'yes', note: '', source: 'abstract' },
+        },
+      },
+    };
+
+    expect(buildSummaryMarkdown(a, OPTS).match(/\(source: /g)).toHaveLength(1);
+  });
+
+  it('separates a No from an Unclear in the notes', () => {
+    const md = buildSummaryMarkdown(nonInferiorityAppraisal(), OPTS);
+    const noBlock =
+      (md.split('Items answered No')[1] ?? '').split('Items answered Unclear')[0] ?? '';
+    const unclearBlock = md.split('Items answered Unclear')[1] ?? '';
+
+    expect(md).toContain('judgements the reader made');
+    expect(md).toContain('which is not a finding');
+    expect(noBlock).toContain(NI_INTERPRETATION_NOTE);
+    expect(unclearBlock).toContain(NI_ANALYSIS_SETS_NOTE);
+    expect(unclearBlock).not.toContain(NI_INTERPRETATION_NOTE);
+  });
+
+  it('explains an Unclear the reader could not have settled from the source they had', () => {
+    const md = buildSummaryMarkdown(nonInferiorityAppraisal(), OPTS);
+
+    // rct-allocation-concealment needs the full text; rct-prespecification needs
+    // the protocol. Neither Unclear is a criticism of the trial.
+    expect(md).toContain('Item 2: Usually needs the full text');
+    expect(md).toContain('Item 8: Usually needs the protocol');
+  });
+
+  it('says None in both note lists when nothing was flagged', () => {
+    const md = buildSummaryMarkdown(emptyAppraisal(), OPTS);
+    const notes = md.split('### Notes on flagged items')[1] ?? '';
+
+    expect(notes.match(/- None\./g)).toHaveLength(2);
+  });
+});
+
+/* ------------------------------------------------------------------- funding */
+
+describe('the funding block', () => {
+  it('records a named funder with an unrecorded sponsor role as exactly that', () => {
+    const md = buildSummaryMarkdown(nonInferiorityAppraisal(), OPTS);
+    const text = buildSummaryText(nonInferiorityAppraisal(), OPTS);
+    const block = (md.split('### Funding & conflicts')[1] ?? '').split('### Notes')[0] ?? '';
+
+    expect(block).toContain('- Funder: Meridian Therapeutics');
+    expect(block).toContain('- Sponsor or funder role: Not recorded.');
+    expect(text).toContain('Funder:');
+    expect(text).toContain('Not recorded.');
+  });
+
+  it('carries no verdict column and no score', () => {
+    const md = buildSummaryMarkdown(nonInferiorityAppraisal(), OPTS);
+    const block = (md.split('### Funding & conflicts')[1] ?? '').split('### Notes')[0] ?? '';
+
+    expect(block).not.toContain('Verdict');
+    expect(block).not.toContain('|');
+    expect(block).toContain('Industry funding is not by itself a source of bias');
+    expect(block).toContain('not that there was nothing to record');
+  });
+
+  it('renders every declared field as not recorded when nothing was entered', () => {
+    const md = buildSummaryMarkdown(emptyAppraisal(), OPTS);
+    const block = (md.split('### Funding & conflicts')[1] ?? '').split('### Notes')[0] ?? '';
+
+    expect(block).toContain('Not recorded.');
+    expect(block).not.toContain('None.');
+  });
+});
+
 /* ---------------------------------------------------------------- plain text */
 
 describe('buildSummaryText', () => {
@@ -436,7 +772,11 @@ describe('buildSummaryText', () => {
       'CLINICAL QUESTION (PICO)',
       'STUDY DESIGN',
       'KEY RESULTS',
-      'VALIDITY',
+      'CRITICAL APPRAISAL',
+      'Internal validity',
+      'Applicability',
+      'Funding & conflicts',
+      'Notes on flagged items',
       'BOTTOM LINE',
       'DISCUSSION QUESTIONS',
     ]) {
@@ -464,6 +804,7 @@ describe('buildSummaryText', () => {
     for (const appraisal of [
       fullAppraisal(),
       emptyAppraisal(),
+      nonInferiorityAppraisal(),
       ratioOnlyAppraisal(),
       ratioWithAcrAppraisal(),
       harmAppraisal(),
@@ -484,8 +825,8 @@ describe('buildSummaryText', () => {
   });
 
   it('keeps the same section order as the Markdown export', () => {
-    const md = buildSummaryMarkdown(fullAppraisal(), OPTS);
-    const text = buildSummaryText(fullAppraisal(), OPTS);
+    const md = buildSummaryMarkdown(nonInferiorityAppraisal(), OPTS);
+    const text = buildSummaryText(nonInferiorityAppraisal(), OPTS);
     const order = (haystack: string, needles: string[]): number[] =>
       needles.map((needle) => haystack.indexOf(needle));
     const isAscending = (positions: number[]): boolean =>
@@ -499,7 +840,12 @@ describe('buildSummaryText', () => {
           '## Clinical question (PICO)',
           '## Study design',
           '## Key results',
-          '## Validity',
+          '## Critical appraisal',
+          '### Internal validity',
+          '### Non-inferiority-specific checks',
+          '### Applicability',
+          '### Funding & conflicts',
+          '### Notes on flagged items',
           '## Bottom line',
           '## Discussion questions',
           DISCLAIMER,
@@ -512,7 +858,12 @@ describe('buildSummaryText', () => {
           'CLINICAL QUESTION (PICO)',
           'STUDY DESIGN',
           'KEY RESULTS',
-          'VALIDITY',
+          'CRITICAL APPRAISAL',
+          'Internal validity',
+          'Non-inferiority-specific checks',
+          'Applicability',
+          'Funding & conflicts',
+          'Notes on flagged items',
           'BOTTOM LINE',
           'DISCUSSION QUESTIONS',
           DISCLAIMER,
@@ -526,7 +877,7 @@ describe('buildSummaryText', () => {
 
 describe('the disclaimer', () => {
   it('is the last line of both formats', () => {
-    for (const appraisal of [fullAppraisal(), emptyAppraisal()]) {
+    for (const appraisal of [fullAppraisal(), emptyAppraisal(), nonInferiorityAppraisal()]) {
       for (const output of [
         buildSummaryMarkdown(appraisal, OPTS),
         buildSummaryText(appraisal, OPTS),

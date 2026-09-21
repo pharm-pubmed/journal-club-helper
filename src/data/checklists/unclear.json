@@ -1,49 +1,148 @@
 {
   "id": "unclear",
   "title": "General appraisal",
-  "version": 1,
+  "version": 2,
+  "note": "Shown when the design could not be worked out from the record. These items apply to any study, but naming the design and switching to its own checklist will give you sharper questions. As everywhere here, a method that is not described is Unclear rather than a failure.",
   "items": [
     {
       "id": "unclear-question",
       "concept": "focused-question",
-      "question": "Can you state, from the abstract alone, which people, which comparison and which outcome the study set out to examine?",
-      "why": "A question you cannot restate is a question the study cannot be judged against, and vague aims leave room to present whichever result came out best."
+      "section": "internal-validity",
+      "question": "Is the question the study set out to answer stated plainly, with the people, the comparison and the main outcome all named?",
+      "why": "A question you cannot restate is one the study cannot be judged against, and a vague aim leaves room to present whichever result came out best.",
+      "lookFor": [
+        "who was studied, and where",
+        "what was compared with what, if anything",
+        "the main outcome, and when it was measured",
+        "whether the stated aim matches the analysis that was actually reported"
+      ],
+      "needs": "abstract"
     },
     {
       "id": "unclear-design-fit",
       "concept": "design-appropriateness",
-      "question": "Does the design the authors chose match the question they are asking, given that only some designs can support a claim about cause?",
-      "why": "Observational data can show that two things travel together but cannot rule out that something else drives both, so a causal claim built on the wrong design is unsupported however large the sample."
+      "section": "internal-validity",
+      "question": "Does the design support the claim being made, given that only some designs can carry a statement about cause?",
+      "why": "Observational data can show that two things travel together but cannot rule out that a third thing drives both, so a causal claim built on the wrong design stays unsupported however large the sample.",
+      "lookFor": [
+        "whether the investigators allocated anything, or only observed",
+        "one time point, or people followed over time",
+        "whether a comparison group exists at all",
+        "causal verbs in the conclusion that the design cannot back"
+      ],
+      "needs": "abstract"
     },
     {
       "id": "unclear-selection",
       "concept": "selection",
-      "question": "Can you tell where the participants came from and how they were selected into the study?",
-      "why": "Every selection step decides who ends up being compared with whom, so when that step is invisible you cannot tell whether the groups were comparable or whom the findings describe."
+      "section": "internal-validity",
+      "question": "Is it clear where the participants came from and how they came to be in the study, including who was left out?",
+      "why": "Every selection step decides who ends up being compared with whom, so when that step is invisible you cannot tell whether the groups were comparable or whom the findings describe.",
+      "lookFor": [
+        "the source of participants and the recruitment period",
+        "eligibility and exclusion rules",
+        "consecutive, random or convenience recruitment",
+        "how many were approached against how many took part"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "unclear-measurement",
       "concept": "measurement",
-      "question": "Does the abstract describe how the main exposure or intervention and the main outcome were measured, and was that the same for everyone?",
-      "why": "Measurement that varies between groups creates differences on paper that never existed in the patients, and a vague outcome definition lets a modest finding be described as a major one."
+      "section": "internal-validity",
+      "question": "Were the main exposure or intervention and the main outcome each captured by a defined method, applied to every participant alike?",
+      "why": "Measurement that varies between groups creates differences on paper that never existed in the patients, and a loose outcome definition lets a modest finding be written up as a major one.",
+      "lookFor": [
+        "the outcome definition, and who judged it",
+        "whether assessors knew which group a participant was in",
+        "instruments, records or self-report, and any validation",
+        "a surrogate measure standing in for what actually matters"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "unclear-confounding",
       "concept": "confounding",
-      "question": "Can you name another explanation for the reported finding that the study does not appear to have ruled out?",
-      "why": "If a plausible competing explanation survives, the reported association may belong to that factor instead, and naming it is the quickest test of how much the conclusion rests on."
+      "section": "internal-validity",
+      "question": "Has the study ruled out the competing explanations you can think of, including differences between the groups and plain chance?",
+      "why": "If a plausible rival explanation survives, the finding may belong to that instead, and naming one is the quickest test of how much the conclusion really rests on.",
+      "lookFor": [
+        "how alike the groups were before anything happened",
+        "adjusted analyses, and what exactly was adjusted for",
+        "how many comparisons were made before this one was highlighted",
+        "any sensitivity analysis that tries a different assumption"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "unclear-completeness",
       "concept": "completeness",
-      "question": "Do the numbers account for everyone who entered the study, including those who left, were excluded or have missing data?",
-      "why": "Participants go missing for reasons connected to how they were doing, so an analysis of those who remained answers a narrower question than the one the study set out to ask."
+      "section": "internal-validity",
+      "question": "Do the figures at the end match the number who joined, and are the people who dropped out or lack data explained?",
+      "why": "Participants go missing for reasons connected to how they were doing, so an analysis of those who remained answers a narrower question than the one the study set out to ask.",
+      "lookFor": [
+        "a chain of numbers from enrolment through to analysis",
+        "reasons for withdrawal, reported for each group",
+        "how missing values were handled",
+        "an analysed population noticeably smaller than the one recruited"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "unclear-reporting",
-      "concept": "reporting",
-      "question": "Does the abstract give you actual numbers with a measure of uncertainty, rather than describing the results only as significant or improved?",
-      "why": "A word like significant says nothing about how large an effect is, and a result reported without its size and its interval cannot be weighed against harms, cost or effort."
+      "id": "unclear-precision",
+      "concept": "precision",
+      "section": "internal-validity",
+      "question": "Are the results given as numbers with a measure of uncertainty, rather than only as significant, improved or reduced?",
+      "why": "A word like significant says nothing about how large an effect is, and a result without its size and its interval cannot be weighed against harms, cost or effort.",
+      "lookFor": [
+        "the effect size with a confidence interval",
+        "absolute numbers alongside percentages and ratios",
+        "the denominator behind every proportion",
+        "outcomes promised in the aim that never appear in the results"
+      ],
+      "needs": "abstract"
+    },
+    {
+      "id": "unclear-applicability",
+      "concept": "applicability",
+      "section": "applicability",
+      "question": "Are the patients, the setting and the care they received close enough to yours for this finding to change anything you do?",
+      "why": "A study can be soundly conducted and still describe people, services or comparisons unlike yours, in which case the size of the effect need not carry across.",
+      "lookFor": [
+        "age, comorbidity and severity of those studied",
+        "country, era and level of care",
+        "what the comparison group actually received, against your usual care",
+        "whether the outcome measured is one your patients would care about"
+      ],
+      "needs": "abstract"
     }
-  ]
+  ],
+  "info": {
+    "id": "funding",
+    "title": "Funding & conflicts",
+    "prompt": "Who funded the study, what role did the funder or sponsor have in the design, conduct, analysis and reporting, and what relevant conflicts of interest were declared?",
+    "why": "Industry funding is not itself a risk of bias, and a trial paid for by a manufacturer is not wrong for that reason. What matters is what the sponsor was in a position to do, and what was declared, so record these as facts and let the methodological items above carry the judgement.",
+    "fields": [
+      {
+        "id": "funder",
+        "label": "Funder",
+        "hint": "Who paid: name the company, agency, charity or grant. Record \"not stated\" when no funding statement is given."
+      },
+      {
+        "id": "sponsor-role",
+        "label": "Sponsor or funder role",
+        "hint": "What they did in design, conduct, data collection and custody, analysis, writing, and the decision to publish. A named funder with no role described is \"unclear\", not \"none\"."
+      },
+      {
+        "id": "author-conflicts",
+        "label": "Author conflicts declared",
+        "hint": "Payments, advisory or speaker roles, employment, stock or patents relevant to this intervention, and whether any declaration statement appears at all."
+      },
+      {
+        "id": "info-source",
+        "label": "Where this came from",
+        "hint": "Which document told you: the published abstract, the funding statement in the full text, the disclosure forms, or the registry record. Say if you only had one of them."
+      }
+    ]
+  }
 }

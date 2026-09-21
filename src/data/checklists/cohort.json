@@ -1,55 +1,176 @@
 {
   "id": "cohort",
   "title": "Cohort study",
-  "version": 1,
+  "version": 2,
+  "note": "Confounding is the threat that separates a cohort from a trial: nobody decided who was exposed, so the groups can differ in everything that led to the exposure. Work through it first, and treat a method that is simply not described as Unclear rather than as a failure.",
   "items": [
     {
-      "id": "cohort-recruitment",
-      "concept": "cohort-definition",
-      "question": "Can you tell how the exposed and unexposed groups were identified, and did both come from the same source population?",
-      "why": "Groups drawn from different places differ in more than the exposure, so the comparison can end up measuring the gap between two populations instead of the effect of the exposure."
-    },
-    {
-      "id": "cohort-exposure-measurement",
-      "concept": "exposure-measurement",
-      "question": "Does the abstract say how exposure was measured, and was the same method applied to everyone rather than leaving it to what people remembered?",
-      "why": "Exposure captured loosely, or captured differently for different participants, blurs the boundary between the groups and usually drags the estimate toward no difference."
-    },
-    {
-      "id": "cohort-outcome-measurement",
-      "concept": "outcome-measurement",
-      "question": "Were outcomes sought and classified the same way in both groups, ideally by people who did not know each participant's exposure?",
-      "why": "If exposed participants are watched more closely, or judged by someone expecting a result, extra cases surface in that group for reasons unconnected to the exposure."
-    },
-    {
-      "id": "cohort-confounding",
-      "concept": "confounding",
-      "question": "Does the abstract name the other factors that could explain the association, and show that the analysis accounted for them?",
-      "why": "Exposed and unexposed people differ in habits, illness and access to care, so an association reported with no adjustment at all is usually explained by those differences."
-    },
-    {
-      "id": "cohort-residual-confounding",
-      "concept": "residual-confounding",
-      "question": "Even after adjustment, can you name an important factor that went unmeasured and would push the result in the reported direction?",
-      "why": "Adjustment removes only what was measured, and measuring something poorly removes only part of it, so a modest association can survive as leftover confounding alone."
-    },
-    {
-      "id": "cohort-follow-up-length",
-      "concept": "follow-up-length",
-      "question": "Do participants appear to have been observed over a period that matches how long the condition of interest takes to develop?",
-      "why": "A study that stops before the outcome has had time to occur collects few events and wide uncertainty, which can make a real effect look like nothing at all."
-    },
-    {
-      "id": "cohort-follow-up-completeness",
-      "concept": "follow-up-completeness",
-      "question": "Can you see what share of each group was followed to the end, and whether the people who dropped out differed between the groups?",
-      "why": "People leave a cohort for reasons tied to how they are doing, so heavy or uneven loss bends the result in a direction you cannot work out from the abstract."
+      "id": "cohort-group-formation",
+      "concept": "selection-into-study",
+      "section": "internal-validity",
+      "question": "Were the exposed and unexposed groups drawn from the same underlying population, and did follow-up start at a comparable point for both?",
+      "why": "Groups assembled in different settings, or counted from different starting points, differ in more than the exposure, so the comparison can measure that gap instead of any effect of being exposed.",
+      "lookFor": [
+        "where each group came from: the same registry, clinic, workforce or database",
+        "eligibility rules applied identically to both groups",
+        "when follow-up began relative to when the exposure began",
+        "people who only became eligible after the exposure had already run for a while"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "cohort-temporality",
       "concept": "temporality",
-      "question": "Is it clear that the exposure was already present before the outcome began, rather than being recorded once the condition was developing?",
-      "why": "When exposure is recorded after early disease has set in, the illness may have caused the exposure rather than the reverse, which turns the reported story around."
+      "section": "internal-validity",
+      "question": "Was the exposure already in place before the outcome began, rather than recorded once the condition may have been developing?",
+      "why": "When exposure is captured after early disease has set in, the illness can be what produced the exposure, which turns the direction of the reported story around.",
+      "lookFor": [
+        "the date exposure was recorded against the date the outcome started",
+        "whether people who already had the outcome at baseline were excluded",
+        "any lag period before follow-up time was counted",
+        "records made at the time rather than recalled later"
+      ],
+      "needs": "full-text"
+    },
+    {
+      "id": "cohort-exposure-classification",
+      "concept": "exposure-classification",
+      "section": "internal-validity",
+      "question": "Was exposure classified by one method applied to everyone, using information recorded before anyone knew who would have the outcome?",
+      "why": "A definition applied loosely, or applied differently to different people, blurs the boundary between the groups and usually drags the estimate toward showing no difference at all.",
+      "lookFor": [
+        "the source of exposure data: dispensing records, measurements, interview, self-report",
+        "the same source and time window used for both groups",
+        "how dose, duration and intensity were handled",
+        "whether whoever classified exposure already knew the outcome"
+      ],
+      "needs": "full-text"
+    },
+    {
+      "id": "cohort-exposure-changes",
+      "concept": "exposure-deviation",
+      "section": "internal-validity",
+      "question": "Did the analysis allow for people who stopped, started or switched exposure during follow-up, rather than fixing everyone at their baseline status?",
+      "why": "Exposure measured once and assumed to continue puts person-time in the wrong group, and switching that happens because someone is deteriorating bends the comparison in a predictable direction.",
+      "lookFor": [
+        "exposure updated over time, or fixed once at baseline",
+        "co-treatments and care that differed between the groups",
+        "how people who stopped or crossed over were counted",
+        "any comparison of as-classified with as-actually-taken analyses"
+      ],
+      "needs": "full-text"
+    },
+    {
+      "id": "cohort-confounding",
+      "concept": "confounding",
+      "section": "internal-validity",
+      "question": "Were the factors that drive both the exposure and the outcome measured well, and were they allowed for when the groups were compared?",
+      "why": "Exposed and unexposed people differ in habits, illness and access to care, so an association presented with no adjustment at all is usually explained by those differences rather than by the exposure.",
+      "lookFor": [
+        "a named list of confounders, with a reason for choosing them",
+        "matching, restriction, stratification, a multivariable model or a propensity score",
+        "how each confounder was measured, not just that it was included",
+        "how far the estimate moved between the crude and the adjusted analysis"
+      ],
+      "needs": "full-text"
+    },
+    {
+      "id": "cohort-residual-confounding",
+      "concept": "residual-confounding",
+      "section": "internal-validity",
+      "question": "After adjustment, is the result still free of an important influence that nobody measured, or that was captured too crudely to remove?",
+      "why": "Adjustment removes only what was measured, and a crude measurement removes only part of it, so a modest association can be nothing more than what was left behind.",
+      "lookFor": [
+        "confounders the authors say they could not measure",
+        "codes or proxies standing in for something harder to capture, such as severity or frailty",
+        "any analysis of how strong an unmeasured factor would have to be to explain the result",
+        "the size of the association set against the size of the likely leftover"
+      ],
+      "needs": "full-text"
+    },
+    {
+      "id": "cohort-outcome-measurement",
+      "concept": "outcome-measurement",
+      "section": "internal-validity",
+      "question": "Were outcomes sought and judged the same way in both groups, by people who did not know who had been exposed?",
+      "why": "If one group is watched more closely, or assessed by someone expecting a particular result, extra events surface in that group for reasons unconnected to the exposure.",
+      "lookFor": [
+        "the outcome definition and who applied it",
+        "assessors kept unaware of exposure status",
+        "how often each group was tested, imaged or reviewed",
+        "active follow-up against outcomes picked up from routine records"
+      ],
+      "needs": "full-text"
+    },
+    {
+      "id": "cohort-missing-data",
+      "concept": "missing-data",
+      "section": "internal-validity",
+      "question": "Is every person who joined the cohort accounted for at the end, with loss to follow-up similar in size and in reason across the groups?",
+      "why": "People leave a cohort for reasons tied to how they are doing, so heavy or lopsided loss leaves you comparing two groups that no longer resemble the ones that were assembled.",
+      "lookFor": [
+        "numbers followed to the end in each group",
+        "how long people were actually followed against how long the outcome takes to appear",
+        "reasons for loss, reported separately for each group",
+        "how missing values were handled: complete cases, imputation, or silence"
+      ],
+      "needs": "full-text"
+    },
+    {
+      "id": "cohort-selective-reporting",
+      "concept": "selective-reporting",
+      "section": "internal-validity",
+      "question": "Are the outcomes and analyses in the paper the ones that were planned before anyone looked at the data?",
+      "why": "When many exposures, outcomes and models can be run, whichever combination reached significance can be promoted to the headline afterwards, and the finding then looks stronger and more certain than it is.",
+      "lookFor": [
+        "a protocol, analysis plan or registry entry, with its date",
+        "outcomes named in the plan that never appear in the results",
+        "subgroups and cut-points that show up only once the results are in",
+        "how the final model was chosen"
+      ],
+      "needs": "protocol-or-registry"
+    },
+    {
+      "id": "cohort-applicability",
+      "concept": "applicability",
+      "section": "applicability",
+      "question": "Are the people studied, the exposure they had and the comparison they were set against close enough to your own patients for the finding to carry over?",
+      "why": "A cohort describes the population it was drawn from, so when your patients differ in age, severity, background risk or the care around them, the size of the association need not be the same for them.",
+      "lookFor": [
+        "age, sex, comorbidity and setting of the cohort",
+        "the level and duration of exposure actually studied",
+        "what the unexposed group received instead",
+        "how common the outcome is among your own patients"
+      ],
+      "needs": "abstract"
     }
-  ]
+  ],
+  "info": {
+    "id": "funding",
+    "title": "Funding & conflicts",
+    "prompt": "Who funded the study, what role did the funder or sponsor have in the design, conduct, analysis and reporting, and what relevant conflicts of interest were declared?",
+    "why": "Industry funding is not itself a risk of bias, and a trial paid for by a manufacturer is not wrong for that reason. What matters is what the sponsor was in a position to do, and what was declared, so record these as facts and let the methodological items above carry the judgement.",
+    "fields": [
+      {
+        "id": "funder",
+        "label": "Funder",
+        "hint": "Who paid: name the company, agency, charity or grant. Record \"not stated\" when no funding statement is given."
+      },
+      {
+        "id": "sponsor-role",
+        "label": "Sponsor or funder role",
+        "hint": "What they did in design, conduct, data collection and custody, analysis, writing, and the decision to publish. A named funder with no role described is \"unclear\", not \"none\"."
+      },
+      {
+        "id": "author-conflicts",
+        "label": "Author conflicts declared",
+        "hint": "Payments, advisory or speaker roles, employment, stock or patents relevant to this intervention, and whether any declaration statement appears at all."
+      },
+      {
+        "id": "info-source",
+        "label": "Where this came from",
+        "hint": "Which document told you: the published abstract, the funding statement in the full text, the disclosure forms, or the registry record. Say if you only had one of them."
+      }
+    ]
+  }
 }

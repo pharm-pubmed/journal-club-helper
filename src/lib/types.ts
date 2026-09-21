@@ -141,11 +141,64 @@ export interface EffectMeasures {
 
 /* ---------------------------------------------------------------- checklists */
 
+/**
+ * Internal validity and applicability are different questions and are kept
+ * apart: a trial can be flawlessly conducted and still not apply to your
+ * patient, and the reverse. Funding is neither, so it is not an item at all —
+ * see `InfoPanel`.
+ */
+export type ChecklistSection = 'internal-validity' | 'applicability';
+
+/** Where an answer came from. Recorded per appraisal, overridable per item. */
+export type SourceScope =
+  'abstract' | 'full-text' | 'supplement' | 'protocol' | 'registry' | 'other';
+
+/**
+ * The weakest source that can usually answer a question.
+ *
+ * This is what stops the tool from punishing a paper for an abstract's word
+ * limit: allocation concealment is almost never described in an abstract, so
+ * when the reader has only the abstract the honest verdict is Unclear and the
+ * UI says which document would settle it. Absence of reporting is not a
+ * methodological failure.
+ */
+export type EvidenceNeed = 'abstract' | 'full-text' | 'protocol-or-registry';
+
 export interface ChecklistItem {
   id: string;
   concept: string;
+  section: ChecklistSection;
+  /** A methodological question. It must not ask what the abstract happens to say. */
   question: string;
   why: string;
+  /** Concrete things to look for, shown under the question. */
+  lookFor: string[];
+  needs: EvidenceNeed;
+}
+
+/** Items shown only for certain design subtypes, in addition to the main list. */
+export interface ChecklistGroup {
+  id: string;
+  title: string;
+  /** Matched against `DesignClassification.subtype`. */
+  subtypes: string[];
+  note?: string;
+  items: ChecklistItem[];
+}
+
+/** Recorded as facts, never scored. Funding is the only one so far. */
+export interface InfoField {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
+export interface InfoPanel {
+  id: string;
+  title: string;
+  prompt: string;
+  why: string;
+  fields: InfoField[];
 }
 
 export interface Checklist {
@@ -154,13 +207,18 @@ export interface Checklist {
   version: number;
   note?: string;
   items: ChecklistItem[];
+  groups?: ChecklistGroup[];
+  info?: InfoPanel;
 }
 
 export type Verdict = 'yes' | 'no' | 'unclear';
 
 export interface ItemAnswer {
   verdict: Verdict | null;
+  /** What the paper says, and why that leads to the verdict. Kept short. */
   note: string;
+  /** null inherits the appraisal's document-level `sourceScope`. */
+  source: SourceScope | null;
 }
 
 export interface VerdictHelp {
@@ -235,16 +293,22 @@ export type CitationFields = Pick<PubMedArticle, 'title' | 'authors' | 'journal'
 export type ValidityAnswers = Record<string, Record<string, ItemAnswer>>;
 
 export interface Appraisal {
-  schemaVersion: 1;
+  schemaVersion: 2;
   pmid: string;
   createdAt: number;
   updatedAt: number;
   citation: CitationFields;
   designDetected: DesignClassification | null;
   designOverride: StudyDesign | null;
+  /** Manual subtype, e.g. forcing the non-inferiority checks on when detection missed. */
+  subtypeOverride: string | null;
   pico: Pico;
   numbers: NumbersState | null;
   validity: ValidityAnswers;
+  /** Default for every item that does not override it. */
+  sourceScope: SourceScope;
+  /** Free-text facts recorded but never scored, keyed by `InfoField.id`. */
+  info: Record<string, string>;
   bottomLine: string;
   /** Empty in v0.1; the AI features in v0.2 fill this. */
   discussionQuestions: string[];

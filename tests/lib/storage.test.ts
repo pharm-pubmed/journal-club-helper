@@ -21,7 +21,7 @@ let store: KeyValueStore;
 
 function makeAppraisal(pmid: string, overrides: Partial<Appraisal> = {}): Appraisal {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     pmid,
     createdAt: 1_000,
     updatedAt: 1_000,
@@ -34,9 +34,12 @@ function makeAppraisal(pmid: string, overrides: Partial<Appraisal> = {}): Apprai
     },
     designDetected: null,
     designOverride: 'rct',
+    subtypeOverride: null,
     pico: { p: 'adults', i: 'drug', c: 'placebo', o: 'death' },
     numbers: null,
-    validity: { rct: { r1: { verdict: 'yes', note: 'concealed' } } },
+    validity: { rct: { r1: { verdict: 'yes', note: 'concealed', source: null } } },
+    sourceScope: 'abstract',
+    info: { funder: 'A charity' },
     bottomLine: 'Looks solid.',
     discussionQuestions: [],
     ...overrides,
@@ -335,6 +338,40 @@ describe('importAll', () => {
 
     await importAll(json, 'replace');
     expect((await loadSettings()).counters).toEqual({ panelOpens: 1, exports: 1, aiRuns: 0 });
+  });
+
+  // The critical-appraisal rework changed item ids and the shape of an answer, so
+  // a v1 record cannot be read as a v2 one. Nothing had shipped, so it is
+  // rejected rather than migrated — silently half-restoring an appraisal would
+  // be worse than losing it.
+  it('refuses a schemaVersion 1 appraisal instead of half-reading it', async () => {
+    const legacy = {
+      ...makeAppraisal('12345678'),
+      schemaVersion: 1,
+      validity: { rct: { 'rct-blinding': { verdict: 'no', note: 'open label' } } },
+    };
+    await getStore().set(appraisalKey('12345678'), legacy);
+
+    expect(await loadAppraisal('12345678')).toBeNull();
+  });
+
+  it('round trips a per-item source override', async () => {
+    const a = makeAppraisal('12345678', {
+      sourceScope: 'abstract',
+      validity: {
+        rct: {
+          'rct-allocation-concealment': { verdict: 'yes', note: 'IWRS', source: 'full-text' },
+          'rct-prespecification': { verdict: 'unclear', note: '', source: null },
+        },
+      },
+    });
+    await saveAppraisal(a);
+
+    const back = await loadAppraisal('12345678');
+    expect(back?.sourceScope).toBe('abstract');
+    expect(back?.validity['rct']?.['rct-allocation-concealment']?.source).toBe('full-text');
+    // null is "inherit the appraisal scope" and has to survive as null, not become a string.
+    expect(back?.validity['rct']?.['rct-prespecification']?.source).toBeNull();
   });
 
   it('rejects corrupt JSON', async () => {

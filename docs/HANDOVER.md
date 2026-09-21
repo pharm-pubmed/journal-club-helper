@@ -167,6 +167,8 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   Writing that file surfaced one thing: `api.anthropic.com` and `api.openai.com` were declared as optional host permissions with no code able to request them. Removed until v0.2 (#34, #35). Shipped manifest is now `storage`, `sidePanel`, one PubMed host permission, and one optional host for E-utilities.
 - 2026-09-19 (Edge): Edge passes the same checks as Chrome — loads, injects, opens the panel, keeps state across tab switches. It also surfaced #43: the panel follows the user to every tab and shows its empty state on unrelated sites, because `side_panel.default_path` makes it global. Present in Chrome too; nobody had noticed because reasoning about "the panel shows a message on other tabs" does not convey how it feels to have a panel follow you around. Left unfixed on purpose — opening the panel is the riskiest path in v0.1 and had just been confirmed working, so the change needs a browser, not an argument.
   Brave dropped from scope (§7). Clipboard copy and `.md` download both confirmed working on Edge. Reading the exported file end to end is what found the export defect in §7; the structure was right and one sentence was false, which is the class of defect a golden-file test cannot reach.
+- 2026-09-21: **Critical appraisal reworked onto risk-of-bias thinking.** All seven checklists rewritten; the RCT one now follows RoB 2 domains and gains four non-inferiority checks as an additive subtype group. Sections split into internal validity and applicability, funding moved out of scoring into an unscored facts panel, and every item now declares what source can settle it so an abstract's word limit is never read as a flaw. `schemaVersion` 2; v1 appraisals are rejected rather than migrated. 420 tests.
+  Two things a future editor should not undo without reading `docs/METHODOLOGY.md`: our Unclear is the _signalling-question_ kind, not RoB 2's abolished domain-level Unclear; and the VV116 regression case in `tests/lib/pipeline.test.ts` is deliberately the trial where the obvious conclusion is false.
   The MCP server as first configured did not work: Chrome's guidance pairs `--categoryExtensions` with `--autoConnect`, but the server's own `--help` says they are incompatible until Chrome 149, and this machine had no Linux Chrome to connect to anyway. Corrected to a pipe connection with an explicit executable path; see §2. Worth remembering that a config lifted from documentation is not a verified config.
 
 ## 7. Decisions and why
@@ -202,6 +204,28 @@ Removing it made `pnpm check:manifest` fail, which is the guard working: it pins
 Brave is not tested and not claimed. Chrome and Edge between them cover the Chromium differences worth paying for, and every hour spent on a third fork is an hour not spent on the checklist wording, which is the actual product.
 
 This is a real trade-off rather than a free one: the pitch is "no servers, no accounts, no analytics", and privacy-minded users are exactly who runs Brave. If Brave reports come in after launch, treat them as signal and test it then — nothing in the code is Chrome-specific, so the likely outcome is that it already works.
+
+### The appraisal follows risk-of-bias thinking, not reporting completeness
+
+The first version of the RCT checklist asked what the abstract said. That is the wrong question, and it produced the wrong answers: a trial was marked down for a method an abstract has no room to describe. The rework separates three things that were tangled together.
+
+**A question is about the study's methods.** No item asks what a document happens to mention — a test enforces that no shipped question contains the phrase "the abstract". Each item instead declares, in `needs`, the weakest source that can usually settle it: allocation concealment needs the full text, prespecification needs the protocol or the registry. The reader records what they are working from once (`Appraisal.sourceScope`), overriding it per item where it differs. When the reader has less than an item needs, the UI and the export both say which document would settle it. **Not reported is Unclear, never No.**
+
+The counterweight, so this is not overstated: poor reporting is empirically associated with larger effects, and an Unclear is not a clean bill of health. `docs/METHODOLOGY.md` states the defensible version — absence of reporting tells you about your evidence base, not about the trial's conduct.
+
+**Internal validity, applicability and funding are three different judgements.** Applicability is in its own section with its own explanation, because a flawless trial can fail to transfer and a flawed one can be exactly about your patient. Funding is not scored at all: it is an `InfoPanel`, recorded as fact, because industry funding is not a risk-of-bias finding and a verdict control there would make it look like one.
+
+**A design subtype adds checks; it never replaces them.** A non-inferiority trial gets four more items and remains a randomised trial that has to survive randomisation, concealment and missing data like any other. The design selector still holds eight designs, with the subtype shown and set separately. `getChecklist(design, subtype)` is what attaches the group.
+
+The distinctions the checklists deliberately refuse to collapse — sequence generation versus concealment, blinding versus the bias it prevents, baseline p-values as a statistical error rather than a quality check, analysis-set labels versus what was done, non-inferiority versus equivalence versus superiority — are set out with their reasoning in `docs/METHODOLOGY.md`. Read it before editing any question.
+
+**To reverse:** you are not reverting a checklist, you are reverting a position on what appraisal means. The wording, the `needs` field, the section split and the unscored funding panel all carry it together.
+
+### PMID 36577095 is the regression case, and it is chosen adversarially
+
+`tests/lib/pipeline.test.ts` runs the real saved page through detection, the checklist and the export. The trial met its non-inferiority criterion for time to sustained clinical recovery (HR 1.17, 95% CI 1.02–1.36, margin 0.8), and no participant in either arm died or progressed to severe Covid-19. So the most tempting summary — non-inferior for preventing severe disease or death — is **false**: that outcome had no events and was never tested.
+
+The test asserts the export carries the caution and cannot produce that claim. Keep it. It is the case where a plausible-sounding conclusion is wrong, which is exactly what this product exists to stop.
 
 ### The export never claims something about the paper it cannot know
 

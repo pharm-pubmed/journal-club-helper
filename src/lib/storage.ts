@@ -16,6 +16,7 @@ import type {
   CounterName,
   ItemAnswer,
   Settings,
+  SourceScope,
   ValidityAnswers,
 } from './types';
 
@@ -70,6 +71,19 @@ function isStringMap(value: unknown, keys: readonly string[]): boolean {
   return keys.every((key) => typeof value[key] === 'string');
 }
 
+const SOURCE_SCOPES: readonly string[] = [
+  'abstract',
+  'full-text',
+  'supplement',
+  'protocol',
+  'registry',
+  'other',
+];
+
+function isSourceScope(value: unknown): value is SourceScope {
+  return typeof value === 'string' && SOURCE_SCOPES.includes(value);
+}
+
 function isValidityAnswers(value: unknown): value is ValidityAnswers {
   if (!isRecord(value)) return false;
   return Object.values(value).every(
@@ -80,7 +94,9 @@ function isValidityAnswers(value: unknown): value is ValidityAnswers {
         const verdict = answer['verdict'];
         const ok =
           verdict === null || verdict === 'yes' || verdict === 'no' || verdict === 'unclear';
-        return ok && typeof answer['note'] === 'string';
+        const source = answer['source'];
+        const sourceOk = source === null || (typeof source === 'string' && isSourceScope(source));
+        return ok && typeof answer['note'] === 'string' && sourceOk;
       }),
   );
 }
@@ -91,13 +107,18 @@ function isValidityAnswers(value: unknown): value is ValidityAnswers {
  */
 export function isAppraisal(value: unknown): value is Appraisal {
   if (!isRecord(value)) return false;
-  if (value['schemaVersion'] !== 1) return false;
+  // Bumped to 2 by the critical-appraisal rework: item ids and ItemAnswer both
+  // changed, so a v1 record cannot be read as one of these. Nothing had shipped,
+  // so it is rejected rather than migrated.
+  if (value['schemaVersion'] !== 2) return false;
   if (!isValidPmid(value['pmid'])) return false;
   if (typeof value['createdAt'] !== 'number' || typeof value['updatedAt'] !== 'number')
     return false;
   if (!isRecord(value['citation'])) return false;
   if (!isStringMap(value['pico'], ['p', 'i', 'c', 'o'])) return false;
   if (!isValidityAnswers(value['validity'])) return false;
+  if (!isSourceScope(value['sourceScope'])) return false;
+  if (!isRecord(value['info'])) return false;
   if (typeof value['bottomLine'] !== 'string') return false;
   if (!Array.isArray(value['discussionQuestions'])) return false;
   return true;
@@ -120,7 +141,7 @@ function pickValidity(validity: ValidityAnswers): ValidityAnswers {
   for (const [checklistId, answers] of Object.entries(validity)) {
     const byItem: Record<string, ItemAnswer> = {};
     for (const [itemId, answer] of Object.entries(answers)) {
-      byItem[itemId] = { verdict: answer.verdict, note: answer.note };
+      byItem[itemId] = { verdict: answer.verdict, note: answer.note, source: answer.source };
     }
     out[checklistId] = byItem;
   }
@@ -134,16 +155,19 @@ function pickValidity(validity: ValidityAnswers): ValidityAnswers {
  */
 function pickAppraisal(a: Appraisal): Appraisal {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     pmid: a.pmid,
     createdAt: a.createdAt,
     updatedAt: a.updatedAt,
     citation: pickCitation(a.citation),
     designDetected: a.designDetected,
     designOverride: a.designOverride,
+    subtypeOverride: a.subtypeOverride,
     pico: { p: a.pico.p, i: a.pico.i, c: a.pico.c, o: a.pico.o },
     numbers: a.numbers,
     validity: pickValidity(a.validity),
+    sourceScope: a.sourceScope,
+    info: { ...a.info },
     bottomLine: a.bottomLine,
     discussionQuestions: [...a.discussionQuestions],
   };

@@ -10,6 +10,9 @@
  *      licensed for non-commercial use and this product is commercial. The test
  *      compares every shipped question against tests/fixtures/forbidden-phrases.json,
  *      a test-only corpus of distinctive stems from those instruments.
+ *
+ * Both jobs cover everything a reader can actually see: the general items, the
+ * items inside subtype-specific groups, and the non-scored info panels.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -19,8 +22,12 @@ import {
   VERDICT_HELP,
   allChecklists,
   getChecklist,
+  visibleItems,
   type Checklist,
   type ChecklistItem,
+  type ChecklistSection,
+  type EvidenceNeed,
+  type InfoPanel,
 } from '../../src/lib/checklist-schema';
 import { STUDY_DESIGNS, type StudyDesign } from '../../src/lib/types';
 import forbiddenFixture from '../fixtures/forbidden-phrases.json';
@@ -42,18 +49,24 @@ const MIN_ITEMS = 6;
 const MAX_ITEMS = 10;
 const MAX_QUESTION_LENGTH = 200;
 
+/** The runtime domain of `ChecklistSection`; JSON can hold anything, so it is checked. */
+const SECTIONS: readonly ChecklistSection[] = ['internal-validity', 'applicability'];
+
+/** The runtime domain of `EvidenceNeed`, which is what drives the Unclear explanation. */
+const NEEDS: readonly EvidenceNeed[] = ['abstract', 'full-text', 'protocol-or-registry'];
+
 /**
  * Jaccard similarity over word sets, above which a shipped question is treated
  * as a copy of a published instrument.
  *
  * 0.5 means the two sentences share half of their combined vocabulary. Two
  * sentences about the same epidemiological concept, written independently,
- * land far below that because they only share function words and the concept
- * noun: the highest score any shipped question currently reaches against the
- * 63-entry corpus is 0.25, and that match is pure function-word overlap
- * ("was", "the", "study"). A verbatim copy scores 1.0 and a reworded copy —
- * the same sentence with a word or two swapped — scores 0.93; both self-tests
- * are at the bottom of this file.
+ * land far below that: the highest score any shipped question reaches against
+ * the 63-entry corpus is the low 0.3s, and that match is the unavoidable
+ * vocabulary of the concept itself ("the", "random", "allocation", "sequence",
+ * "method") rather than a shared sentence. A verbatim copy scores 1.0 and a
+ * reworded copy — the same sentence with a word or two swapped — scores 0.93;
+ * both self-tests are at the bottom of this file.
  * The threshold therefore sits in a wide empty band between "same topic" and
  * "same sentence".
  */
@@ -100,8 +113,22 @@ function closestForbidden(sentence: string): { phrase: string; score: number } {
   return best;
 }
 
+/** The info panels a checklist ships, as a list so a checklist without one is not special-cased. */
+function infoPanels(checklist: Checklist): InfoPanel[] {
+  return checklist.info ? [checklist.info] : [];
+}
+
 const checklists = allChecklists();
-const allItems: ChecklistItem[] = checklists.flatMap((checklist) => checklist.items);
+
+/** Everything a reader sees: general items plus every group's items, from every checklist. */
+const allItems: ChecklistItem[] = checklists.flatMap((checklist) => visibleItems(checklist));
+const allPanels: InfoPanel[] = checklists.flatMap((checklist) => infoPanels(checklist));
+
+/** Every question-shaped string that ships, including the non-scored info prompts. */
+const allQuestions: { id: string; text: string }[] = [
+  ...allItems.map((item) => ({ id: item.id, text: item.question })),
+  ...allPanels.map((panel) => ({ id: `info:${panel.id}`, text: panel.prompt })),
+];
 
 /* ------------------------------------------------------------------- files */
 
@@ -135,6 +162,9 @@ describe('checklist files', () => {
 
 describe.each(EXPECTED_FILES)('%s checklist', (name) => {
   const checklist = checklists.find((entry) => entry.id === name) as Checklist;
+  /** Group items are shown alongside the general ones, so they obey the same rules. */
+  const items = visibleItems(checklist);
+  const groups = checklist.groups ?? [];
 
   it('has a title and a positive integer version', () => {
     expect(checklist.title.trim().length).toBeGreaterThan(0);
@@ -142,21 +172,23 @@ describe.each(EXPECTED_FILES)('%s checklist', (name) => {
     expect(checklist.version).toBeGreaterThanOrEqual(1);
   });
 
-  it(`has between ${MIN_ITEMS} and ${MAX_ITEMS} items`, () => {
+  it(`has between ${MIN_ITEMS} and ${MAX_ITEMS} general items`, () => {
     expect(checklist.items.length).toBeGreaterThanOrEqual(MIN_ITEMS);
     expect(checklist.items.length).toBeLessThanOrEqual(MAX_ITEMS);
   });
 
-  it('prefixes every item id with the checklist id and keeps them unique locally', () => {
-    for (const item of checklist.items) {
+  it('prefixes every item id with the checklist id and keeps them unique across the checklist', () => {
+    for (const item of items) {
       expect(item.id.startsWith(`${checklist.id}-`)).toBe(true);
       expect(item.id).toMatch(/^[a-z0-9-]+$/);
     }
-    expect(new Set(checklist.items.map((item) => item.id)).size).toBe(checklist.items.length);
+    // Group items share the answer map with the general items, so a collision
+    // would silently make two questions write to the same stored answer.
+    expect(new Set(items.map((item) => item.id)).size).toBe(items.length);
   });
 
   it('gives every item a concept slug, a question and a why', () => {
-    for (const item of checklist.items) {
+    for (const item of items) {
       expect(item.concept).toMatch(/^[a-z0-9-]+$/);
       expect(item.question.trim().length).toBeGreaterThan(0);
       expect(item.why.trim().length).toBeGreaterThan(0);
@@ -164,7 +196,7 @@ describe.each(EXPECTED_FILES)('%s checklist', (name) => {
   });
 
   it('asks one question per item, ending in a question mark', () => {
-    for (const item of checklist.items) {
+    for (const item of items) {
       expect(item.question.trim().endsWith('?')).toBe(true);
       // One sentence: no sentence-ending punctuation before the final mark.
       expect(item.question.slice(0, -1)).not.toMatch(/[.?!]\s/);
@@ -172,8 +204,64 @@ describe.each(EXPECTED_FILES)('%s checklist', (name) => {
   });
 
   it(`keeps every question at or under ${MAX_QUESTION_LENGTH} characters`, () => {
-    for (const item of checklist.items) {
+    for (const item of items) {
       expect(item.question.length).toBeLessThanOrEqual(MAX_QUESTION_LENGTH);
+    }
+  });
+
+  it('puts every item in a real section, with at least one internal-validity item', () => {
+    for (const item of items) {
+      expect(SECTIONS).toContain(item.section);
+    }
+    expect(items.some((item) => item.section === 'internal-validity')).toBe(true);
+  });
+
+  it('declares the weakest source that can answer each item', () => {
+    for (const item of items) {
+      expect(NEEDS).toContain(item.needs);
+    }
+  });
+
+  it('gives every item a non-empty list of concrete things to look for', () => {
+    for (const item of items) {
+      expect(Array.isArray(item.lookFor)).toBe(true);
+      expect(item.lookFor.length).toBeGreaterThan(0);
+      for (const hint of item.lookFor) {
+        expect(typeof hint).toBe('string');
+        expect(hint.trim().length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('describes every subtype group it ships, with items of its own', () => {
+    expect(new Set(groups.map((group) => group.id)).size).toBe(groups.length);
+    for (const group of groups) {
+      expect(group.id).toMatch(/^[a-z0-9-]+$/);
+      expect(group.title.trim().length).toBeGreaterThan(0);
+      expect(group.subtypes.length).toBeGreaterThan(0);
+      for (const subtype of group.subtypes) {
+        expect(subtype.trim().length).toBeGreaterThan(0);
+      }
+      expect(group.items.length).toBeGreaterThan(0);
+      if (group.note !== undefined) expect(group.note.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it('records info panels as facts, never as scored items', () => {
+    for (const panel of infoPanels(checklist)) {
+      expect(panel.id).toMatch(/^[a-z0-9-]+$/);
+      expect(panel.title.trim().length).toBeGreaterThan(0);
+      expect(panel.prompt.trim().length).toBeGreaterThan(0);
+      expect(panel.why.trim().length).toBeGreaterThan(0);
+      expect(panel.fields.length).toBeGreaterThan(0);
+      for (const field of panel.fields) {
+        expect(field.id).toMatch(/^[a-z0-9-]+$/);
+        expect(field.label.trim().length).toBeGreaterThan(0);
+        if (field.hint !== undefined) expect(field.hint.trim().length).toBeGreaterThan(0);
+      }
+      expect(new Set(panel.fields.map((field) => field.id)).size).toBe(panel.fields.length);
+      // An info panel has no verdict, so it must not look like an item.
+      expect(items.some((item) => item.id === panel.id)).toBe(false);
     }
   });
 });
@@ -188,6 +276,19 @@ describe('checklist set', () => {
     const first = allChecklists();
     first.pop();
     expect(allChecklists()).toHaveLength(EXPECTED_FILES.length);
+  });
+
+  /**
+   * The rule from the appraisal brief, made executable: a question is about the
+   * study's methods, never about what an abstract happens to mention. "Not
+   * reported" is Unclear, and which document would settle it is carried by
+   * `needs`, not by the wording of the question.
+   */
+  it('never asks what the abstract says', () => {
+    const offenders = allQuestions
+      .filter((entry) => entry.text.toLowerCase().includes('the abstract'))
+      .map((entry) => `${entry.id}: ${entry.text}`);
+    expect(offenders).toEqual([]);
   });
 });
 
@@ -205,8 +306,10 @@ describe('getChecklist', () => {
   });
 
   it('maps non-randomized-trial onto the rct checklist (#1 B5)', () => {
-    expect(getChecklist('non-randomized-trial')).toBe(getChecklist('rct'));
+    // Value equality, not identity: subtype filtering builds a fresh object.
+    expect(getChecklist('non-randomized-trial')).toEqual(getChecklist('rct'));
     expect(getChecklist('non-randomized-trial').id).toBe('rct');
+    expect(getChecklist('non-randomized-trial').items).toEqual(getChecklist('rct').items);
   });
 
   it('explains the reuse in a checklist-level note on rct.json', () => {
@@ -224,6 +327,51 @@ describe('getChecklist', () => {
   it('gives getChecklist("cohort") 6-10 items (issue #13 acceptance)', () => {
     expect(getChecklist('cohort').items.length).toBeGreaterThanOrEqual(MIN_ITEMS);
     expect(getChecklist('cohort').items.length).toBeLessThanOrEqual(MAX_ITEMS);
+  });
+});
+
+/* ------------------------------------------------------- subtype-specific groups */
+
+describe('subtype groups', () => {
+  it('adds the non-inferiority group for a non-inferiority trial', () => {
+    const checklist = getChecklist('rct', 'non-inferiority');
+    expect(checklist.groups?.map((group) => group.id)).toEqual(['rct-non-inferiority']);
+    const group = checklist.groups?.[0];
+    expect(group?.items.length).toBeGreaterThan(0);
+    // Added to the general items, never a replacement for them.
+    expect(checklist.items).toEqual(getChecklist('rct').items);
+    expect(visibleItems(checklist).length).toBe(
+      checklist.items.length + (group?.items.length ?? 0),
+    );
+  });
+
+  it('says in the group note that these checks are in addition to the general items', () => {
+    const group = getChecklist('rct', 'non-inferiority').groups?.[0];
+    expect(group?.note).toBeDefined();
+    expect(group?.note?.trim().length).toBeGreaterThan(0);
+  });
+
+  it('hides the group when no subtype is known', () => {
+    expect(getChecklist('rct', null).groups).toBeUndefined();
+    expect(getChecklist('rct').groups).toBeUndefined();
+    expect(visibleItems(getChecklist('rct', null))).toEqual(getChecklist('rct').items);
+  });
+
+  it('hides the group for a different subtype', () => {
+    expect(getChecklist('rct', 'parallel').groups).toBeUndefined();
+    expect(getChecklist('rct', 'crossover').groups).toBeUndefined();
+    expect(visibleItems(getChecklist('rct', 'parallel'))).toEqual(getChecklist('rct').items);
+  });
+
+  it('keeps every group subtype reachable from the checklist that declares it', () => {
+    for (const checklist of checklists) {
+      for (const group of checklist.groups ?? []) {
+        for (const subtype of group.subtypes) {
+          const resolved = getChecklist(checklist.id, subtype);
+          expect(resolved.groups?.map((entry) => entry.id)).toContain(group.id);
+        }
+      }
+    }
   });
 });
 
@@ -252,24 +400,22 @@ describe('original wording guard', () => {
 
   it('never reproduces a corpus phrase exactly', () => {
     const normalizedCorpus = new Set(forbiddenPhrases.map(normalize));
-    for (const item of allItems) {
-      expect(normalizedCorpus.has(normalize(item.question))).toBe(false);
+    for (const entry of allQuestions) {
+      expect(normalizedCorpus.has(normalize(entry.text))).toBe(false);
     }
   });
 
   it(`keeps every question below ${SIMILARITY_THRESHOLD} similarity to the corpus`, () => {
-    const offenders = allItems
-      .map((item) => ({ item, match: closestForbidden(item.question) }))
-      .filter((entry) => entry.match.score >= SIMILARITY_THRESHOLD)
-      .map(
-        (entry) => `${entry.item.id} ~ "${entry.match.phrase}" (${entry.match.score.toFixed(2)})`,
-      );
+    const offenders = allQuestions
+      .map((entry) => ({ entry, match: closestForbidden(entry.text) }))
+      .filter((row) => row.match.score >= SIMILARITY_THRESHOLD)
+      .map((row) => `${row.entry.id} ~ "${row.match.phrase}" (${row.match.score.toFixed(2)})`);
     expect(offenders).toEqual([]);
   });
 
   it(`keeps the worst observed similarity under ${MAX_OBSERVED_SIMILARITY}`, () => {
-    const worst = allItems
-      .map((item) => closestForbidden(item.question).score)
+    const worst = allQuestions
+      .map((entry) => closestForbidden(entry.text).score)
       .reduce((max, score) => Math.max(max, score), 0);
     expect(worst).toBeLessThan(MAX_OBSERVED_SIMILARITY);
   });
@@ -279,6 +425,34 @@ describe('original wording guard', () => {
     for (const item of allItems) {
       expect(normalizedCorpus.has(normalize(item.why))).toBe(false);
     }
+    for (const panel of allPanels) {
+      expect(normalizedCorpus.has(normalize(panel.why))).toBe(false);
+    }
+  });
+
+  it('also checks the look-for hints for exact reproduction', () => {
+    const normalizedCorpus = new Set(forbiddenPhrases.map(normalize));
+    for (const item of allItems) {
+      for (const hint of item.lookFor) {
+        expect(normalizedCorpus.has(normalize(hint))).toBe(false);
+      }
+    }
+  });
+
+  it('never names a published appraisal instrument in shipped text', () => {
+    // Spec §9: the concepts are common knowledge, the instruments are not ours to cite.
+    const banned = /\b(casp|jbi|consort|strobe|prisma|quadas|robins|rob ?2|amstar|robis)\b/i;
+    const shipped = [
+      ...allItems.flatMap((item) => [item.question, item.why, ...item.lookFor]),
+      ...allPanels.flatMap((panel) => [panel.prompt, panel.why]),
+      ...checklists.flatMap((checklist) => [
+        checklist.title,
+        checklist.note ?? '',
+        ...(checklist.groups ?? []).flatMap((group) => [group.title, group.note ?? '']),
+      ]),
+    ];
+    const offenders = shipped.filter((text) => banned.test(text));
+    expect(offenders).toEqual([]);
   });
 
   /* The guard is only worth having if it fires. These two sentences are

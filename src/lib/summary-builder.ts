@@ -10,7 +10,7 @@
  *
  *  1. Every section is emitted even when it is empty. The value of the product
  *     is the complete template with the gaps visible: a summary that silently
- *     drops the validity table because nothing was answered hides exactly the
+ *     drops the appraisal table because nothing was answered hides exactly the
  *     part of the appraisal that was skipped.
  *  2. Where no absolute effect could be computed the export says so in words,
  *     and says which of the two reasons applies. "Absolute effect not reported
@@ -24,18 +24,32 @@
  *     this file writes a conclusion, a recommendation or an interpretation
  *     (spec §2, §9).
  *
+ * The critical-appraisal rework adds a fourth, which is about what the reader
+ * is allowed to carry out of the room: the export must never let one verdict be
+ * read as a bigger claim than it is. Internal validity and applicability are
+ * kept in separate blocks because a well-run trial can still be about the wrong
+ * patient; subtype-specific checks are labelled as additions so nobody reads
+ * them as a lighter checklist; funding is recorded as fact with no verdict
+ * column, because industry money is not itself a flaw; an Unclear is attributed
+ * to the source the reader had rather than to the study; and a non-inferiority
+ * result is fenced to the endpoint that was actually tested.
+ *
  * Pure module: no chrome.*, no DOM. `src/ui/labels.ts` is imported for the
  * user-facing names, which is data only — keeping one copy of "Randomized
  * controlled trial" for the panel and the export.
  */
-import { getChecklist } from './checklist-schema';
+import { getChecklist, itemsInSection, needsMoreThan } from './checklist-schema';
 import { formatNnt } from './effect-measures';
 import type {
   Appraisal,
+  Checklist,
+  ChecklistGroup,
+  ChecklistItem,
   CitationFields,
   DesignEvidence,
   EffectMeasures,
   NumbersState,
+  SourceScope,
   StudyDesign,
   Verdict,
 } from './types';
@@ -43,8 +57,12 @@ import {
   CONFIDENCE_LABELS,
   DESIGN_OPTION_LABELS,
   DISCLAIMER,
+  EVIDENCE_NEED_HINTS,
   PICO_LABELS,
   PRODUCT_NAME,
+  SECTION_LABELS,
+  SOURCE_SCOPE_LABELS,
+  SUBTYPE_DESIGN_LINES,
   VERDICT_LABELS,
   designLabel,
 } from '../ui/labels';
@@ -77,10 +95,76 @@ const EMPTY_CELL = '—';
 const NO_NOTE = '(no note)';
 const NOTHING_FLAGGED = 'None.';
 const NUMBER_NOTES_HEADING = 'Notes on these numbers:';
-const VALIDITY_NOTES_HEADING = 'Notes on items answered No or Unclear:';
 const SET_MANUALLY = 'Set manually.';
 const NOT_DETECTED =
   'No design was detected from the publication type or the abstract keywords, so the general checklist is used below.';
+
+/** A part of the checklist that exists but has nothing in it, said out loud. */
+const NO_ITEMS = 'No items in this part of the checklist.';
+
+/* ------------------------------------------- critical appraisal, fixed copy */
+
+const APPRAISAL_HEADING = 'Critical appraisal';
+const FUNDING_HEADING = 'Funding & conflicts';
+const NOTES_HEADING = 'Notes on flagged items';
+
+/**
+ * What the appraisal was actually read from. Printed before any verdict,
+ * because every verdict below has to be read through it.
+ */
+function appraisedFromLine(scope: SourceScope): string {
+  return `Appraised from: ${SOURCE_SCOPE_LABELS[scope]}.`;
+}
+
+/**
+ * The single most important sentence in the rework. This document gets carried
+ * into a room and argued from, and an Unclear that reads as a fault found in
+ * the study turns an abstract's word limit into a methodological criticism.
+ * "Not reported" is Unclear, and Unclear is a statement about the reader.
+ */
+const UNCLEAR_IS_A_LIMIT =
+  'An Unclear verdict means the source above does not settle that question: it records a limit ' +
+  'on what the reader could check, not a fault found in the study. Where an item was checked ' +
+  'against a different document, that source is shown beside its verdict.';
+
+/** Printed at the head of every subtype-specific block, without exception. */
+const GROUP_IS_ADDITIONAL =
+  'These checks are additional. Every item under Internal validity still applies to this trial; ' +
+  'nothing above is replaced or relaxed by what follows.';
+
+/**
+ * The guardrail this section exists for. A non-inferiority trial demonstrates
+ * one thing: that on the outcome it powered, against the margin it fixed in
+ * advance, the new treatment was not worse by more than that margin. Readers
+ * routinely stretch it into "as good as", into "better", and — the case this
+ * wording comes from — onto a second endpoint that produced no events in either
+ * arm, where nothing whatever was demonstrated because nothing was ever tested.
+ */
+const NON_INFERIORITY_CAUTION =
+  'Carry this result no further than the outcome it was tested on. A non-inferiority finding ' +
+  'belongs to one pre-specified endpoint and one pre-specified margin: it is not a finding of ' +
+  'equivalence, it is not a finding of superiority, and it says nothing about any other endpoint. ' +
+  'If an outcome recorded no events in either arm, the trial did not demonstrate non-inferiority ' +
+  'for it — that outcome was never put to the test.';
+
+/** Applicability is a separate question, and the export says which is which. */
+const APPLICABILITY_IS_NOT_VALIDITY =
+  'Applicability is not internal validity. A trial can be conducted impeccably and still not ' +
+  'transfer to the patient in front of you, and a trial with real methodological weaknesses can ' +
+  'still be about exactly your patient. Nothing below is a verdict on how the study was run.';
+
+/** Facts, not a score. Both halves of that sentence matter. */
+const FUNDING_IS_NOT_SCORED =
+  'Recorded as fact, never scored. Industry funding is not by itself a source of bias, and a ' +
+  'field left blank means nothing was recorded here — not that there was nothing to record.';
+
+const NOT_RECORDED = 'Not recorded.';
+
+const NOTES_NO_HEADING =
+  'Items answered No — judgements the reader made, about the study or about its fit:';
+const NOTES_UNCLEAR_HEADING =
+  'Items answered Unclear — the source used does not settle these, which is not a finding ' +
+  'against the study:';
 
 /** Enough to identify the paper; the full list belongs in the reference manager. */
 const MAX_AUTHORS_SHOWN = 3;
@@ -104,11 +188,28 @@ interface Row {
   value: string;
 }
 
-interface ValidityRow {
-  /** 1-based position in the checklist; the notes below the table refer to it. */
+interface AppraisalRow {
+  /** 1-based position, running across every block; the notes refer to it. */
   position: number;
   question: string;
   verdict: string;
+}
+
+/** One `###` block of the critical-appraisal section: prose, then a table. */
+interface AppraisalBlock {
+  title: string;
+  /** Sentences printed between the heading and the table. */
+  lead: string[];
+  rows: AppraisalRow[];
+}
+
+interface AppraisalModel {
+  sourceLines: string[];
+  blocks: AppraisalBlock[];
+  funding: Row[];
+  /** "Item 3: ..." lines, split because a No and an Unclear are different claims. */
+  noNotes: string[];
+  unclearNotes: string[];
 }
 
 type LinkRenderer = (text: string, url: string) => string;
@@ -201,16 +302,56 @@ function effectiveDesign(a: Appraisal): StudyDesign {
   return a.designOverride ?? a.designDetected?.design ?? 'unclear';
 }
 
-function designHeadline(a: Appraisal): string {
-  // A manual override carries no subtype: the user picked a design, not a shape
-  // of trial, so claiming "(parallel)" on their behalf would invent detail. It
-  // also uses the option wording, because "Not detected" is a statement about
-  // the classifier and reads wrong next to a design the user chose by hand.
-  if (a.designOverride !== null) return DESIGN_OPTION_LABELS[a.designOverride];
-  return designLabel(effectiveDesign(a), a.designDetected?.subtype ?? null);
+/**
+ * The subtype decides whether a whole extra block of checks appears, so where it
+ * came from matters. An explicit `subtypeOverride` is the user saying "this is a
+ * non-inferiority trial" and wins outright. Failing that, a manual *design*
+ * override carries no subtype at all: the user picked a design, not a shape of
+ * trial, and reading "non-inferiority" back out of a stale detection would
+ * switch those checks on in their name.
+ */
+function effectiveSubtype(a: Appraisal): string | null {
+  const chosen = oneLine(a.subtypeOverride ?? '');
+  if (chosen !== '') return chosen;
+  if (a.designOverride !== null) return null;
+  return a.designDetected?.subtype ?? null;
 }
 
-/** Section 3, second line: where the design came from, and on what evidence. */
+function checklistFor(a: Appraisal): Checklist {
+  return getChecklist(effectiveDesign(a), effectiveSubtype(a));
+}
+
+/**
+ * Section 3, first line. The subtype no longer rides along in a parenthesis:
+ * "Randomized controlled trial (non-inferiority)" reads as a kind of trial you
+ * can skim past, where a line of its own is a design decision the reader has to
+ * account for.
+ */
+function designHeadline(a: Appraisal): string {
+  // The option wording is used for an override, because "Not detected" is a
+  // statement about the classifier and reads wrong next to a design the user
+  // chose by hand.
+  if (a.designOverride !== null) return DESIGN_OPTION_LABELS[a.designOverride];
+  return designLabel(effectiveDesign(a), null);
+}
+
+/**
+ * Section 3, second line: the subtype, standing on its own.
+ *
+ * A subtype the user typed in is marked as such, because it is what turned the
+ * subtype-specific checks on and the reader is entitled to know the classifier
+ * did not find it. The mark is dropped when the design was overridden too —
+ * the detection line already says the whole block was set by hand.
+ */
+function subtypeLine(a: Appraisal): string | null {
+  const subtype = effectiveSubtype(a);
+  if (subtype === null) return null;
+  const label = SUBTYPE_DESIGN_LINES[subtype] ?? subtype;
+  const chosen = oneLine(a.subtypeOverride ?? '') !== '' && a.designOverride === null;
+  return chosen ? `${label} (set manually)` : label;
+}
+
+/** Section 3, last line: where the design came from, and on what evidence. */
 function detectionLine(a: Appraisal): string {
   if (a.designOverride !== null) return SET_MANUALLY;
   const detected = a.designDetected;
@@ -300,31 +441,118 @@ function numberNotes(numbers: NumbersState | null): string[] {
     .map(endWithPeriod);
 }
 
-/** Section 5: the checklist for the effective design, answered or not. */
-function validityModel(a: Appraisal): { rows: ValidityRow[]; notes: string[] } {
-  const checklist = getChecklist(effectiveDesign(a));
-  const answers = a.validity[checklist.id] ?? {};
-  const rows: ValidityRow[] = [];
-  const notes: string[] = [];
+/* ------------------------------------------------------ critical appraisal */
 
-  checklist.items.forEach((item, index) => {
-    const position = index + 1;
-    const verdict: Verdict | null = answers[item.id]?.verdict ?? null;
-    rows.push({
-      position,
-      question: item.question,
-      verdict: verdict === null ? EMPTY_CELL : VERDICT_LABELS[verdict],
-    });
+/**
+ * The verdict cell. A per-item source only shows when it actually departs from
+ * the appraisal's default, so the column stays quiet until it has something to
+ * say: an item recorded against the same source as everything else is not an
+ * override and printing it would bury the ones that are.
+ */
+function verdictCell(verdict: Verdict | null, override: SourceScope | null): string {
+  const label = verdict === null ? EMPTY_CELL : VERDICT_LABELS[verdict];
+  if (override === null) return label;
+  return `${label} (source: ${SOURCE_SCOPE_LABELS[override]})`;
+}
 
-    // Only No and Unclear reach the notes list: those are the items the group is
-    // there to argue about. An unanswered item is a gap, not a finding, so its
-    // note stays in the panel.
-    if (verdict !== 'no' && verdict !== 'unclear') return;
-    const note = oneLine(answers[item.id]?.note ?? '');
-    notes.push(`Item ${position} (${VERDICT_LABELS[verdict]}): ${note === '' ? NO_NOTE : note}`);
+/**
+ * True for the block of checks a non-inferiority design switches on. The group's
+ * declared subtypes are the reliable signal — `applicableGroups` matches on the
+ * same field — with the id as a second chance in case a group is ever keyed
+ * differently.
+ */
+function isNonInferiorityGroup(group: ChecklistGroup): boolean {
+  return group.subtypes.includes('non-inferiority') || group.id.includes('non-inferiority');
+}
+
+/**
+ * `group.note` is deliberately not printed. It is written for the panel, where
+ * the general items sit in one list; the export splits applicability out into
+ * its own block, so a note counting "the nine general items" would contradict
+ * the eight numbered above it. `GROUP_IS_ADDITIONAL` makes the same promise in
+ * terms of what the export actually shows, and makes it for every group rather
+ * than only for the ones whose JSON happens to say so.
+ */
+function groupLead(group: ChecklistGroup): string[] {
+  const lead = [GROUP_IS_ADDITIONAL];
+  if (isNonInferiorityGroup(group)) lead.push(NON_INFERIORITY_CAUTION);
+  return lead;
+}
+
+/** Facts from `checklist.info`, filled in from `appraisal.info`, never scored. */
+function fundingRows(checklist: Checklist, a: Appraisal): Row[] {
+  const fields = checklist.info?.fields ?? [];
+  // No panel at all still gets a line: a missing block would read as "nothing to
+  // declare", which is the one thing an absent answer must never say.
+  if (fields.length === 0) return [{ label: null, value: NOT_RECORDED }];
+  return fields.map((field) => {
+    const recorded = oneLine(a.info[field.id] ?? '');
+    return { label: field.label, value: recorded === '' ? NOT_RECORDED : recorded };
   });
+}
 
-  return { rows, notes: notes.length === 0 ? [NOTHING_FLAGGED] : notes };
+/**
+ * Section 5: the checklist for the effective design, answered or not, split
+ * into internal validity, then any subtype-specific blocks, then applicability.
+ * Positions run continuously across all three so a note can say "Item 9" and
+ * mean exactly one row.
+ */
+function appraisalModel(a: Appraisal): AppraisalModel {
+  const checklist = checklistFor(a);
+  const answers = a.validity[checklist.id] ?? {};
+  const blocks: AppraisalBlock[] = [];
+  const noNotes: string[] = [];
+  const unclearNotes: string[] = [];
+  let position = 0;
+
+  const addBlock = (title_: string, lead: string[], items: readonly ChecklistItem[]): void => {
+    const rows: AppraisalRow[] = [];
+    for (const item of items) {
+      position += 1;
+      const answer = answers[item.id];
+      const verdict: Verdict | null = answer?.verdict ?? null;
+      const source = answer?.source ?? null;
+      const override = source !== null && source !== a.sourceScope ? source : null;
+      rows.push({ position, question: item.question, verdict: verdictCell(verdict, override) });
+
+      // Only No and Unclear reach the notes: those are the items the group is
+      // there to argue about. An unanswered item is a gap, not a finding, so its
+      // note stays in the panel.
+      if (verdict !== 'no' && verdict !== 'unclear') continue;
+      const pieces: string[] = [];
+      const note = oneLine(answer?.note ?? '');
+      if (note !== '') pieces.push(endWithPeriod(note));
+      // An Unclear on a question this source was never going to answer is not a
+      // judgement at all, so the export names the document that would settle it.
+      if (verdict === 'unclear' && needsMoreThan(item, source ?? a.sourceScope)) {
+        pieces.push(EVIDENCE_NEED_HINTS[item.needs]);
+      }
+      if (pieces.length === 0) pieces.push(NO_NOTE);
+      const line = `Item ${position}: ${pieces.join(' ')}`;
+      (verdict === 'no' ? noNotes : unclearNotes).push(line);
+    }
+    blocks.push({ title: title_, lead, rows });
+  };
+
+  addBlock(SECTION_LABELS['internal-validity'], [], itemsInSection(checklist, 'internal-validity'));
+  // `getChecklist` has already dropped the groups that do not apply to this
+  // subtype, so whatever survives here belongs in the export.
+  for (const group of checklist.groups ?? []) {
+    addBlock(group.title, groupLead(group), group.items);
+  }
+  addBlock(
+    SECTION_LABELS.applicability,
+    [APPLICABILITY_IS_NOT_VALIDITY],
+    itemsInSection(checklist, 'applicability'),
+  );
+
+  return {
+    sourceLines: [appraisedFromLine(a.sourceScope), UNCLEAR_IS_A_LIMIT],
+    blocks,
+    funding: fundingRows(checklist, a),
+    noNotes: noNotes.length === 0 ? [NOTHING_FLAGGED] : noNotes,
+    unclearNotes: unclearNotes.length === 0 ? [NOTHING_FLAGGED] : unclearNotes,
+  };
 }
 
 /** Section 7: the questions, or three blank lines to write them on. */
@@ -357,12 +585,48 @@ function markdownRows(rows: readonly Row[]): string[] {
   );
 }
 
+function markdownBullets(lines: readonly string[]): string[] {
+  return lines.map((line) => `- ${line}`);
+}
+
+/** The `## Critical appraisal` section, heading to last note. */
+function markdownAppraisal(model: AppraisalModel): string[][] {
+  const blocks: string[][] = [[`## ${APPRAISAL_HEADING}`]];
+  // One paragraph per sentence: a soft break inside a paragraph is not a line
+  // break in Markdown, and these two must not run together.
+  for (const line of model.sourceLines) blocks.push([line]);
+
+  for (const block of model.blocks) {
+    blocks.push([`### ${block.title}`]);
+    for (const line of block.lead) blocks.push([line]);
+    blocks.push(
+      block.rows.length === 0
+        ? [NO_ITEMS]
+        : markdownTable(
+            ['#', 'Item', 'Verdict'],
+            block.rows.map((row) => [String(row.position), row.question, row.verdict]),
+          ),
+    );
+  }
+
+  blocks.push([`### ${FUNDING_HEADING}`]);
+  blocks.push([FUNDING_IS_NOT_SCORED]);
+  blocks.push(markdownRows(model.funding));
+
+  blocks.push([`### ${NOTES_HEADING}`]);
+  blocks.push([NOTES_NO_HEADING]);
+  blocks.push(markdownBullets(model.noNotes));
+  blocks.push([NOTES_UNCLEAR_HEADING]);
+  blocks.push(markdownBullets(model.unclearNotes));
+  return blocks;
+}
+
 /**
  * Markdown export: the eight sections of spec §4.5 in order, blank ones
  * included, disclaimer last.
  */
 export function buildSummaryMarkdown(a: Appraisal, opts: SummaryOptions): string {
-  const validity = validityModel(a);
+  const subtype = subtypeLine(a);
   const blocks: string[][] = [
     [`# ${title(a)}`],
     [citationLine(a.citation, a.pmid, markdownLink)],
@@ -375,6 +639,7 @@ export function buildSummaryMarkdown(a: Appraisal, opts: SummaryOptions): string
 
     ['## Study design'],
     [`**${designHeadline(a)}**`],
+    ...(subtype === null ? [] : [[subtype]]),
     [detectionLine(a)],
 
     ['## Key results'],
@@ -384,18 +649,10 @@ export function buildSummaryMarkdown(a: Appraisal, opts: SummaryOptions): string
   const notes = numberNotes(a.numbers);
   if (notes.length > 0) {
     blocks.push([NUMBER_NOTES_HEADING]);
-    blocks.push(notes.map((note) => `- ${note}`));
+    blocks.push(markdownBullets(notes));
   }
 
-  blocks.push(['## Validity']);
-  blocks.push(
-    markdownTable(
-      ['#', 'Item', 'Verdict'],
-      validity.rows.map((row) => [String(row.position), row.question, row.verdict]),
-    ),
-  );
-  blocks.push([VALIDITY_NOTES_HEADING]);
-  blocks.push(validity.notes.map((note) => `- ${note}`));
+  blocks.push(...markdownAppraisal(appraisalModel(a)));
 
   blocks.push(['## Bottom line']);
   // Verbatim, or nothing at all: the blank space is the prompt to write one.
@@ -416,9 +673,6 @@ export function buildSummaryMarkdown(a: Appraisal, opts: SummaryOptions): string
 
 const INDENT = '  ';
 
-/** Lines the verdict up under the question text of a numbered checklist item. */
-const VERDICT_INDENT = '   ';
-
 function indent(lines: readonly string[], depth = 1): string[] {
   return lines.map((line) => (line === '' ? '' : `${INDENT.repeat(depth)}${line}`));
 }
@@ -438,6 +692,43 @@ function textSection(heading: string, lines: readonly string[]): string[] {
   return [heading, ...indent(lines)];
 }
 
+/** The plain-text twin of `markdownAppraisal`: same content, no syntax. */
+function textAppraisal(model: AppraisalModel): string[] {
+  const lines: string[] = [...model.sourceLines, ''];
+
+  // Numbered questions line up under each other whatever the item count, and the
+  // verdict lines up under the question text rather than under its number.
+  const width = String(
+    model.blocks.reduce((last, block) => block.rows.at(-1)?.position ?? last, 0),
+  ).length;
+
+  for (const block of model.blocks) {
+    lines.push(block.title);
+    const body: string[] = [...block.lead];
+    if (block.rows.length === 0) body.push(NO_ITEMS);
+    for (const row of block.rows) {
+      const number = `${String(row.position).padStart(width)}. `;
+      body.push(`${number}${oneLine(row.question)}`);
+      body.push(`${' '.repeat(number.length)}Verdict: ${row.verdict}`);
+    }
+    lines.push(...indent(body), '');
+  }
+
+  lines.push(FUNDING_HEADING);
+  lines.push(...indent([FUNDING_IS_NOT_SCORED, ...alignedRows(model.funding)]), '');
+
+  lines.push(NOTES_HEADING);
+  lines.push(
+    ...indent([
+      NOTES_NO_HEADING,
+      ...indent(model.noNotes),
+      NOTES_UNCLEAR_HEADING,
+      ...indent(model.unclearNotes),
+    ]),
+  );
+  return lines;
+}
+
 /**
  * Plain-text export: identical content and order to the Markdown one, with no
  * Markdown syntax anywhere — indentation and `Label: value` lines instead of
@@ -445,7 +736,6 @@ function textSection(heading: string, lines: readonly string[]): string[] {
  * the punctuation raw.
  */
 export function buildSummaryText(a: Appraisal, opts: SummaryOptions): string {
-  const validity = validityModel(a);
   const lines: string[] = [title(a), citationLine(a.citation, a.pmid, plainLink), ''];
 
   lines.push(
@@ -456,7 +746,14 @@ export function buildSummaryText(a: Appraisal, opts: SummaryOptions): string {
   );
   lines.push('');
 
-  lines.push(...textSection('STUDY DESIGN', [designHeadline(a), detectionLine(a)]));
+  const subtype = subtypeLine(a);
+  lines.push(
+    ...textSection('STUDY DESIGN', [
+      designHeadline(a),
+      ...(subtype === null ? [] : [subtype]),
+      detectionLine(a),
+    ]),
+  );
   lines.push('');
 
   const keyResults = alignedRows(keyResultRows(a.numbers));
@@ -465,13 +762,7 @@ export function buildSummaryText(a: Appraisal, opts: SummaryOptions): string {
   lines.push(...textSection('KEY RESULTS', keyResults));
   lines.push('');
 
-  const validityLines: string[] = [];
-  for (const row of validity.rows) {
-    validityLines.push(`${row.position}. ${oneLine(row.question)}`);
-    validityLines.push(`${VERDICT_INDENT}Verdict: ${row.verdict}`);
-  }
-  validityLines.push(VALIDITY_NOTES_HEADING, ...indent(validity.notes));
-  lines.push(...textSection('VALIDITY', validityLines));
+  lines.push(...textSection(APPRAISAL_HEADING.toUpperCase(), textAppraisal(appraisalModel(a))));
   lines.push('');
 
   const bottomLine = a.bottomLine.trim();

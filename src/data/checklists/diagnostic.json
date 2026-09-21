@@ -1,55 +1,162 @@
 {
   "id": "diagnostic",
   "title": "Diagnostic accuracy study",
-  "version": 1,
+  "version": 2,
+  "note": "Four things decide whether the reported accuracy is real: who was tested, what the test was judged against, whether the two results were read independently, and whether everyone made it through to the end. Prevalence then decides what a positive result is worth. An undescribed method is Unclear, not a failure.",
   "items": [
     {
-      "id": "diagnostic-patient-spectrum",
-      "concept": "patient-spectrum",
-      "question": "Does the sample look like the mix of people in whom this test would really be used, rather than obvious cases set against healthy volunteers?",
-      "why": "Any test separates clear extremes better than it separates the ambiguous middle, so studying advanced cases against healthy controls flatters both sensitivity and specificity."
+      "id": "diagnostic-patient-selection",
+      "concept": "patient-selection",
+      "section": "internal-validity",
+      "question": "Were the participants taken consecutively, or at random, from the mix of people in whom this test would really be used?",
+      "why": "A test separates obvious cases from healthy volunteers far more cleanly than it separates the difficult middle, so a hand-picked sample flatters both sensitivity and specificity.",
+      "lookFor": [
+        "where participants came from, and at what point in the diagnostic pathway",
+        "definite cases set against healthy volunteers, recruited as two separate groups",
+        "exclusions of atypical, severe or difficult patients",
+        "whether recruitment was consecutive or left to convenience"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "diagnostic-reference-standard",
       "concept": "reference-standard",
-      "question": "Can you tell what was used as the comparison standard, and is it strong enough to count as the truth for this condition?",
-      "why": "Every mistake in the comparison standard is charged to the test under study, so a weak standard can make an accurate test look wrong, or a poor test look better than it is."
+      "section": "internal-validity",
+      "question": "Was the comparison the test was judged against strong enough to stand as the truth for this condition, and was the same one used for everyone?",
+      "why": "Every mistake in that comparison is charged to the test under study, so a weak standard can make an accurate test look wrong, or a poor test look better than it is.",
+      "lookFor": [
+        "what served as the truth: histology, culture, imaging, an adjudication panel, or follow-up",
+        "its own known error rate, and whether the authors acknowledge it",
+        "different standards used for different participants",
+        "clinical follow-up used as the standard for those who tested negative"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "diagnostic-independence",
-      "concept": "test-independence",
-      "question": "Do you know whether whoever read the new test could see the comparison standard result, and whether the reverse was also prevented?",
-      "why": "Interpreters who have seen the other result drift toward agreement, which manufactures accuracy that would never appear in day-to-day practice."
+      "id": "diagnostic-blinding",
+      "concept": "interpretation-blinding",
+      "section": "internal-validity",
+      "question": "Were the two readings kept apart, so that neither the person interpreting the test nor the one applying the standard knew the other result?",
+      "why": "An interpreter who has seen the other result drifts toward agreeing with it, which manufactures accuracy that would never appear in everyday practice.",
+      "lookFor": [
+        "blinding stated in both directions, not just one",
+        "what clinical information the reader had while interpreting",
+        "how many readers there were, and how far they agreed",
+        "the order in which the test and the standard were carried out"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "diagnostic-verification",
       "concept": "complete-verification",
-      "question": "Can you see that every participant was checked against the same comparison standard, including those whose test came back negative?",
-      "why": "When only positive results are confirmed, false negatives are never counted, and sensitivity ends up calculated from a group trimmed of the test's own misses."
+      "section": "internal-validity",
+      "question": "Did everyone go on to the same reference check, including the participants whose test came back negative?",
+      "why": "When only the positives are confirmed, the test's own misses are never counted, and sensitivity is calculated from a group already trimmed of them.",
+      "lookFor": [
+        "how many in each result group were checked against the standard",
+        "a weaker or different standard used for the negatives",
+        "participants who left before the standard could be applied",
+        "a flow diagram that accounts for everyone who was tested"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "diagnostic-threshold",
-      "concept": "pre-specified-threshold",
-      "question": "Does the abstract indicate that the cut-off separating a positive from a negative result was fixed in advance rather than chosen after the data were seen?",
-      "why": "A threshold tuned on the same sample it is reported from performs worse in the next group of patients, sometimes considerably worse."
+      "concept": "prespecified-threshold",
+      "section": "internal-validity",
+      "question": "Was the cut-off dividing a positive from a negative result fixed before the data were examined, rather than chosen to suit this sample?",
+      "why": "A threshold tuned on the same patients it is reported from performs worse in the next group, sometimes by a wide margin.",
+      "lookFor": [
+        "the threshold stated in advance, with a source for it",
+        "a curve used to pick the best-performing point in these data",
+        "several thresholds analysed but only one carried into the conclusion",
+        "separate samples used to develop and then to test the cut-off"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "diagnostic-indeterminate",
-      "concept": "indeterminate-results",
-      "question": "Can you tell how many results were indeterminate, failed or missing, and how they were handled in the analysis?",
-      "why": "Quietly dropping uninterpretable results removes the hardest patients from the denominator, so a test that often fails in practice looks dependable on paper."
+      "id": "diagnostic-flow-timing",
+      "concept": "flow-and-timing",
+      "section": "internal-validity",
+      "question": "Are indeterminate, failed and missing results reported and accounted for, and was the interval between the two tests short enough that the condition could not change?",
+      "why": "Quietly dropping uninterpretable results removes the hardest patients from the denominator, and a long gap lets people recover or deteriorate between the two measurements.",
+      "lookFor": [
+        "the number of failed or uninterpretable tests, given by group",
+        "how those results were handled in the analysis, rather than passed over",
+        "the time between the test and the reference check",
+        "treatment started in between that could alter the condition"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "diagnostic-precision",
       "concept": "accuracy-with-precision",
-      "question": "Are sensitivity and specificity reported with confidence intervals, and can you recover the raw counts behind them?",
-      "why": "Accuracy estimated from a few dozen patients can move by tens of percentage points, and a single figure with no interval hides how unstable it is."
+      "section": "internal-validity",
+      "question": "Are sensitivity and specificity reported with confidence intervals, and can the raw counts behind them be recovered?",
+      "why": "Accuracy estimated from a few dozen patients can move by tens of percentage points, and a single figure with no interval hides how unstable it is.",
+      "lookFor": [
+        "the four counts of the two-by-two table, or enough numbers to rebuild them",
+        "a confidence interval on each measure",
+        "how many participants actually had the condition",
+        "likelihood ratios or predictive values reported alongside"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "diagnostic-prevalence",
-      "concept": "predictive-values",
-      "question": "Does the report make clear how common the condition was in the sample, since that governs what a positive result actually means?",
-      "why": "Sensitivity and specificity stay roughly steady while predictive values move with prevalence, so a test that shines in a high-prevalence sample can return mostly false positives where the condition is rare."
+      "concept": "prevalence",
+      "section": "internal-validity",
+      "question": "Is it clear how common the condition was among those tested, given that this governs what a positive result actually means?",
+      "why": "Sensitivity and specificity stay roughly steady while predictive values move with prevalence, so a test that shines in a sample full of disease can return mostly false alarms where the condition is rare.",
+      "lookFor": [
+        "the number with the condition over the number tested",
+        "predictive values quoted, and the prevalence they assume",
+        "a sample deliberately enriched with known cases",
+        "the setting participants were recruited from, and its usual case mix"
+      ],
+      "needs": "full-text"
+    },
+    {
+      "id": "diagnostic-applicability",
+      "concept": "applicability",
+      "section": "applicability",
+      "question": "Would the test be used at the same point in the pathway, on similar patients, and with comparable equipment and operator skill, in your own setting?",
+      "why": "Accuracy depends on who is tested and on who performs and reads the test, and the chance of disease among your patients decides what a positive or a negative result is actually worth to them.",
+      "lookFor": [
+        "the stage of the pathway at which the test was applied",
+        "operator experience, equipment, and laboratory or field conditions",
+        "how the prevalence in your patients compares with the study sample",
+        "what would change for the patient once the result is known"
+      ],
+      "needs": "abstract"
     }
-  ]
+  ],
+  "info": {
+    "id": "funding",
+    "title": "Funding & conflicts",
+    "prompt": "Who funded the study, what role did the funder or sponsor have in the design, conduct, analysis and reporting, and what relevant conflicts of interest were declared?",
+    "why": "Industry funding is not itself a risk of bias, and a trial paid for by a manufacturer is not wrong for that reason. What matters is what the sponsor was in a position to do, and what was declared, so record these as facts and let the methodological items above carry the judgement.",
+    "fields": [
+      {
+        "id": "funder",
+        "label": "Funder",
+        "hint": "Who paid: name the company, agency, charity or grant. Record \"not stated\" when no funding statement is given."
+      },
+      {
+        "id": "sponsor-role",
+        "label": "Sponsor or funder role",
+        "hint": "What they did in design, conduct, data collection and custody, analysis, writing, and the decision to publish. A named funder with no role described is \"unclear\", not \"none\"."
+      },
+      {
+        "id": "author-conflicts",
+        "label": "Author conflicts declared",
+        "hint": "Payments, advisory or speaker roles, employment, stock or patents relevant to this intervention, and whether any declaration statement appears at all."
+      },
+      {
+        "id": "info-source",
+        "label": "Where this came from",
+        "hint": "Which document told you: the published abstract, the funding statement in the full text, the disclosure forms, or the registry record. Say if you only had one of them."
+      }
+    ]
+  }
 }

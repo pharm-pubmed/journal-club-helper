@@ -1,62 +1,254 @@
 {
   "id": "rct",
   "title": "Randomized controlled trial",
-  "version": 1,
-  "note": "A non-randomized trial is appraised with these same items: the randomization and allocation concealment questions will usually be answered No, which weakens the comparison between groups rather than making the study worthless.",
+  "version": 2,
+  "note": "A non-randomized trial is appraised with these same items. The first two will usually be answered No, which tells you how much weight the comparison between groups can carry; it does not make the study worthless.",
   "items": [
     {
-      "id": "rct-randomization",
-      "concept": "randomization-method",
-      "question": "Can you tell how participants were assigned to the groups, and does the method described rely on chance rather than on a predictable order?",
-      "why": "Assignment that staff can anticipate lets healthier or sicker people drift into one arm, so a difference at the end may be a difference in who was enrolled rather than an effect of the treatment."
+      "id": "rct-randomisation-sequence",
+      "concept": "allocation-sequence",
+      "section": "internal-validity",
+      "question": "Was the allocation sequence generated using a genuinely random and unpredictable method?",
+      "why": "If the next assignment can be worked out in advance, whoever enrols patients can steer the sicker or the healthier ones into one arm, and the groups stop being comparable before any treatment is given. The word \"randomized\" on its own describes no method, so treat it as Unclear rather than as a failure.",
+      "lookFor": [
+        "a computer-generated sequence, or a named random-number generator",
+        "randomization run centrally or by a third party, away from the recruiting clinicians",
+        "permuted blocks, varying block sizes, or stratification by site or prognostic factor",
+        "a physical chance mechanism such as a coin toss or drawing lots",
+        "the bare claim that patients were randomized, with no method given: that is Unclear, not Yes"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "rct-allocation-concealment",
       "concept": "allocation-concealment",
-      "question": "Does the abstract tell you whether the people enrolling each participant could have known which group that person was about to get?",
-      "why": "When recruiters can see the next assignment coming, they can delay, steer or skip a borderline patient, which quietly undoes the balance that random assignment was meant to create."
+      "section": "internal-validity",
+      "question": "Was allocation concealed until each participant was irreversibly enrolled?",
+      "why": "When the person recruiting can foresee the next assignment, they can delay, divert or quietly pass over a borderline patient, which undoes the balance the random sequence was meant to create. This is a different question from how the sequence was built, so answer it from its own evidence instead of copying the previous verdict.",
+      "lookFor": [
+        "central or telephone randomization, or an interactive web or voice response system",
+        "allocation held and dispensed by a pharmacy or an independent unit",
+        "sequentially numbered, opaque, sealed envelopes, with some sign they were used as intended",
+        "alternation, day of the week, birth date or chart number: the list is open, so No",
+        "identical, sequentially numbered treatment packs prepared in advance",
+        "whether the recruiter could have seen or guessed the assignment before enrolment was final"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "rct-blinding",
-      "concept": "blinding",
-      "question": "Do you know who was kept unaware of the assigned group: the participants, the treating clinicians, the outcome assessors, or none of them?",
-      "why": "People who know what they received report symptoms differently, and assessors who know the group tend to judge subjective outcomes in the expected direction. Deaths and other hard endpoints are far less vulnerable than scores and judgement calls."
+      "id": "rct-baseline-balance",
+      "concept": "baseline-balance",
+      "section": "internal-validity",
+      "question": "Were there no clinically important baseline imbalances that suggest a problem with the randomization process?",
+      "why": "A large difference in a factor that drives the outcome is a hint that the allocation process failed, and part of the difference measured later may be that head start showing through. Do not look for p-values comparing the arms at baseline: in a randomized trial any difference is by definition chance, so testing it answers nothing.",
+      "lookFor": [
+        "age, sex and disease severity in each arm",
+        "prognostic factors and risk scores that predict the outcome",
+        "prior treatment, concomitant therapy, vaccination status and comorbidity",
+        "the size of a difference and whether it matters clinically, not whether it is significant",
+        "an imbalance large enough to suggest the sequence or its concealment broke down",
+        "in a small or cluster-randomized trial, imbalance by chance alone is common"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "rct-baseline-comparability",
-      "concept": "baseline-comparability",
-      "question": "Does the abstract show that the groups started out alike in the characteristics that drive the outcome, such as age, severity and prior treatment?",
-      "why": "A visible imbalance at the start means the groups were not exchangeable, so part of the difference measured later may simply be that head start showing through."
+      "id": "rct-deviations-from-intervention",
+      "concept": "intervention-deviations",
+      "section": "internal-validity",
+      "question": "Were deviations from the assigned interventions unlikely to bias the result, considering who knew the assigned treatment?",
+      "why": "When patients or clinicians know the assignment, extra treatment, extra attention and differences in effort and adherence can follow the arm rather than the patient, and the measured difference then reflects that behaviour instead of the drug. An open-label design is not automatically a problem: judge it against the outcome, since a hard endpoint may barely move while a symptom score moves a great deal.",
+      "lookFor": [
+        "whether participants and treating clinicians knew the assignment",
+        "placebo, sham or double-dummy arrangements, and any evidence that blinding held",
+        "co-interventions, rescue treatment and switching between arms",
+        "adherence in each arm, and whether protocol deviations differed in size or in kind",
+        "how far the outcome could plausibly be moved by behaviour rather than biology"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "rct-follow-up",
-      "concept": "follow-up-completeness",
-      "question": "Can you see how many participants were followed to the end, and whether the losses were similar in size and in reason across the groups?",
-      "why": "Participants who disappear are rarely a random slice of the trial, so heavy or lopsided attrition leaves you comparing two groups that randomization never created."
+      "id": "rct-missing-outcome-data",
+      "concept": "missing-outcome-data",
+      "section": "internal-validity",
+      "question": "Were outcome data sufficiently complete, with missingness unlikely to bias the estimated treatment effect?",
+      "why": "People who leave a trial are rarely a random slice of it, so once enough outcomes are missing, or the missing ones differ between arms or relate to how the patient was doing, what is left is no longer the comparison randomization created. A follow-up percentage is not the test: in a time-to-event trial censoring is expected, and the question is whether it was informative.",
+      "lookFor": [
+        "how many primary outcomes are missing in each arm, not only the total",
+        "the difference between arms in how many are missing and for what reasons",
+        "the stated reasons: withdrawal, death, loss to follow-up, administrative censoring",
+        "whether missingness plausibly depends on the outcome itself or on how the patient was faring",
+        "imputation, and sensitivity analyses that try other assumptions about the missing values",
+        "a participant flow account that reconciles those randomized with those analysed"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "rct-intention-to-treat",
-      "concept": "intention-to-treat",
-      "question": "Does the abstract say whether participants were analysed in the group they were assigned to, even if they stopped, switched or never started that treatment?",
-      "why": "Counting only the people who completed the assigned treatment turns a randomized comparison back into an observational one, because staying on a treatment is itself tied to prognosis."
+      "id": "rct-outcome-measurement",
+      "concept": "outcome-measurement",
+      "section": "internal-validity",
+      "question": "Was the outcome measured appropriately and similarly between groups, with outcome assessors blinded when this mattered?",
+      "why": "An assessor who knows the assignment can shade a judgement call in the direction they expect, and measuring one arm more often, or by a different method, manufactures a difference by itself. A label such as observer-blinded settles nothing on its own: what decides it is who actually assessed the primary outcome and what that person knew.",
+      "lookFor": [
+        "whether the primary outcome is objective, adjudicated, or a subjective rating",
+        "who assessed it in practice, and whether they knew the assigned treatment",
+        "an independent blinded adjudication committee, and what it was asked to judge",
+        "a validated instrument with a definition and threshold fixed in advance",
+        "the same method, equipment, observers and visit schedule in both arms",
+        "for a patient-reported outcome, whether participants themselves knew what they received"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "rct-primary-outcome",
-      "concept": "pre-specified-outcome",
-      "question": "Is one primary outcome named and defined precisely enough that you could check it against the registered protocol?",
-      "why": "When many outcomes and time points are measured, whichever one reached significance can be promoted to the headline afterwards, and the reported benefit then looks larger and more certain than it is."
+      "id": "rct-analysis-population",
+      "concept": "analysis-population",
+      "section": "internal-validity",
+      "question": "Was the primary analysis appropriate for the treatment effect the trial intended to estimate, while preserving the randomized comparison as far as possible?",
+      "why": "Removing participants after randomization for reasons tied to their prognosis turns a randomized comparison back into an observational one, and what is reported may then be a selection effect rather than a treatment effect. Never judge this by the label: a modified intention-to-treat analysis is not automatically invalid and an intention-to-treat label is not automatically a pass, so look at who was left out and why.",
+      "lookFor": [
+        "how many were randomized and how many entered the primary analysis, arm by arm",
+        "who was excluded, at what point, and for what stated reason",
+        "whether exclusions were decided without knowing the assignment or the outcome",
+        "whether everyone analysed was counted in the arm they were assigned to",
+        "what effect the trial set out to estimate, and how deviations and missing data were handled in it",
+        "any per-protocol, as-treated or full-analysis set, and whether the results agree across them"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "rct-funding",
-      "concept": "funding-and-conflicts",
-      "question": "Do you know who funded the trial and what part the sponsor played in its design, analysis and reporting?",
-      "why": "A sponsor with a stake in the answer can shape the dose, the comparator and which analyses reach print, and an abstract that omits funding leaves you unable to weigh that."
+      "id": "rct-prespecification",
+      "concept": "prespecification",
+      "section": "internal-validity",
+      "question": "Were the primary outcome and primary analysis prespecified, with no evidence that the reported result was selected from multiple outcomes, measurements, time points, or analyses?",
+      "why": "When several outcomes, scales, time points or analysis methods are available, whichever came out best can be promoted to the headline afterwards, and the benefit then looks larger and more certain than it is. You cannot tell without the registry entry, protocol or statistical analysis plan, so without them the answer is Unclear; a primary outcome named in the paper itself is no evidence that it was chosen in advance.",
+      "lookFor": [
+        "a registration number, and the registration date relative to the start of enrolment",
+        "a published protocol or statistical analysis plan, with any amendments dated and explained",
+        "whether the outcome, its definition and its time point match between registry and paper",
+        "whether the analysis method, subgroups and adjustments were set out beforehand",
+        "more than one primary outcome is legitimate if each was declared in advance and handled as such",
+        "registered outcomes that are never reported, and reported outcomes that were never registered"
+      ],
+      "needs": "protocol-or-registry"
     },
     {
       "id": "rct-applicability",
       "concept": "applicability",
-      "question": "Are the participants, the dose and the comparison close enough to the patients and the usual care you know for the result to carry over?",
-      "why": "Trials tend to enrol younger, healthier and more adherent volunteers than the people seen in practice, and the control arm may not match usual care, so the size of the effect need not transfer."
+      "section": "applicability",
+      "question": "Are the participants, interventions, comparator, outcomes, and setting sufficiently similar to the clinical context in which the result would be used?",
+      "why": "A trial can be run impeccably and still not transfer, if it enrolled different patients, used a dose or a comparator you would not use, or ran in another health system or another era. Until you have named the patients and the setting you have in mind there is nothing to compare against, so the honest verdict is Unclear rather than a default Yes.",
+      "lookFor": [
+        "the eligibility criteria, and who was screened out before randomization",
+        "age, severity, comorbidity and background therapy against the patients you see",
+        "the dose, schedule, route and duration actually delivered, and how it was monitored",
+        "whether the comparator is the care you would otherwise give, or something weaker",
+        "whether the outcome measured is one your patient would care about, or a surrogate",
+        "country, health system, level of care, and the staff and resources assumed",
+        "factors tied to the era: circulating variant, vaccination coverage, background treatment"
+      ],
+      "needs": "abstract"
     }
-  ]
+  ],
+  "groups": [
+    {
+      "id": "rct-non-inferiority",
+      "title": "Non-inferiority-specific checks",
+      "subtypes": ["non-inferiority"],
+      "note": "These four questions are added to the nine general items, never a substitute for them: a non-inferiority trial still has to survive randomization, concealment, missing data and everything else above.",
+      "items": [
+        {
+          "id": "rct-ni-rationale-assay-sensitivity",
+          "concept": "assay-sensitivity",
+          "section": "internal-validity",
+          "question": "Was a non-inferiority design clinically justified, and is there adequate reason to expect the active comparator to retain its established effect in this trial setting?",
+          "why": "The whole argument rests on the comparator working here about as well as it did in the trials that established it; if that no longer holds, a trial can look non-inferior simply because neither arm did much. A two-arm trial can rarely demonstrate this from its own data, so thin evidence is Unclear rather than Yes.",
+          "lookFor": [
+            "why a placebo or no-treatment arm was not used, and whether one would have been ethical",
+            "the trials that established the comparator's effect, and how large and consistent it was",
+            "how this population, severity and stage of disease differ from those trials",
+            "differences in background or concomitant therapy, and in vaccination or prior immunity",
+            "a different era, pathogen, variant, diagnostic threshold or standard of care",
+            "whether the endpoint and its time point match the ones on which the comparator was shown to work",
+            "any internal signal that this trial could have detected a real difference at all"
+          ],
+          "needs": "full-text"
+        },
+        {
+          "id": "rct-ni-margin",
+          "concept": "non-inferiority-margin",
+          "section": "internal-validity",
+          "question": "Was the non-inferiority margin prespecified and justified on both clinical and statistical grounds?",
+          "why": "A margin picked or widened once the data are in can make almost any result look acceptable, and a margin wider than the comparator's own benefit can declare non-inferiority for a treatment that is no better than nothing. Record separately whether a margin was stated in advance and whether the justification for its size holds.",
+          "lookFor": [
+            "the numeric value, and the scale it sits on: absolute difference, risk ratio, hazard ratio, odds ratio",
+            "the direction of the margin, and which way counts as worse",
+            "whether it appears in the registry entry, protocol or analysis plan, and at what date",
+            "the clinical argument: how much worse an outcome a patient would accept for the trade-off offered",
+            "the statistical argument: how much of the comparator's established effect the margin preserves",
+            "whether the margin changed between registration, protocol and publication"
+          ],
+          "needs": "protocol-or-registry"
+        },
+        {
+          "id": "rct-ni-analysis-sets",
+          "concept": "non-inferiority-analysis-sets",
+          "section": "internal-validity",
+          "question": "Were adherence, crossover, exclusions, protocol deviations and missing data handled in a way unlikely to bias toward non-inferiority, and were the conclusions consistent across analysis sets?",
+          "why": "Non-adherence, crossover and dropout blur the difference between the arms, and because the aim here is to show the arms are close, sloppy conduct pushes the result toward non-inferiority rather than away from it. No rule rescues this: agreement between analysis sets is reassuring but is not proof, and an intention-to-treat label is not a defence, so read how each set was defined and who was left out of it.",
+          "lookFor": [
+            "how many stopped treatment, switched arms or never started, in each group",
+            "how each analysis set is defined, and how many participants it contains",
+            "the reasons people were excluded from a set, and when that decision was made",
+            "how missing outcomes were handled within each set",
+            "whether the sets point the same way, and what it means when they do not",
+            "that poor adherence and crossover make non-inferiority easier to declare, not harder"
+          ],
+          "needs": "full-text"
+        },
+        {
+          "id": "rct-ni-interpretation",
+          "concept": "non-inferiority-interpretation",
+          "section": "internal-validity",
+          "question": "Does the confidence interval for the primary treatment effect support non-inferiority relative to the prespecified margin, and is the conclusion limited to the outcome actually tested?",
+          "why": "What decides non-inferiority is where the whole confidence interval sits in relation to the margin, not a p-value, so a conclusion drawn from the point estimate alone can rest on an interval that still allows unacceptable harm. Non-inferiority is not equivalence and not superiority, and showing it for one endpoint says nothing about any other endpoint, including harms.",
+          "lookFor": [
+            "the point estimate and the whole confidence interval, on the same scale as the margin",
+            "which end of the interval faces the margin, and how close it comes to it",
+            "whether the interval also crosses no difference, which is not the same as superiority",
+            "a one-sided interval, and the confidence level it was computed at",
+            "the claim being made in words: non-inferior is neither equivalent nor better",
+            "which endpoint was tested, and whether the conclusion has quietly spread to other outcomes or to harms"
+          ],
+          "needs": "abstract"
+        }
+      ]
+    }
+  ],
+  "info": {
+    "id": "funding",
+    "title": "Funding & conflicts",
+    "prompt": "Who funded the study, what role did the funder or sponsor have in the design, conduct, analysis and reporting, and what relevant conflicts of interest were declared?",
+    "why": "Industry funding is not itself a risk of bias, and a trial paid for by a manufacturer is not wrong for that reason. What matters is what the sponsor was in a position to do, and what was declared, so record these as facts and let the methodological items above carry the judgement.",
+    "fields": [
+      {
+        "id": "funder",
+        "label": "Funder",
+        "hint": "Who paid: name the company, agency, charity or grant. Record \"not stated\" when no funding statement is given."
+      },
+      {
+        "id": "sponsor-role",
+        "label": "Sponsor or funder role",
+        "hint": "What they did in design, conduct, data collection and custody, analysis, writing, and the decision to publish. A named funder with no role described is \"unclear\", not \"none\"."
+      },
+      {
+        "id": "author-conflicts",
+        "label": "Author conflicts declared",
+        "hint": "Payments, advisory or speaker roles, employment, stock or patents relevant to this intervention, and whether any declaration statement appears at all."
+      },
+      {
+        "id": "info-source",
+        "label": "Where this came from",
+        "hint": "Which document told you: the published abstract, the funding statement in the full text, the disclosure forms, or the registry record. Say if you only had one of them."
+      }
+    ]
+  }
 }

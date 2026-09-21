@@ -14,7 +14,10 @@ export const TAB_ORDER: readonly TabId[] = ['pico', 'numbers', 'validity', 'expo
 export const TAB_LABELS: Record<TabId, string> = {
   pico: 'PICO',
   numbers: 'Numbers',
-  validity: 'Validity',
+  // The tab id stays `validity` because stored appraisals key off it; the label
+  // follows the section it now contains, which covers internal validity,
+  // applicability and funding rather than validity alone.
+  validity: 'Appraisal',
   export: 'Export',
 };
 
