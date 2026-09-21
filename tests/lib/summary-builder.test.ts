@@ -594,7 +594,7 @@ describe('the study design block', () => {
 
 /** In the caller's words, so a reworded caution has to be re-read, not skipped. */
 const NON_INFERIORITY_GUARDRAIL = 'Carry this result no further than the outcome it was tested on.';
-const NO_EVENTS_CAUTION = 'that outcome was never put to the test';
+const NO_EVENTS_CAUTION = 'carries no non-inferiority claim, however few events it recorded';
 const ADDITIONAL_NOT_INSTEAD = 'Every item under Internal validity still applies';
 const APPLICABILITY_LEAD = 'Applicability is not internal validity.';
 const UNCLEAR_IS_A_LIMIT = 'it records a limit on what the reader could check, not a fault found';

@@ -46,7 +46,7 @@ An Unclear verdict means the source above does not settle that question: it reco
 
 These checks are additional. Every item under Internal validity still applies to this trial; nothing above is replaced or relaxed by what follows.
 
-Carry this result no further than the outcome it was tested on. A non-inferiority finding belongs to one pre-specified endpoint and one pre-specified margin: it is not a finding of equivalence, it is not a finding of superiority, and it says nothing about any other endpoint. If an outcome recorded no events in either arm, the trial did not demonstrate non-inferiority for it — that outcome was never put to the test.
+Carry this result no further than the outcome it was tested on. A non-inferiority finding belongs to one pre-specified endpoint and one pre-specified margin: it is not a finding of equivalence, it is not a finding of superiority, and it says nothing about any other endpoint. An outcome that was not part of that pre-specified test carries no non-inferiority claim, however few events it recorded; where an outcome had no events in either arm, check what was pre-specified and how precise the estimate is before reading anything into it.
 
 | # | Item | Verdict |
 | --- | --- | --- |

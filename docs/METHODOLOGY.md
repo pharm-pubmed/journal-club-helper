@@ -93,10 +93,15 @@ to the result. A trial can be conducted impeccably and reported badly. A trial
 can be reported to the letter and still be unusable.
 
 So a paper that does not mention allocation concealment has not thereby
-demonstrated a failure of allocation concealment. It has demonstrated a word
-limit. Abstracts in particular are 250–350 words carrying a design, a population,
-an intervention, a primary endpoint, a result and a conclusion; the methods that
-matter most to bias are exactly the ones that get cut first.
+demonstrated a failure of allocation concealment. Absence of reporting alone does
+not establish that the method was inadequate; it establishes that the source in
+front of you does not say. Why a method is missing — brevity, an editorial
+convention, an oversight, or a method that was never used at all — is not
+something a reader can recover from the page, and an appraisal should not pretend
+to know it. What the reader does know is the limit of their own information, and
+an abstract is a narrow source: a design, a population, an intervention, a primary
+endpoint, a result and a conclusion, with the methodological detail that bears
+most on bias rarely present.
 
 ### How the tool is built to avoid the confusion
 
@@ -126,14 +131,20 @@ checklist wording, in the UI's verdict help, and in the AI guardrails.
 A technical reviewer will notice that this rule can be pushed too far, so the
 tool does not pretend otherwise.
 
-Unclear is not a clean bill of health. Empirically, trials that do not describe
-concealment or blinding tend to report larger effects than those that do — which
-is part of why the instruments treat missing information as a concern rather than
-as neutral. What our rule asserts is narrower and defensible: **absence of
-reporting tells you about your own evidence base, not about the study's conduct**,
-and the honest response is to name the document that would settle it rather than
-to convict the paper in its absence. An appraisal full of Unclears is a real
-finding about how much you can currently claim, and the export says so.
+Unclear is not a clean bill of health. Meta-epidemiological work has found that
+trials which do not describe concealment or blinding can report larger effect
+estimates than those that do — but the association is not uniform. It has been
+most consistent for subjectively assessed outcomes, and much weaker, at times
+indistinguishable from none, for outcomes such as all-cause mortality; it also
+varies by clinical domain and between the collections of trials examined (Wood et
+al. 2008; Savović et al. 2012). So missing information is a reason for concern
+rather than for neutrality, which is why the instruments do not treat it as
+benign — but it is not a general law about the size of an effect, and it is not
+a verdict on the trial in front of you. What our rule asserts is narrower and
+defensible: **absence of reporting alone does not establish that the method was
+inadequate**, and the honest response is to name the document that would settle it
+rather than to convict the paper in its absence. An appraisal full of Unclears is
+a real finding about how much you can currently claim, and the export says so.
 
 ---
 
@@ -281,10 +292,15 @@ is neither meaningfully better nor meaningfully worse, and needs a margin in bot
 directions. Non-inferiority asks only whether it is not worse by more than a
 stated amount, and is one-directional by design. A non-inferiority result is
 compatible with the new treatment being slightly worse, exactly as much worse as
-the margin permits. It never establishes equivalence, and it never establishes
-superiority — a superiority claim from a non-inferiority trial requires a
-pre-specified testing procedure, not an after-the-fact look at whether the
-confidence interval happened to exclude no difference.
+the margin permits. It never establishes equivalence. Superiority is a different
+matter: a non-inferiority trial can legitimately go on to test it, and with a
+single primary endpoint and a single dose, a fixed-sequence test of superiority
+following a successful non-inferiority test generally calls for no further
+multiplicity adjustment — the FDA's non-inferiority guidance addresses this case
+directly. What does not follow is reading superiority off the interval after the
+fact. Whether the claim is available for a particular trial depends on that
+trial's analysis plan and testing sequence, which is a protocol question to look
+up rather than something to assert or to deny from an abstract.
 
 **Non-inferiority for one endpoint is not non-inferiority for another.** The
 margin was justified for a particular outcome, the trial was powered for that
@@ -349,19 +365,33 @@ the evidence its margin rests on.
 This is the point most readers have backwards, and it is why the checklist treats
 analysis sets differently here.
 
-In a superiority trial, an intention-to-treat analysis is conservative: people
-who did not take the drug, or crossed over, dilute the difference between arms
-and push the estimate toward no effect, making it _harder_ to declare a winner.
-The bias works against the claim being made.
+In a superiority trial, an intention-to-treat analysis is often called
+conservative, and under the right conditions it is: if the quantity of interest is
+the effect of being assigned to the treatment, and non-adherence is comparable
+across arms and unrelated to prognosis, then people who did not take the drug, or
+who crossed over, dilute the difference between arms and push the estimate toward
+no effect, making it _harder_ to declare a winner.
 
-In a non-inferiority trial, the claim being made is that the arms are not far
-apart. The same dilution now pushes the estimate toward exactly the answer the
-trial is looking for. **Non-adherence, crossover and measurement noise make
-non-inferiority easier to declare, not harder.** Sloppy conduct is rewarded.
+Those are conditions, not guarantees, and each of them can fail. Which estimand is
+being targeted decides what "dilution" even means: attenuation is a statement
+about the effect of adherence, whereas the effect of assignment is the thing an
+intention-to-treat analysis estimates rather than a watered-down version of it.
+The mechanism of non-adherence matters too. Non-adherence concentrated in one arm,
+driven by the outcome under study, or related to prognosis — sicker participants
+abandoning the more demanding regimen, say — need not attenuate anything, and can
+move an estimate away from the null as easily as toward it. "Intention to treat,
+therefore conservative" has to be argued from the trial in front of you, not read
+off the label.
 
-So "the ITT analysis showed non-inferiority" is not, on its own, the reassurance
-it is in a superiority trial. The corresponding item asks whether analyses defined
-differently agree.
+In a non-inferiority trial, the usual reassurance runs backwards even where those
+conditions do hold. The claim being made is that the arms are not far apart, so
+dilution now pushes the estimate toward exactly the answer the trial is looking
+for. **Non-adherence, crossover and measurement noise can make non-inferiority
+easier to declare, not harder.** Sloppy conduct is rewarded.
+
+So "the ITT analysis showed non-inferiority" is not, on its own, a reassurance —
+and in a superiority trial the label on its own is not one either. The
+corresponding item asks whether analyses defined differently agree.
 
 And the mirror-image error has to be avoided at the same time: **a per-protocol
 analysis is not the trustworthy one.** It is defined by post-randomisation
@@ -397,8 +427,11 @@ from it.
 - Non-inferiority required the lower bound of the two-sided 95% confidence
   interval for the hazard ratio to lie above 0.8. The result was HR 1.17
   (95% CI 1.02–1.36), so the criterion was met.
-- The margin of 0.8 was justified against an assumed reference recovery duration
-  of 5.5 days — that is, about 6.875 days, roughly 25% longer recovery.
+- Justifying the margin at the design stage, the trial expressed 0.8 on the hazard
+  ratio against an assumed reference recovery duration of 5.5 days as about
+  6.875 days, roughly a quarter longer recovery. That conversion belongs to the
+  trial's own design-stage reasoning, under the assumptions set out in its
+  statistical analysis section; it is not an observed result.
 - Per-protocol and early-treatment analyses and a missing-data sensitivity
   analysis also supported non-inferiority. The analysis of all randomised
   participants was post hoc.
@@ -442,21 +475,29 @@ Unclear is the right answer.
 
 ### Reading 3 — the margin is a clinical judgement the tool must not make
 
-0.8 on the hazard ratio was anchored to an assumed reference recovery of 5.5
-days, and the arithmetic gives about 6.875 days: a treatment could leave people
-symptomatic roughly 25% longer and still clear the bar.
+The margin of 0.8 on the hazard ratio was anchored to an assumed reference
+recovery of 5.5 days, and about 6.875 days — roughly a quarter longer — is the
+figure the trial presented for it when justifying the margin at the design stage.
 
-Is 25% longer an acceptable price? That depends on what the alternative costs,
-what the drug interactions of the comparator are for this patient, what else the
-patient is taking, and what a day and a half of symptoms is worth to them. It is
-a value judgement, it varies by patient, and **the tool records the margin and
-asks whether it was justified clinically and statistically — it never rules on
-whether the margin was reasonable.**
+That figure needs handling with care, because it reads as though it followed from
+the hazard ratio. It does not. Proportional hazards alone will not turn a
+hazard-ratio margin into a time ratio: under proportional hazards, the ratio of
+median times, or of mean times, is not in general the reciprocal of the hazard
+ratio. The reciprocal relationship holds under an exponential model with a
+constant hazard, and comparable conversions hold under other specific parametric
+assumptions. So 6.875 days is the conversion this trial presented, resting on the
+assumptions stated in its own statistical analysis section — not an observed
+result, and not a general property of a hazard ratio. Anyone quoting it should say
+whose arithmetic it is.
 
-One caveat a careful reader should add: converting a hazard-ratio margin into "so
-many days" is itself an approximation that leans on the relationship between
-hazards and times holding steady over follow-up. The 6.875-day figure is a way to
-make the margin intuitively graspable, not a second result.
+Taken on the trial's own design-stage terms, then, a treatment could leave people
+symptomatic roughly a quarter longer and still clear the bar. Is that an
+acceptable price? That depends on what the alternative costs, what the drug
+interactions of the comparator are for this patient, what else the patient is
+taking, and what a day and a half of symptoms is worth to them. It is a value
+judgement, it varies by patient, and **the tool records the margin and asks
+whether it was justified clinically and statistically — it never rules on whether
+the margin was reasonable.**
 
 ### Reading 4 — nothing was shown about severe disease or death
 
@@ -476,15 +517,23 @@ over-reaching: false, as a description of what the trial showed. It is also
 precisely the sentence a hurried reader writes, which is why it appears as the
 worked example in `src/prompts/appraisal-guardrails.md`.
 
-### Reading 5 — the interval excludes 1, and that is still not superiority
+### Reading 5 — the interval excludes 1, which makes superiority a question to look up
 
-The lower bound of 1.02 lies above 1. A reader who is primed to look for winners
-will read that as "VV116 was better". A non-inferiority design does not license
-the step. Whether a superiority claim is available depends on whether a
-superiority test was pre-specified in the trial's testing sequence — a
-full-text-or-protocol question, and therefore an Unclear from an abstract, not an
-inference. The tool's non-inferiority items are built so that this stays a
-question rather than becoming a conclusion.
+The lower bound of 1.02 lies above 1. A reader primed to look for winners will
+read that as "VV116 was better"; a reader primed to be careful will answer that a
+non-inferiority trial cannot show superiority at all. Both have moved too fast. A
+non-inferiority trial may be designed to test superiority once non-inferiority is
+established, and with one primary endpoint and one dose, a fixed-sequence test of
+that kind generally calls for no further multiplicity adjustment. What settles the
+matter for this trial is its analysis plan and its testing sequence, which the
+abstract does not give.
+
+So a lower bound excluding no effect is a reason to go and read the statistical
+analysis section: a question to look up in the analysis plan, not a conclusion to
+draw from the abstract and not one to rule out from it either. From an abstract
+the honest verdict is Unclear, pointing at the protocol or the full text. The
+tool's non-inferiority items are built so that this stays a question rather than
+becoming either a conclusion or a refusal.
 
 ### What the appraisal looks like
 
@@ -529,7 +578,8 @@ deliberate methodological choice from an oversight.
 ### Unclear is a first-class verdict, not a skipped item
 
 Making Unclear a real answer with its own help text and its own `needs` pointer
-is what stops the tool from converting a word limit into a criticism.
+is what stops the tool from converting an absence of reporting into a criticism of
+the study.
 
 **To reverse:** dropping to a binary forces every under-reported method into
 either an unearned Yes or a false No, and there is no wording that rescues it.
@@ -588,6 +638,20 @@ product is not taken from any of them.
   2012;308:2594-2604. PMID 23268518.
 - Hopewell S, Chan A-W, Collins GS, et al. CONSORT 2025 statement: updated
   guideline for reporting randomised trials. _BMJ_ 2025;389:e081123.
+
+Supporting references for two of the empirical and regulatory claims made above:
+what missing reporting does and does not imply (section 3), and when a superiority
+claim is available from a non-inferiority trial (sections 6 and 8).
+
+- Wood L, Egger M, Gluud LL, et al. Empirical evidence of bias in treatment effect
+  estimates in controlled trials with different interventions and outcomes:
+  meta-epidemiological study. _BMJ_ 2008;336:601-605.
+- Savović J, Jones HE, Altman DG, et al. Influence of reported study design
+  characteristics on intervention effect estimates from randomized, controlled
+  trials. _Ann Intern Med_ 2012;157:429-438.
+- U.S. Food and Drug Administration. Non-Inferiority Clinical Trials to Establish
+  Effectiveness: Guidance for Industry. November 2016, §IV.G, on testing for
+  superiority within a non-inferiority trial.
 
 Worked example:
 

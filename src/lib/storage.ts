@@ -40,7 +40,17 @@ export const APPRAISAL_PREFIX = 'appraisal:';
 export const SETTINGS_KEY = 'settings';
 
 /** Bumped when the export file format changes in a way importAll cannot read. */
-export const EXPORT_SCHEMA_VERSION = 1;
+export const EXPORT_SCHEMA_VERSION = 2;
+
+/**
+ * Where a stored record that this version cannot read is moved to.
+ *
+ * Declining to migrate old answers and destroying the old record are two
+ * different decisions; only the first was taken. The record stays on the device
+ * under this prefix, out of the listing and out of exports, instead of being
+ * silently overwritten the next time the reader opens that article.
+ */
+export const UNREADABLE_PREFIX = 'appraisal-unreadable:';
 
 /** PubMed IDs are digits only. Also keeps `appraisal:<pmid>` free of path-like junk. */
 const PMID_PATTERN = /^[0-9]{1,9}$/;
@@ -192,10 +202,31 @@ function pickSettings(s: Settings): Settings {
 
 /* --------------------------------------------------------------- appraisals */
 
+/**
+ * A record this version cannot read is moved aside rather than left where the
+ * next autosave would overwrite it. The reader gets an empty form, which is
+ * honest, and the old record survives under `UNREADABLE_PREFIX` where it can
+ * still be recovered by hand.
+ */
 export async function loadAppraisal(pmid: string): Promise<Appraisal | null> {
   if (!isValidPmid(pmid)) return null;
-  const raw = await getStore().get<unknown>(appraisalKey(pmid));
-  return isAppraisal(raw) ? raw : null;
+  const key = appraisalKey(pmid);
+  const raw = await getStore().get<unknown>(key);
+  if (isAppraisal(raw)) return raw;
+  if (raw !== undefined && raw !== null) await quarantine(pmid, key, raw);
+  return null;
+}
+
+async function quarantine(pmid: string, key: string, raw: unknown): Promise<void> {
+  const store = getStore();
+  try {
+    await store.set(`${UNREADABLE_PREFIX}${pmid}`, raw);
+    await store.remove([key]);
+  } catch {
+    // Storage is full or unavailable. Leaving the unreadable record in place is
+    // the safer failure: the reader sees an empty form either way, and a save
+    // that cannot write cannot overwrite it.
+  }
 }
 
 export async function saveAppraisal(appraisal: Appraisal): Promise<void> {
@@ -342,24 +373,22 @@ export async function importAll(
   if (!isRecord(parsed)) {
     throw new Error('That file is not a Journal Club Helper export.');
   }
-  if (parsed['schemaVersion'] !== EXPORT_SCHEMA_VERSION) {
+  const fileVersion = parsed['schemaVersion'];
+  if (fileVersion !== EXPORT_SCHEMA_VERSION) {
     throw new Error(
-      'That export was written by a different version of this extension and cannot be read.',
+      typeof fileVersion === 'number' && fileVersion < EXPORT_SCHEMA_VERSION
+        ? 'That backup was written by an earlier version of this extension, before the appraisal ' +
+            'checklists changed, and cannot be read. Nothing here has been altered.'
+        : 'That export was written by a different version of this extension and cannot be read. ' +
+            'Nothing here has been altered.',
     );
   }
 
-  const store = getStore();
-  if (mode === 'replace') {
-    const all = await store.getAll();
-    const ours = Object.keys(all).filter(
-      (key) => key.startsWith(APPRAISAL_PREFIX) || key === SETTINGS_KEY,
-    );
-    // Only our own keys: another feature's data is not this import's business.
-    if (ours.length > 0) await store.remove(ours);
-  }
-
+  // Everything is validated before anything is written or removed. The previous
+  // order deleted first and validated afterwards, so an unreadable backup
+  // emptied the store and then imported nothing.
   const incoming = Array.isArray(parsed['appraisals']) ? parsed['appraisals'] : [];
-  let imported = 0;
+  const usable: Appraisal[] = [];
   let skipped = 0;
   for (const raw of incoming) {
     if (!isAppraisal(raw)) {
@@ -371,6 +400,29 @@ export async function importAll(
       skipped += 1;
       continue;
     }
+    usable.push(appraisal);
+  }
+
+  if (incoming.length > 0 && usable.length === 0) {
+    throw new Error(
+      'None of the appraisals in that file could be read, so nothing was imported and nothing ' +
+        'here has been changed.',
+    );
+  }
+
+  const store = getStore();
+  if (mode === 'replace') {
+    const all = await store.getAll();
+    const ours = Object.keys(all).filter(
+      (key) => key.startsWith(APPRAISAL_PREFIX) || key === SETTINGS_KEY,
+    );
+    // Only our own keys: another feature's data, and anything set aside as
+    // unreadable, are not this import's business.
+    if (ours.length > 0) await store.remove(ours);
+  }
+
+  let imported = 0;
+  for (const appraisal of usable) {
     if (mode === 'merge') {
       const existing = await loadAppraisal(appraisal.pmid);
       if (existing && existing.updatedAt > appraisal.updatedAt) {

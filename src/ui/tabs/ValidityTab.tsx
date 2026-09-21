@@ -64,7 +64,7 @@ const INHERIT = '';
 /** One line each, so the two scored sections cannot be read as the same question. */
 const SECTION_LEDE: Record<string, string> = {
   'internal-validity':
-    'How far the study can answer its own question. Judge the methods, not the word count of what you are reading.',
+    'How far the study can answer its own question. Judge the methods. Where your source does not say, that is a limit on what you can check, not a fault you have found.',
   applicability:
     'A different question from the ones above: whether an answer this study supports would transfer to your patient. A study can be sound here and still not apply, or apply and still be shaky.',
 };

@@ -56,24 +56,22 @@ const SECTIONS: readonly ChecklistSection[] = ['internal-validity', 'applicabili
 const NEEDS: readonly EvidenceNeed[] = ['abstract', 'full-text', 'protocol-or-registry'];
 
 /**
- * Jaccard similarity over word sets, above which a shipped question is treated
- * as a copy of a published instrument.
+ * Jaccard similarity over word sets, at or above which a shipped question is
+ * treated as a copy of a published instrument and the build fails.
  *
- * 0.5 means the two sentences share half of their combined vocabulary. Two
- * sentences about the same epidemiological concept, written independently,
- * land far below that: the highest score any shipped question reaches against
- * the 63-entry corpus is the low 0.3s, and that match is the unavoidable
- * vocabulary of the concept itself ("the", "random", "allocation", "sequence",
- * "method") rather than a shared sentence. A verbatim copy scores 1.0 and a
- * reworded copy — the same sentence with a word or two swapped — scores 0.93;
- * both self-tests are at the bottom of this file.
- * The threshold therefore sits in a wide empty band between "same topic" and
- * "same sentence".
+ * 0.5 means the two sentences share half of their combined vocabulary. A
+ * verbatim copy scores 1.0 and a reworded copy — the same sentence with a word
+ * or two swapped — scores 0.93; both self-tests are at the bottom of this file.
+ * Two sentences about the same epidemiological concept, written independently,
+ * land far below that, so the threshold sits in a wide empty band between "same
+ * topic" and "same sentence".
+ *
+ * Staying under this number proves only that no question is a copy. It is not
+ * evidence that the wording is original. That claim is carried by
+ * REVIEWED_EXCEPTIONS further down, where a pair that scores high has to be read
+ * by a person who writes down why the overlap is not borrowed wording.
  */
 const SIMILARITY_THRESHOLD = 0.5;
-
-/** Observed headroom guard: the real questions must stay well under the threshold. */
-const MAX_OBSERVED_SIMILARITY = 0.35;
 
 const forbiddenPhrases: string[] = forbiddenFixture.phrases;
 
@@ -392,6 +390,145 @@ describe('verdict help', () => {
 
 /* ------------------------------------------------------------ wording guard */
 
+/**
+ * Similarity at or above which a (question, corpus phrase) pair has to be read
+ * by a person and written up in REVIEWED_EXCEPTIONS below.
+ *
+ * Measured, not guessed. Across the 73 question-shaped strings this build ships
+ * (66 items plus the funding panel carried by each of the 7 checklists) and the
+ * 63-entry corpus, the scores fall into two groups. Everything except one pair
+ * sits at 0.250 or below; the top of that group is the funding panel against
+ * "have they taken account of the confounding factors in the design and
+ * analysis" and cohort-outcome-measurement against "were the outcomes measured
+ * in a valid and reliable way", both 0.250. Then there is an empty band up to
+ * the single pair at 0.333 that REVIEWED_EXCEPTIONS covers. 0.30 sits inside
+ * that band: far enough above 0.250 that editing an existing question does not
+ * drag unrelated pairs into review, and far enough below 0.333 that the pair
+ * already on the list cannot drop under the bar and out of sight without being
+ * genuinely rewritten.
+ *
+ * Raising this number is not a way to deal with a question that trips it. There
+ * are two ways out: review the pair and record why it is acceptable, or reword
+ * the question. Raising it does not even work quietly: every entry below the new
+ * bar immediately becomes stale, so the change can only be made by deleting
+ * somebody's written review, in the same diff, where it can be argued with.
+ */
+const REVIEW_BAR = 0.3;
+
+/**
+ * How far a recorded score may sit from the score measured now.
+ *
+ * The word sets compared here are small — 8 to 30 words — so the smallest edit
+ * either sentence can take moves the score by roughly 0.02. On the pair below,
+ * adding one word to the question takes 0.333 to 0.313, and swapping one of the
+ * shared words takes it to 0.250. A tolerance of 0.01 therefore absorbs the
+ * rounding in the recorded literal and nothing else.
+ */
+const SCORE_DRIFT_TOLERANCE = 0.01;
+
+/**
+ * A reason is an argument about two specific sentences, which does not fit in a
+ * few words. This length is a floor against an empty gesture, not a target.
+ */
+const MIN_REASON_LENGTH = 120;
+
+/** One pair of shipped question and corpus phrase, cleared by a human reader. */
+interface ReviewedException {
+  /** The item id, or `info:<panel id>` for a non-scored panel prompt. */
+  readonly id: string;
+  /** The corpus entry it approached, copied exactly from the fixture. */
+  readonly phrase: string;
+  /** The similarity measured when the pair was reviewed. */
+  readonly score: number;
+  /** Why the overlap is the vocabulary of the concept and not reused wording. */
+  readonly reason: string;
+}
+
+/**
+ * Pairs that a person has read and cleared.
+ *
+ * This list, not a number, is what the guard offers as evidence of original
+ * wording. Adding a question that brushes against an instrument's phrasing
+ * fails the test until someone opens both sentences, decides whether the
+ * overlap is the unavoidable vocabulary of the concept, and writes the reason
+ * down here. An entry that stops scoring over the bar fails too, so the list
+ * cannot silt up with excuses for wording that has since changed.
+ *
+ * What does not belong here: a pair that is genuinely close wording. The fix
+ * for that is to rewrite the question.
+ */
+const REVIEWED_EXCEPTIONS: readonly ReviewedException[] = [
+  {
+    id: 'rct-randomisation-sequence',
+    phrase: 'method used to generate the random allocation sequence',
+    score: 0.333,
+    reason:
+      'Reviewed 2026-09-21. The five words the two sentences share — the, random, ' +
+      'allocation, sequence, method — are the name of the thing being asked about rather ' +
+      'than a borrowed phrase: "allocation sequence" is the standard term for the list of ' +
+      'assignments, "random" is the property under examination, and "method" is the ordinary ' +
+      'noun for how something was produced. Nothing else is shared. The corpus entry is a ' +
+      'noun phrase instructing authors to report a method; the shipped line is a question ' +
+      'asking a reader to judge one, and the judgement it carries — "genuinely random and ' +
+      'unpredictable" — has no counterpart in the corpus entry. The longest run of ' +
+      'consecutive words the two have in common is the two-word term of art itself. The ' +
+      'score is as high as it is mostly because the corpus entry is only eight words long, ' +
+      'which keeps the union small: 5 shared words over a union of 15. Naming the concept in ' +
+      'plainer words would score lower and cost the reader clarity, which is not a trade ' +
+      'worth making.',
+  },
+];
+
+/** One scored (question, corpus phrase) pair. */
+interface ScoredPair {
+  id: string;
+  phrase: string;
+  score: number;
+}
+
+/** Stable identity of a pair, used to match the measured pairs against the list. */
+function pairKey(id: string, phrase: string): string {
+  return `${id} ~ ${phrase}`;
+}
+
+function describePair(pair: ScoredPair): string {
+  return `${pair.id} ~ "${pair.phrase}" (${pair.score.toFixed(3)})`;
+}
+
+/**
+ * Every pair scoring at or above `minimum`, worst first.
+ *
+ * Every corpus phrase is compared, not only the closest one, so a question that
+ * brushes against two instruments owes a review for each of them.
+ */
+function pairsAtOrAbove(minimum: number): ScoredPair[] {
+  const worst = new Map<string, ScoredPair>();
+  for (const entry of allQuestions) {
+    const target = words(entry.text);
+    for (const phrase of forbiddenPhrases) {
+      const score = jaccard(target, words(phrase));
+      if (score < minimum) continue;
+      // The funding panel ships on every checklist, so the same pair is reached
+      // more than once; one review covers it, recorded at its worst score.
+      const key = pairKey(entry.id, phrase);
+      const seen = worst.get(key);
+      if (seen === undefined || score > seen.score) {
+        worst.set(key, { id: entry.id, phrase, score });
+      }
+    }
+  }
+  return [...worst.values()].sort((a, b) => b.score - a.score);
+}
+
+/** The score a listed pair reaches now, or null when that pair no longer exists. */
+function currentScore(id: string, phrase: string): number | null {
+  if (!forbiddenPhrases.includes(phrase)) return null;
+  const matching = allQuestions.filter((entry) => entry.id === id);
+  if (matching.length === 0) return null;
+  const target = words(phrase);
+  return matching.reduce((max, entry) => Math.max(max, jaccard(words(entry.text), target)), 0);
+}
+
 describe('original wording guard', () => {
   it('has a non-trivial comparison corpus', () => {
     expect(forbiddenPhrases.length).toBeGreaterThanOrEqual(40);
@@ -406,18 +543,63 @@ describe('original wording guard', () => {
   });
 
   it(`keeps every question below ${SIMILARITY_THRESHOLD} similarity to the corpus`, () => {
-    const offenders = allQuestions
-      .map((entry) => ({ entry, match: closestForbidden(entry.text) }))
-      .filter((row) => row.match.score >= SIMILARITY_THRESHOLD)
-      .map((row) => `${row.entry.id} ~ "${row.match.phrase}" (${row.match.score.toFixed(2)})`);
-    expect(offenders).toEqual([]);
+    expect(pairsAtOrAbove(SIMILARITY_THRESHOLD).map(describePair)).toEqual([]);
   });
 
-  it(`keeps the worst observed similarity under ${MAX_OBSERVED_SIMILARITY}`, () => {
-    const worst = allQuestions
-      .map((entry) => closestForbidden(entry.text).score)
-      .reduce((max, score) => Math.max(max, score), 0);
-    expect(worst).toBeLessThan(MAX_OBSERVED_SIMILARITY);
+  /**
+   * The review step, made executable. A pair is not cleared by sitting under
+   * some number; it is cleared by a person reading both sentences and saying
+   * why the overlap is the vocabulary of the concept. Anything at or above the
+   * bar that nobody has written up fails here, by name.
+   */
+  it(`has a written review for every pair at or above ${REVIEW_BAR}`, () => {
+    const reviewed = new Set(REVIEWED_EXCEPTIONS.map((entry) => pairKey(entry.id, entry.phrase)));
+    const unreviewed = pairsAtOrAbove(REVIEW_BAR)
+      .filter((pair) => !reviewed.has(pairKey(pair.id, pair.phrase)))
+      .map(describePair);
+    expect(unreviewed).toEqual([]);
+  });
+
+  /** An excuse for wording that no longer exists is worse than no excuse. */
+  it('carries no stale entry in the reviewed list', () => {
+    const stale = REVIEWED_EXCEPTIONS.flatMap((entry) => {
+      const score = currentScore(entry.id, entry.phrase);
+      if (score === null) {
+        return [`${pairKey(entry.id, entry.phrase)}: that question or phrase no longer exists`];
+      }
+      if (score < REVIEW_BAR) {
+        return [
+          `${pairKey(entry.id, entry.phrase)}: now scores ${score.toFixed(3)}, under the ` +
+            `${REVIEW_BAR} bar — delete the entry`,
+        ];
+      }
+      return [];
+    });
+    expect(stale).toEqual([]);
+  });
+
+  /** The recorded score is part of the review: if it has moved, the reason was written about a different sentence. */
+  it('records the score each reviewed pair was cleared at', () => {
+    const drifted = REVIEWED_EXCEPTIONS.flatMap((entry) => {
+      const score = currentScore(entry.id, entry.phrase);
+      if (score === null || Math.abs(score - entry.score) <= SCORE_DRIFT_TOLERANCE) return [];
+      return [
+        `${pairKey(entry.id, entry.phrase)}: recorded ${entry.score}, now ${score.toFixed(3)} ` +
+          '— re-read the pair and rewrite the reason',
+      ];
+    });
+    expect(drifted).toEqual([]);
+  });
+
+  it('gives every reviewed pair one entry and a reason someone actually wrote', () => {
+    const keys = REVIEWED_EXCEPTIONS.map((entry) => pairKey(entry.id, entry.phrase));
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const entry of REVIEWED_EXCEPTIONS) {
+      expect(entry.reason.trim().length).toBeGreaterThanOrEqual(MIN_REASON_LENGTH);
+      expect(entry.reason).not.toMatch(/\b(todo|tbd|fixme|n\/a)\b/i);
+      // A review clears a near miss, never a copy: that decision is not a human's to make.
+      expect(entry.score).toBeLessThan(SIMILARITY_THRESHOLD);
+    }
   });
 
   it('also checks the why text for exact reproduction', () => {

@@ -41,11 +41,13 @@ in it is right.
 If the supplied text does not describe a method, the verdict is `unclear`. It is
 never `no`.
 
-**Why.** Abstracts have word limits. A method missing from an abstract tells you
-about the abstract, not about the trial. Reporting guidelines such as CONSORT
-describe what authors should write down; risk-of-bias assessment is about what
-was done. Treating silence as a failure convicts every well-conducted trial with
-a tight word count.
+**Why.** Absence of reporting alone does not establish that the method was
+inadequate. Silence marks the limit of the source in front of you; it does not
+tell you what the trialists did, and it does not tell you why they did not write
+it down. Reporting guidelines such as CONSORT describe what authors should write
+down; risk-of-bias assessment is about what was done. Treating silence as a
+failure turns every under-reported method into a finding you have no evidence
+for.
 
 ### 2. Never answer `yes` because a stock phrase is present either
 
@@ -64,6 +66,13 @@ Do not answer `yes` because the authors wrote "intention-to-treat". Do not answe
 what the numbers show: how many were randomised, how many were in the primary
 analysis, and on what stated grounds any were excluded.
 
+Do not describe an intention-to-treat analysis as conservative on the strength of
+the label either. Whether non-adherence pushes an estimate toward no effect
+depends on which estimand is being targeted and on how the non-adherence arose:
+non-adherence concentrated in one arm, or related to prognosis, need not attenuate
+anything. In a non-inferiority trial the usual reassurance runs the other way,
+because dilution favours the claim being made.
+
 **Why.** The same three labels are used for materially different analyses. An ITT
 label does not make an analysis valid and an mITT label does not make one
 invalid. The exclusions and their reasons are the finding; the label is
@@ -81,21 +90,27 @@ is close to unmovable by knowledge of assignment; a self-reported symptom score
 is not. A blanket "not blinded, therefore high risk" is the most common false
 positive in amateur appraisal.
 
-### 5. Never convert a non-inferiority result into equivalence or superiority
+### 5. Never convert a non-inferiority result into equivalence, and never read superiority off the interval
 
 A non-inferiority result means only that the treatment was not worse by more than
 the stated margin. Do not write "equivalent", "as effective as", "similar to",
-"comparable to", "no difference", "just as good" or "better".
+"comparable to", "no difference" or "just as good".
 
-A confidence interval that happens to exclude no difference does **not** license a
-superiority claim. Whether superiority can be claimed depends on whether a
-superiority test was pre-specified in the trial's testing sequence, which an
-abstract does not settle: record `unclear` and name the protocol.
+Superiority is a separate question, and your job is to leave it as one. A
+confidence interval that excludes no difference does **not** by itself license a
+superiority claim — and it does not rule one out either. A non-inferiority trial
+may legitimately go on to test superiority, and with a single primary endpoint and
+a single dose, a fixed-sequence test of superiority after non-inferiority
+generally calls for no further multiplicity adjustment. Whether the claim is
+available for this trial depends on its analysis plan and its testing sequence,
+which an abstract does not give. Record `unclear`, name the protocol, and neither
+assert superiority nor declare it unavailable.
 
 **Why.** Non-inferiority is one-directional and compatible with the new treatment
 being worse by up to the whole margin. Equivalence requires margins in both
-directions. Superiority requires a pre-specified test. These are three different
-claims and the trial made one of them.
+directions. Superiority depends on what the trial's testing sequence provided for.
+These are three different claims, and which of them a trial is entitled to make is
+a protocol question rather than something an interval settles on its own.
 
 ### 6. Never extend a non-inferiority conclusion to an endpoint that was not tested
 
@@ -247,8 +262,10 @@ nirmatrelvir–ritonavir, an acceptable v0.2 bottom-line draft is:
 > sustained clinical recovery through day 28. In the primary analysis population
 > of 771 randomised participants who received at least one dose, the hazard ratio
 > was 1.17 (95% CI 1.02–1.36), clearing the trial's non-inferiority criterion that
-> the lower bound exceed 0.8 — a margin corresponding to roughly 25% longer
-> recovery against an assumed 5.5-day reference. Internal validity: the
+> the lower bound exceed 0.8 — a margin the trial justified at the design stage
+> against an assumed 5.5-day reference recovery, which under its own stated
+> assumptions it expressed as roughly a quarter longer recovery. Internal
+> validity: the
 > pre-specified primary analysis excluded the 51 randomised participants who were
 > never dosed, and the analysis of all randomised participants was post hoc.
 > Applicability: the margin borrows its meaning from the comparator's previously
@@ -261,9 +278,12 @@ What makes it acceptable:
 
 - it stays inside the endpoint that was actually tested;
 - it names the analysis set by what it contains rather than by a label;
-- it gives the margin and what the margin means, without ruling on whether the
-  margin is acceptable — that judgement belongs to the reader;
-- it does not read the interval's lower bound of 1.02 as superiority;
+- it gives the margin and the trial's own design-stage reading of it, attributed
+  as such, without ruling on whether the margin is acceptable — that judgement
+  belongs to the reader;
+- it does not read the interval's lower bound of 1.02 as superiority, and does not
+  declare superiority unavailable either: that turns on a testing sequence the
+  abstract does not give;
 - it does not mention the funder, because funding is not a bottom-line element;
 - it closes the door on the extension a reader would otherwise make.
 
@@ -282,8 +302,10 @@ Check each of these against what you have written.
 2. Is every `yes` backed by a described method, rather than by a label?
 3. Does every `unclear` carry a non-null `needs`?
 4. Does every figure in every `evidence` field appear in the supplied text?
-5. Have you used the word "equivalent", "similar", "comparable", "no difference"
-   or "better" about a non-inferiority result?
+5. Have you used the word "equivalent", "similar", "comparable" or "no difference"
+   about a non-inferiority result, or called the treatment better — or ruled out
+   that it could be — without a testing sequence in the supplied text to support
+   either?
 6. Have you carried a conclusion to an endpoint that was not tested, or to one
    with no events?
 7. Has the funder influenced anything other than a recorded fact?

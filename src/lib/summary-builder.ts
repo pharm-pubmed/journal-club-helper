@@ -119,7 +119,7 @@ function appraisedFromLine(scope: SourceScope): string {
 /**
  * The single most important sentence in the rework. This document gets carried
  * into a room and argued from, and an Unclear that reads as a fault found in
- * the study turns an abstract's word limit into a methodological criticism.
+ * the study turns an absence of reporting into a criticism it has no evidence for.
  * "Not reported" is Unclear, and Unclear is a statement about the reader.
  */
 const UNCLEAR_IS_A_LIMIT =
@@ -138,14 +138,21 @@ const GROUP_IS_ADDITIONAL =
  * advance, the new treatment was not worse by more than that margin. Readers
  * routinely stretch it into "as good as", into "better", and — the case this
  * wording comes from — onto a second endpoint that produced no events in either
- * arm, where nothing whatever was demonstrated because nothing was ever tested.
+ * arm and was never part of the pre-specified non-inferiority test.
+ *
+ * The caution deliberately does not say that zero events rules non-inferiority
+ * out. On a risk-difference margin with enough participants, two arms with no
+ * events can sit comfortably inside the margin. What decides it is the effect
+ * measure, the margin and the precision reached — and, before any of that,
+ * whether the outcome was pre-specified as a non-inferiority endpoint at all.
  */
 const NON_INFERIORITY_CAUTION =
   'Carry this result no further than the outcome it was tested on. A non-inferiority finding ' +
   'belongs to one pre-specified endpoint and one pre-specified margin: it is not a finding of ' +
   'equivalence, it is not a finding of superiority, and it says nothing about any other endpoint. ' +
-  'If an outcome recorded no events in either arm, the trial did not demonstrate non-inferiority ' +
-  'for it — that outcome was never put to the test.';
+  'An outcome that was not part of that pre-specified test carries no non-inferiority claim, ' +
+  'however few events it recorded; where an outcome had no events in either arm, check what was ' +
+  'pre-specified and how precise the estimate is before reading anything into it.';
 
 /** Applicability is a separate question, and the export says which is which. */
 const APPLICABILITY_IS_NOT_VALIDITY =

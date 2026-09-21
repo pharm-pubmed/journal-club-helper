@@ -256,7 +256,7 @@ describe('VV116 (PMID 36577095) end to end', () => {
       expect(rendering).toContain('Non-inferiority design');
       // The guardrail this paper exists to protect.
       expect(rendering).toContain('Carry this result no further than the outcome it was tested on');
-      expect(rendering).toContain('no events in either arm');
+      expect(rendering).toContain('carries no non-inferiority claim');
       // Applicability is visibly not a verdict on how the trial was run.
       expect(rendering).toContain('Applicability is not internal validity');
       // Funding recorded, sponsor role absent — and absence must not read as a finding.

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { KeyValueStore } from '../../src/lib/kv-store';
 import { createMemoryStore, getStore, setStore } from '../../src/lib/kv-store';
 import {
+  EXPORT_SCHEMA_VERSION,
   MAX_APPRAISALS,
   MAX_APPRAISAL_BYTES,
   appraisalKey,
@@ -230,7 +231,7 @@ describe('exportAll', () => {
 
     const parsed = JSON.parse(await exportAll());
     expect(typeof parsed.exportedAt).toBe('string');
-    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.schemaVersion).toBe(EXPORT_SCHEMA_VERSION);
     expect(parsed.appraisals).toHaveLength(1);
     expect(parsed.appraisals[0].pmid).toBe('11111111');
     expect(parsed.appraisals[0].pico).toEqual({ p: 'adults', i: 'drug', c: 'placebo', o: 'death' });
@@ -374,6 +375,66 @@ describe('importAll', () => {
     expect(back?.validity['rct']?.['rct-prespecification']?.source).toBeNull();
   });
 
+  // Reported against d18cb78. The export file's own version was left at 1 while
+  // each appraisal inside moved to 2, so a pre-rework backup passed the version
+  // gate, replace mode deleted everything first, and every appraisal in the file
+  // was then skipped as unreadable: imported 0, skipped 1, stored data gone.
+  // Refusing to migrate old answers and destroying old records are different
+  // decisions, and only the first one was taken deliberately.
+  it('refuses a pre-rework export instead of emptying the store for it', async () => {
+    const legacyFile = JSON.stringify({
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      appraisals: [{ ...makeAppraisal('22222222'), schemaVersion: 1 }],
+      settings: { schemaVersion: 1, counters: { panelOpens: 3, exports: 1, aiRuns: 0 } },
+    });
+    await saveAppraisal(makeAppraisal('11111111'));
+
+    await expect(importAll(legacyFile, 'replace')).rejects.toThrow(
+      /earlier version|cannot be read/i,
+    );
+    expect(await loadAppraisal('11111111')).not.toBeNull();
+  });
+
+  // The same class of failure with a current-version file whose contents are all
+  // unreadable: replace must not empty the store for an import that writes nothing.
+  it('does not delete stored appraisals when the file has nothing usable in it', async () => {
+    const file = JSON.stringify({
+      schemaVersion: EXPORT_SCHEMA_VERSION,
+      exportedAt: new Date().toISOString(),
+      appraisals: [{ nonsense: true }, { pmid: 'not-a-pmid' }],
+      settings: { schemaVersion: 1, counters: { panelOpens: 0, exports: 0, aiRuns: 0 } },
+    });
+    await saveAppraisal(makeAppraisal('11111111'));
+
+    await expect(importAll(file, 'replace')).rejects.toThrow();
+    expect(await loadAppraisal('11111111')).not.toBeNull();
+  });
+
+  it('still replaces when the file does carry readable appraisals', async () => {
+    const json = await exportOf([makeAppraisal('22222222')]);
+    await saveAppraisal(makeAppraisal('11111111'));
+
+    expect(await importAll(json, 'replace')).toEqual({ imported: 1, skipped: 0 });
+    expect(await loadAppraisal('11111111')).toBeNull();
+    expect(await loadAppraisal('22222222')).not.toBeNull();
+  });
+
+  // A stored record we cannot read is not a record we may overwrite.
+  it('sets an unreadable stored appraisal aside rather than letting the next save bury it', async () => {
+    const legacy = { ...makeAppraisal('11111111'), schemaVersion: 1 };
+    await getStore().set(appraisalKey('11111111'), legacy);
+
+    expect(await loadAppraisal('11111111')).toBeNull();
+
+    const all = await getStore().getAll();
+    const quarantined = Object.keys(all).filter((key) => key.includes('11111111'));
+    expect(quarantined.some((key) => key !== appraisalKey('11111111'))).toBe(true);
+    // And it stays out of the normal listing and the export.
+    expect(await listAppraisals()).toHaveLength(0);
+    expect(await exportAll()).not.toContain('11111111');
+  });
+
   it('rejects corrupt JSON', async () => {
     await expect(importAll('{ not json', 'merge')).rejects.toThrow(/valid JSON/i);
     await expect(importAll('[]', 'merge')).rejects.toThrow();
@@ -387,7 +448,7 @@ describe('importAll', () => {
 
   it('skips entries with a bad PMID or a bad schema', async () => {
     const json = JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: EXPORT_SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       appraisals: [
         makeAppraisal('11111111'),
@@ -404,7 +465,7 @@ describe('importAll', () => {
 
   it('never writes a key other than appraisal:* and settings', async () => {
     const json = JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: EXPORT_SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       appraisals: [makeAppraisal('11111111')],
       settings: { schemaVersion: 1, counters: { panelOpens: 1, exports: 0, aiRuns: 0 } },
@@ -420,7 +481,7 @@ describe('importAll', () => {
 
   it('skips an oversized entry instead of failing the whole import', async () => {
     const json = JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: EXPORT_SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       appraisals: [
         makeAppraisal('11111111'),
