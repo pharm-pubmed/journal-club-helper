@@ -84,7 +84,7 @@ Not available yet. Filled in for v0.3 (Chrome Web Store submission steps, versio
 
 ## 4. Known issues
 
-Manual passes on **Chrome** and **Edge** on 2026-09-19 cleared most of what was unverified. One real defect came out of them (#43); what is still unchecked is listed below.
+Manual passes on **Chrome** and **Edge** cleared everything that was unverified in the shipped feature set. Two real defects came out of them — #43, and the export wording now recorded in §7 — which is a better return than the passes themselves.
 
 ### Verified on Chrome, 2026-09-19
 
@@ -105,11 +105,12 @@ Edge also surfaced **#43**: once open, the panel follows the user to every tab a
 
 ### Still unverified
 
-| #   | Not verified                                       | Why it matters                                                                                                                                                                                                                                                 | Issue |
-| --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| 1   | **Clipboard copy in the side panel**, any browser  | Chromium forks differ on clipboard permission there. The Export tab is built to show a red "select the preview and copy it yourself" message on denial, so the bad outcome is not a refusal but a button that does nothing visible. Nobody has pressed it yet. | #25   |
-| 2   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for.                                                                                                                                     | —     |
-| 3   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                                                                                                                                                          | #27   |
+| #   | Not verified                                       | Why it matters                                                                                                             | Issue |
+| --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----- |
+| 1   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for. | —     |
+| 2   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                      | #27   |
+
+Clipboard copy and the `.md` download were both exercised on Edge and work. Reading the downloaded file end to end is what found the export defect in §7 — the file was correct in every structural respect and wrong in one sentence, which no golden-file test could have caught, because the golden encodes an empty appraisal correctly and cannot know the abstract it is describing.
 
 Two design limitations that are deliberate, not defects:
 
@@ -165,7 +166,7 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
 - 2026-09-19 (later still): Adopted two things from Chrome's "build extensions with AI" guidance. `CHROMEWEBSTORE.md` now holds the per-permission justification and data-use answers a store reviewer asks for, next to the code so it cannot drift; update it in the same commit as any manifest change. `.mcp.json` adds the chrome-devtools MCP server so an agent can drive the built extension in a real browser — the substitute for the component tests §4 says are missing.
   Writing that file surfaced one thing: `api.anthropic.com` and `api.openai.com` were declared as optional host permissions with no code able to request them. Removed until v0.2 (#34, #35). Shipped manifest is now `storage`, `sidePanel`, one PubMed host permission, and one optional host for E-utilities.
 - 2026-09-19 (Edge): Edge passes the same checks as Chrome — loads, injects, opens the panel, keeps state across tab switches. It also surfaced #43: the panel follows the user to every tab and shows its empty state on unrelated sites, because `side_panel.default_path` makes it global. Present in Chrome too; nobody had noticed because reasoning about "the panel shows a message on other tabs" does not convey how it feels to have a panel follow you around. Left unfixed on purpose — opening the panel is the riskiest path in v0.1 and had just been confirmed working, so the change needs a browser, not an argument.
-  Brave dropped from scope (§7). `.md` download confirmed working; the exported file was read end to end, which is how the export defect in §7 was found. Clipboard copy is still unexercised.
+  Brave dropped from scope (§7). Clipboard copy and `.md` download both confirmed working on Edge. Reading the exported file end to end is what found the export defect in §7; the structure was right and one sentence was false, which is the class of defect a golden-file test cannot reach.
   The MCP server as first configured did not work: Chrome's guidance pairs `--categoryExtensions` with `--autoConnect`, but the server's own `--help` says they are incompatible until Chrome 149, and this machine had no Linux Chrome to connect to anyway. Corrected to a pipe connection with an explicit executable path; see §2. Worth remembering that a config lifted from documentation is not a verified config.
 
 ## 7. Decisions and why
