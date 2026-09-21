@@ -5,6 +5,7 @@ import {
   EXPORT_SCHEMA_VERSION,
   MAX_APPRAISALS,
   MAX_APPRAISAL_BYTES,
+  UNREADABLE_PREFIX,
   appraisalKey,
   deleteAppraisal,
   exportAll,
@@ -16,7 +17,7 @@ import {
   saveSettings,
 } from '../../src/lib/storage';
 import type { Appraisal, Settings } from '../../src/lib/storage';
-import { createAutosaveController } from '../../src/ui/hooks/useAutosave';
+import { createAutosaveController, restoreAppraisal } from '../../src/ui/hooks/useAutosave';
 
 let store: KeyValueStore;
 
@@ -93,6 +94,55 @@ describe('appraisalKey', () => {
 });
 
 describe('saveAppraisal / loadAppraisal', () => {
+  it('preserves an unreadable record before saving without a prior load', async () => {
+    const legacy = { ...makeAppraisal('11111111'), schemaVersion: 1 };
+    await store.set(appraisalKey('11111111'), legacy);
+
+    await saveAppraisal(makeAppraisal('11111111', { bottomLine: 'New assessment' }));
+
+    expect(await store.get(`${UNREADABLE_PREFIX}11111111`)).toEqual(legacy);
+    expect((await loadAppraisal('11111111'))?.bottomLine).toBe('New assessment');
+  });
+
+  it('blocks autosave after a quota failure during restore, then retries safely', async () => {
+    const legacy = {
+      ...makeAppraisal('11111111'),
+      schemaVersion: 1,
+      bottomLine: 'Old notes '.repeat(500),
+    };
+    await store.set(appraisalKey('11111111'), legacy);
+    const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length;
+    let capacity = bytes(await store.getAll()) + 100;
+    setStore({
+      ...store,
+      async set(key, value) {
+        if (bytes({ ...(await store.getAll()), [key]: value }) > capacity) {
+          throw new Error('QUOTA_BYTES quota exceeded');
+        }
+        await store.set(key, value);
+      },
+    });
+
+    // Restoring releases the form even after a read error. A smaller replacement
+    // fits the quota, so safety must be enforced by the write path too.
+    await restoreAppraisal('11111111');
+    const errors: string[] = [];
+    const autosave = createAutosaveController({ onError: (message) => errors.push(message) });
+    autosave.schedule(makeAppraisal('11111111', { bottomLine: 'New assessment' }));
+    await autosave.flush();
+
+    expect(await store.get(appraisalKey('11111111'))).toEqual(legacy);
+    expect(await store.get(`${UNREADABLE_PREFIX}11111111`)).toBeUndefined();
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/preserv|recover|safely/i);
+
+    capacity = Number.POSITIVE_INFINITY;
+    autosave.schedule(makeAppraisal('11111111', { bottomLine: 'Retried assessment' }));
+    await autosave.flush();
+    expect(await store.get(`${UNREADABLE_PREFIX}11111111`)).toEqual(legacy);
+    expect((await loadAppraisal('11111111'))?.bottomLine).toBe('Retried assessment');
+  });
+
   it('round trips an appraisal', async () => {
     const a = makeAppraisal('11111111');
     await saveAppraisal(a);
@@ -259,6 +309,80 @@ describe('exportAll', () => {
 });
 
 describe('importAll', () => {
+  it('describes an empty backup as empty, not unreadable', async () => {
+    await saveAppraisal(makeAppraisal('11111111'));
+    const before = await store.getAll();
+
+    await expect(
+      importAll(JSON.stringify({ schemaVersion: 2, appraisals: [] }), 'replace'),
+    ).rejects.toThrow(/contains no appraisals/i);
+
+    expect(await store.getAll()).toEqual(before);
+  });
+
+  it('reports earlier merge writes when preserving a later legacy record fails', async () => {
+    const legacy = { ...makeAppraisal('22222222'), schemaVersion: 1 };
+    await store.set(appraisalKey('22222222'), legacy);
+    setStore({
+      ...store,
+      async set(key, value) {
+        if (key.startsWith(UNREADABLE_PREFIX)) throw new Error('QUOTA_BYTES quota exceeded');
+        await store.set(key, value);
+      },
+    });
+    const json = JSON.stringify({
+      schemaVersion: 2,
+      appraisals: [makeAppraisal('11111111'), makeAppraisal('22222222')],
+    });
+
+    await expect(importAll(json, 'merge')).rejects.toThrow(
+      /1 appraisal.*written.*not rolled back.*preserved safely/i,
+    );
+
+    expect((await store.get<Appraisal>(appraisalKey('11111111')))?.schemaVersion).toBe(2);
+    expect(await store.get(appraisalKey('22222222'))).toEqual(legacy);
+    expect(await store.get(`${UNREADABLE_PREFIX}22222222`)).toBeUndefined();
+  });
+
+  it('reports written appraisals when a later settings write fails', async () => {
+    const settings = { schemaVersion: 1, counters: { panelOpens: 7, exports: 2, aiRuns: 0 } };
+    await store.set('settings', settings);
+    setStore({
+      ...store,
+      async set(key, value) {
+        if (key === 'settings') throw new Error('Settings write failed');
+        await store.set(key, value);
+      },
+    });
+    const json = JSON.stringify({
+      schemaVersion: 2,
+      appraisals: [makeAppraisal('11111111')],
+      settings,
+    });
+
+    await expect(importAll(json, 'merge')).rejects.toThrow(
+      /1 appraisal.*written.*not rolled back.*Settings write failed/i,
+    );
+
+    expect((await store.get<Appraisal>(appraisalKey('11111111')))?.schemaVersion).toBe(2);
+    expect(await store.get('settings')).toEqual(settings);
+  });
+
+  it.each([
+    { schemaVersion: 2 },
+    { schemaVersion: 2, appraisals: [] },
+    { schemaVersion: 2, appraisals: 'invalid' },
+    { schemaVersion: 2, appraisals: null },
+  ])('rejects an empty or malformed payload before any replacement: %j', async (payload) => {
+    await saveAppraisal(makeAppraisal('11111111'));
+    await saveSettings({ schemaVersion: 1, counters: { panelOpens: 9, exports: 2, aiRuns: 0 } });
+    const before = await store.getAll();
+
+    await expect(importAll(JSON.stringify(payload), 'replace')).rejects.toThrow();
+
+    expect(await store.getAll()).toEqual(before);
+  });
+
   async function exportOf(appraisals: Appraisal[], settings?: Settings): Promise<string> {
     const fresh = createMemoryStore();
     setStore(fresh);
@@ -307,8 +431,11 @@ describe('importAll', () => {
       schemaVersion: 1,
       counters: { panelOpens: 9, exports: 4, aiRuns: 0 },
     });
+    await saveAppraisal(makeAppraisal('11111111'));
+    const existing = await store.get(appraisalKey('11111111'));
     await importAll(json, 'replace');
     expect((await loadSettings()).counters).toEqual({ panelOpens: 9, exports: 4, aiRuns: 0 });
+    expect(await store.get(appraisalKey('11111111'))).toEqual(existing);
   });
 
   // A backup restored onto a device that has kept working must not hand back a
@@ -323,8 +450,11 @@ describe('importAll', () => {
       counters: { panelOpens: 2, exports: 7, aiRuns: 0 },
     });
 
-    await importAll(json, 'merge');
+    await saveAppraisal(makeAppraisal('11111111'));
+    const existing = await store.get(appraisalKey('11111111'));
+    expect(await importAll(json, 'merge')).toEqual({ imported: 0, skipped: 0, settingsOnly: true });
     expect((await loadSettings()).counters).toEqual({ panelOpens: 9, exports: 7, aiRuns: 0 });
+    expect(await store.get(appraisalKey('11111111'))).toEqual(existing);
   });
 
   it('takes the file counters verbatim in replace mode', async () => {
@@ -339,6 +469,22 @@ describe('importAll', () => {
 
     await importAll(json, 'replace');
     expect((await loadSettings()).counters).toEqual({ panelOpens: 1, exports: 1, aiRuns: 0 });
+  });
+
+  it.each([
+    {},
+    { schemaVersion: 99, counters: { panelOpens: 1, exports: 2, aiRuns: 0 } },
+    { schemaVersion: 1, counters: { panelOpens: 'bad', exports: 2, aiRuns: 0 } },
+  ])('rejects an empty appraisal list with unreadable settings: %j', async (settings) => {
+    await saveAppraisal(makeAppraisal('11111111'));
+    await saveSettings({ schemaVersion: 1, counters: { panelOpens: 9, exports: 2, aiRuns: 0 } });
+    const before = await store.getAll();
+
+    await expect(
+      importAll(JSON.stringify({ schemaVersion: 2, appraisals: [], settings }), 'replace'),
+    ).rejects.toThrow(/contains no appraisals/i);
+
+    expect(await store.getAll()).toEqual(before);
   });
 
   // The critical-appraisal rework changed item ids and the shape of an answer, so

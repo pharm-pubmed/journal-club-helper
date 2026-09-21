@@ -113,7 +113,7 @@ function isValidityAnswers(value: unknown): value is ValidityAnswers {
 
 /**
  * Structural check for anything read back from storage or from an import file.
- * Anything that fails is treated as absent rather than crashing the panel.
+ * Unreadable stored records must be preserved before they can be replaced.
  */
 export function isAppraisal(value: unknown): value is Appraisal {
   if (!isRecord(value)) return false;
@@ -223,9 +223,12 @@ async function quarantine(pmid: string, key: string, raw: unknown): Promise<void
     await store.set(`${UNREADABLE_PREFIX}${pmid}`, raw);
     await store.remove([key]);
   } catch {
-    // Storage is full or unavailable. Leaving the unreadable record in place is
-    // the safer failure: the reader sees an empty form either way, and a save
-    // that cannot write cannot overwrite it.
+    // A new archive can exceed the quota while a smaller overwrite would fit.
+    // Do not permit replacement until preservation succeeds.
+    throw new Error(
+      'The saved appraisal could not be preserved safely. It has not been replaced. ' +
+        'Free storage space or recover the existing record before trying again.',
+    );
   }
 }
 
@@ -235,6 +238,9 @@ export async function saveAppraisal(appraisal: Appraisal): Promise<void> {
   }
   const stamped: Appraisal = { ...appraisal, updatedAt: Date.now() };
   assertWithinSizeLimit(stamped);
+  // The UI can release an empty form after restore fails, and callers can save
+  // without loading first. Enforce preservation at the write boundary as well.
+  await loadAppraisal(stamped.pmid);
   await getStore().set(appraisalKey(stamped.pmid), stamped);
   await evictOldest();
 }
@@ -302,6 +308,17 @@ async function evictOldest(): Promise<void> {
 
 const COUNTER_NAMES: readonly CounterName[] = ['panelOpens', 'exports', 'aiRuns'];
 
+/** An empty appraisal list is useful only when it carries readable counters. */
+function hasReadableSettings(value: unknown): value is Settings {
+  if (!isRecord(value) || value['schemaVersion'] !== 1) return false;
+  const counters = value['counters'];
+  if (!isRecord(counters)) return false;
+  return COUNTER_NAMES.every((name) => {
+    const count = counters[name];
+    return typeof count === 'number' && Number.isSafeInteger(count) && count >= 0;
+  });
+}
+
 export function defaultSettings(): Settings {
   return { schemaVersion: 1, counters: { panelOpens: 0, exports: 0, aiRuns: 0 } };
 }
@@ -354,8 +371,9 @@ export async function exportAll(): Promise<string> {
  *   merge   — keep what is stored; an imported copy wins only when it is at
  *             least as new, so restoring an old backup cannot silently undo
  *             work done since. Usage counters take the higher of the two.
- *   replace — drop every stored appraisal and the settings record first, and
- *             take the file's counters verbatim.
+ *   replace — replace appraisals and take the file's counters verbatim. A file
+ *             with an empty appraisal list and readable settings updates only
+ *             the counters, preserving every stored appraisal.
  *
  * `skipped` counts entries that were not written: malformed, wrong PMID,
  * oversized, or older than the stored copy in merge mode.
@@ -363,7 +381,7 @@ export async function exportAll(): Promise<string> {
 export async function importAll(
   json: string,
   mode: 'merge' | 'replace',
-): Promise<{ imported: number; skipped: number }> {
+): Promise<{ imported: number; skipped: number; settingsOnly?: boolean }> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(json);
@@ -387,7 +405,17 @@ export async function importAll(
   // Everything is validated before anything is written or removed. The previous
   // order deleted first and validated afterwards, so an unreadable backup
   // emptied the store and then imported nothing.
-  const incoming = Array.isArray(parsed['appraisals']) ? parsed['appraisals'] : [];
+  const incoming = parsed['appraisals'];
+  if (!Array.isArray(incoming)) {
+    throw new Error('That file has no valid appraisal list. Nothing here has been changed.');
+  }
+  const settingsOnly = incoming.length === 0 && hasReadableSettings(parsed['settings']);
+  if (incoming.length === 0 && !settingsOnly) {
+    throw new Error(
+      'That file contains no appraisals and no readable usage counts to restore. ' +
+        'Nothing here has been changed.',
+    );
+  }
   const usable: Appraisal[] = [];
   let skipped = 0;
   for (const raw of incoming) {
@@ -403,56 +431,65 @@ export async function importAll(
     usable.push(appraisal);
   }
 
-  if (incoming.length > 0 && usable.length === 0) {
+  if (usable.length === 0 && !settingsOnly) {
     throw new Error(
       'None of the appraisals in that file could be read, so nothing was imported and nothing ' +
         'here has been changed.',
     );
   }
 
-  const store = getStore();
-  if (mode === 'replace') {
-    const all = await store.getAll();
-    const ours = Object.keys(all).filter(
-      (key) => key.startsWith(APPRAISAL_PREFIX) || key === SETTINGS_KEY,
-    );
-    // Only our own keys: another feature's data, and anything set aside as
-    // unreadable, are not this import's business.
-    if (ours.length > 0) await store.remove(ours);
-  }
-
   let imported = 0;
-  for (const appraisal of usable) {
-    if (mode === 'merge') {
-      const existing = await loadAppraisal(appraisal.pmid);
-      if (existing && existing.updatedAt > appraisal.updatedAt) {
-        skipped += 1;
-        continue;
-      }
+  try {
+    const store = getStore();
+    if (mode === 'replace' && !settingsOnly) {
+      const all = await store.getAll();
+      const ours = Object.keys(all).filter(
+        (key) => key.startsWith(APPRAISAL_PREFIX) || key === SETTINGS_KEY,
+      );
+      // Only our own keys: another feature's data, and anything set aside as
+      // unreadable, are not this import's business.
+      if (ours.length > 0) await store.remove(ours);
     }
-    // The key comes from the validated PMID, never from a key in the file, so
-    // only `appraisal:*` and `settings` can ever be written here.
-    await store.set(appraisalKey(appraisal.pmid), appraisal);
-    imported += 1;
-  }
 
-  const settings = parsed['settings'];
-  if (isRecord(settings)) {
-    const incomingSettings = normaliseSettings(settings);
-    if (mode === 'merge') {
-      // Counters only ever go up, so merging a backup from another device must
-      // not hand back a lower number than this device has already reached.
-      const current = await loadSettings();
-      for (const name of COUNTER_NAMES) {
-        incomingSettings.counters[name] = Math.max(
-          current.counters[name],
-          incomingSettings.counters[name],
-        );
+    for (const appraisal of usable) {
+      if (mode === 'merge') {
+        const existing = await loadAppraisal(appraisal.pmid);
+        if (existing && existing.updatedAt > appraisal.updatedAt) {
+          skipped += 1;
+          continue;
+        }
       }
+      // The key comes from the validated PMID, never from a key in the file, so
+      // only `appraisal:*` and `settings` can ever be written here.
+      await store.set(appraisalKey(appraisal.pmid), appraisal);
+      imported += 1;
     }
-    await saveSettings(incomingSettings);
-  }
 
-  await evictOldest();
-  return { imported, skipped };
+    const settings = parsed['settings'];
+    if (isRecord(settings)) {
+      const incomingSettings = normaliseSettings(settings);
+      if (mode === 'merge') {
+        // Counters only ever go up, so merging a backup from another device must
+        // not hand back a lower number than this device has already reached.
+        const current = await loadSettings();
+        for (const name of COUNTER_NAMES) {
+          incomingSettings.counters[name] = Math.max(
+            current.counters[name],
+            incomingSettings.counters[name],
+          );
+        }
+      }
+      await saveSettings(incomingSettings);
+    }
+
+    if (!settingsOnly) await evictOldest();
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Browser storage could not be updated.';
+    throw new Error(
+      `Import stopped: ${imported} appraisal(s) were written and ${skipped} skipped. ` +
+        'Any earlier writes or removals were not rolled back. ' +
+        detail,
+    );
+  }
+  return settingsOnly ? { imported, skipped, settingsOnly: true } : { imported, skipped };
 }

@@ -56,20 +56,17 @@ const SECTIONS: readonly ChecklistSection[] = ['internal-validity', 'applicabili
 const NEEDS: readonly EvidenceNeed[] = ['abstract', 'full-text', 'protocol-or-registry'];
 
 /**
- * Jaccard similarity over word sets, at or above which a shipped question is
- * treated as a copy of a published instrument and the build fails.
+ * Jaccard similarity over word sets, at or above which the build flags a
+ * question for excessive overlap with the comparison corpus.
  *
  * 0.5 means the two sentences share half of their combined vocabulary. A
  * verbatim copy scores 1.0 and a reworded copy — the same sentence with a word
  * or two swapped — scores 0.93; both self-tests are at the bottom of this file.
- * Two sentences about the same epidemiological concept, written independently,
- * land far below that, so the threshold sits in a wide empty band between "same
- * topic" and "same sentence".
- *
- * Staying under this number proves only that no question is a copy. It is not
- * evidence that the wording is original. That claim is carried by
- * REVIEWED_EXCEPTIONS further down, where a pair that scores high has to be read
- * by a person who writes down why the overlap is not borrowed wording.
+ * Staying under this number means only that this metric found no pair at or
+ * above the threshold in this corpus. It proves neither originality nor the
+ * absence of copying. REVIEWED_EXCEPTIONS records reasons for accepting flagged
+ * pairs; the tests cannot establish who wrote them or whether a human reviewed
+ * them. Those questions remain part of code review.
  */
 const SIMILARITY_THRESHOLD = 0.5;
 
@@ -392,7 +389,7 @@ describe('verdict help', () => {
 
 /**
  * Similarity at or above which a (question, corpus phrase) pair has to be read
- * by a person and written up in REVIEWED_EXCEPTIONS below.
+ * and written up in REVIEWED_EXCEPTIONS below.
  *
  * Measured, not guessed. Across the 73 question-shaped strings this build ships
  * (66 items plus the funding panel carried by each of the 7 checklists) and the
@@ -402,10 +399,9 @@ describe('verdict help', () => {
  * analysis" and cohort-outcome-measurement against "were the outcomes measured
  * in a valid and reliable way", both 0.250. Then there is an empty band up to
  * the single pair at 0.333 that REVIEWED_EXCEPTIONS covers. 0.30 sits inside
- * that band: far enough above 0.250 that editing an existing question does not
- * drag unrelated pairs into review, and far enough below 0.333 that the pair
- * already on the list cannot drop under the bar and out of sight without being
- * genuinely rewritten.
+ * that band for the current corpus. Even small wording edits can move a pair
+ * across the bar; the stale-entry check makes dropping a listed pair below it
+ * visible but does not establish that the meaning has changed.
  *
  * Raising this number is not a way to deal with a question that trips it. There
  * are two ways out: review the pair and record why it is acceptable, or reword
@@ -418,11 +414,9 @@ const REVIEW_BAR = 0.3;
 /**
  * How far a recorded score may sit from the score measured now.
  *
- * The word sets compared here are small — 8 to 30 words — so the smallest edit
- * either sentence can take moves the score by roughly 0.02. On the pair below,
- * adding one word to the question takes 0.333 to 0.313, and swapping one of the
- * shared words takes it to 0.250. A tolerance of 0.01 therefore absorbs the
- * rounding in the recorded literal and nothing else.
+ * This allows rounding in the recorded score. It is not a detector for every
+ * wording change: edits can preserve the word set or the score. Reviewers must
+ * still check whether the reason applies to the current sentences.
  */
 const SCORE_DRIFT_TOLERANCE = 0.01;
 
@@ -432,7 +426,7 @@ const SCORE_DRIFT_TOLERANCE = 0.01;
  */
 const MIN_REASON_LENGTH = 120;
 
-/** One pair of shipped question and corpus phrase, cleared by a human reader. */
+/** One pair of shipped question and corpus phrase with a recorded rationale. */
 interface ReviewedException {
   /** The item id, or `info:<panel id>` for a non-scored panel prompt. */
   readonly id: string;
@@ -445,14 +439,10 @@ interface ReviewedException {
 }
 
 /**
- * Pairs that a person has read and cleared.
- *
- * This list, not a number, is what the guard offers as evidence of original
- * wording. Adding a question that brushes against an instrument's phrasing
- * fails the test until someone opens both sentences, decides whether the
- * overlap is the unavoidable vocabulary of the concept, and writes the reason
- * down here. An entry that stops scoring over the bar fails too, so the list
- * cannot silt up with excuses for wording that has since changed.
+ * Recorded decisions for pairs requiring review. Reasons are arguments for a
+ * reviewer to assess, not proof of originality or of human approval. Adding a
+ * pair above the bar without a reason fails, as does retaining an entry whose
+ * pair no longer reaches the bar.
  *
  * What does not belong here: a pair that is genuinely close wording. The fix
  * for that is to rewrite the question.
@@ -463,7 +453,7 @@ const REVIEWED_EXCEPTIONS: readonly ReviewedException[] = [
     phrase: 'method used to generate the random allocation sequence',
     score: 0.333,
     reason:
-      'Reviewed 2026-09-21. The five words the two sentences share — the, random, ' +
+      'Rationale recorded 2026-09-21. The five words the two sentences share — the, random, ' +
       'allocation, sequence, method — are the name of the thing being asked about rather ' +
       'than a borrowed phrase: "allocation sequence" is the standard term for the list of ' +
       'assignments, "random" is the property under examination, and "method" is the ordinary ' +
@@ -475,7 +465,11 @@ const REVIEWED_EXCEPTIONS: readonly ReviewedException[] = [
       'score is as high as it is mostly because the corpus entry is only eight words long, ' +
       'which keeps the union small: 5 shared words over a union of 15. Naming the concept in ' +
       'plainer words would score lower and cost the reader clarity, which is not a trade ' +
-      'worth making.',
+      'worth making. Counterargument: this overlap is avoidable. For example, ' +
+      '"Was the order of assignment produced by an unpredictable chance process nobody ' +
+      'could foresee?" scores approximately 0.048 against this corpus phrase. Retaining ' +
+      'the standard clinical terminology is a judgement about clarity, not a fact that ' +
+      'the overlap is necessary; a reviewer can disagree with that judgement.',
   },
 ];
 
@@ -547,10 +541,8 @@ describe('original wording guard', () => {
   });
 
   /**
-   * The review step, made executable. A pair is not cleared by sitting under
-   * some number; it is cleared by a person reading both sentences and saying
-   * why the overlap is the vocabulary of the concept. Anything at or above the
-   * bar that nobody has written up fails here, by name.
+   * Check that flagged pairs have a recorded rationale. This checks coverage of
+   * the list, not the authorship or correctness of the reasons.
    */
   it(`has a written review for every pair at or above ${REVIEW_BAR}`, () => {
     const reviewed = new Set(REVIEWED_EXCEPTIONS.map((entry) => pairKey(entry.id, entry.phrase)));
@@ -578,7 +570,7 @@ describe('original wording guard', () => {
     expect(stale).toEqual([]);
   });
 
-  /** The recorded score is part of the review: if it has moved, the reason was written about a different sentence. */
+  /** Score drift prompts another review; an unchanged score does not establish unchanged wording. */
   it('records the score each reviewed pair was cleared at', () => {
     const drifted = REVIEWED_EXCEPTIONS.flatMap((entry) => {
       const score = currentScore(entry.id, entry.phrase);
@@ -591,13 +583,13 @@ describe('original wording guard', () => {
     expect(drifted).toEqual([]);
   });
 
-  it('gives every reviewed pair one entry and a reason someone actually wrote', () => {
+  it('gives every reviewed pair one entry and a non-placeholder rationale', () => {
     const keys = REVIEWED_EXCEPTIONS.map((entry) => pairKey(entry.id, entry.phrase));
     expect(new Set(keys).size).toBe(keys.length);
     for (const entry of REVIEWED_EXCEPTIONS) {
       expect(entry.reason.trim().length).toBeGreaterThanOrEqual(MIN_REASON_LENGTH);
       expect(entry.reason).not.toMatch(/\b(todo|tbd|fixme|n\/a)\b/i);
-      // A review clears a near miss, never a copy: that decision is not a human's to make.
+      // A recorded rationale does not bypass the upper similarity threshold.
       expect(entry.score).toBeLessThan(SIMILARITY_THRESHOLD);
     }
   });
