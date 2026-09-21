@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { KeyValueStore } from '../../src/lib/kv-store';
 import { createMemoryStore, getStore, setStore } from '../../src/lib/kv-store';
 import {
+  EXPORT_SCHEMA_VERSION,
   MAX_APPRAISALS,
   MAX_APPRAISAL_BYTES,
+  UNREADABLE_PREFIX,
   appraisalKey,
   deleteAppraisal,
   exportAll,
@@ -15,13 +17,13 @@ import {
   saveSettings,
 } from '../../src/lib/storage';
 import type { Appraisal, Settings } from '../../src/lib/storage';
-import { createAutosaveController } from '../../src/ui/hooks/useAutosave';
+import { createAutosaveController, restoreAppraisal } from '../../src/ui/hooks/useAutosave';
 
 let store: KeyValueStore;
 
 function makeAppraisal(pmid: string, overrides: Partial<Appraisal> = {}): Appraisal {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     pmid,
     createdAt: 1_000,
     updatedAt: 1_000,
@@ -34,9 +36,12 @@ function makeAppraisal(pmid: string, overrides: Partial<Appraisal> = {}): Apprai
     },
     designDetected: null,
     designOverride: 'rct',
+    subtypeOverride: null,
     pico: { p: 'adults', i: 'drug', c: 'placebo', o: 'death' },
     numbers: null,
-    validity: { rct: { r1: { verdict: 'yes', note: 'concealed' } } },
+    validity: { rct: { r1: { verdict: 'yes', note: 'concealed', source: null } } },
+    sourceScope: 'abstract',
+    info: { funder: 'A charity' },
     bottomLine: 'Looks solid.',
     discussionQuestions: [],
     ...overrides,
@@ -89,6 +94,55 @@ describe('appraisalKey', () => {
 });
 
 describe('saveAppraisal / loadAppraisal', () => {
+  it('preserves an unreadable record before saving without a prior load', async () => {
+    const legacy = { ...makeAppraisal('11111111'), schemaVersion: 1 };
+    await store.set(appraisalKey('11111111'), legacy);
+
+    await saveAppraisal(makeAppraisal('11111111', { bottomLine: 'New assessment' }));
+
+    expect(await store.get(`${UNREADABLE_PREFIX}11111111`)).toEqual(legacy);
+    expect((await loadAppraisal('11111111'))?.bottomLine).toBe('New assessment');
+  });
+
+  it('blocks autosave after a quota failure during restore, then retries safely', async () => {
+    const legacy = {
+      ...makeAppraisal('11111111'),
+      schemaVersion: 1,
+      bottomLine: 'Old notes '.repeat(500),
+    };
+    await store.set(appraisalKey('11111111'), legacy);
+    const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length;
+    let capacity = bytes(await store.getAll()) + 100;
+    setStore({
+      ...store,
+      async set(key, value) {
+        if (bytes({ ...(await store.getAll()), [key]: value }) > capacity) {
+          throw new Error('QUOTA_BYTES quota exceeded');
+        }
+        await store.set(key, value);
+      },
+    });
+
+    // Restoring releases the form even after a read error. A smaller replacement
+    // fits the quota, so safety must be enforced by the write path too.
+    await restoreAppraisal('11111111');
+    const errors: string[] = [];
+    const autosave = createAutosaveController({ onError: (message) => errors.push(message) });
+    autosave.schedule(makeAppraisal('11111111', { bottomLine: 'New assessment' }));
+    await autosave.flush();
+
+    expect(await store.get(appraisalKey('11111111'))).toEqual(legacy);
+    expect(await store.get(`${UNREADABLE_PREFIX}11111111`)).toBeUndefined();
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/preserv|recover|safely/i);
+
+    capacity = Number.POSITIVE_INFINITY;
+    autosave.schedule(makeAppraisal('11111111', { bottomLine: 'Retried assessment' }));
+    await autosave.flush();
+    expect(await store.get(`${UNREADABLE_PREFIX}11111111`)).toEqual(legacy);
+    expect((await loadAppraisal('11111111'))?.bottomLine).toBe('Retried assessment');
+  });
+
   it('round trips an appraisal', async () => {
     const a = makeAppraisal('11111111');
     await saveAppraisal(a);
@@ -227,7 +281,7 @@ describe('exportAll', () => {
 
     const parsed = JSON.parse(await exportAll());
     expect(typeof parsed.exportedAt).toBe('string');
-    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.schemaVersion).toBe(EXPORT_SCHEMA_VERSION);
     expect(parsed.appraisals).toHaveLength(1);
     expect(parsed.appraisals[0].pmid).toBe('11111111');
     expect(parsed.appraisals[0].pico).toEqual({ p: 'adults', i: 'drug', c: 'placebo', o: 'death' });
@@ -255,6 +309,80 @@ describe('exportAll', () => {
 });
 
 describe('importAll', () => {
+  it('describes an empty backup as empty, not unreadable', async () => {
+    await saveAppraisal(makeAppraisal('11111111'));
+    const before = await store.getAll();
+
+    await expect(
+      importAll(JSON.stringify({ schemaVersion: 2, appraisals: [] }), 'replace'),
+    ).rejects.toThrow(/contains no appraisals/i);
+
+    expect(await store.getAll()).toEqual(before);
+  });
+
+  it('reports earlier merge writes when preserving a later legacy record fails', async () => {
+    const legacy = { ...makeAppraisal('22222222'), schemaVersion: 1 };
+    await store.set(appraisalKey('22222222'), legacy);
+    setStore({
+      ...store,
+      async set(key, value) {
+        if (key.startsWith(UNREADABLE_PREFIX)) throw new Error('QUOTA_BYTES quota exceeded');
+        await store.set(key, value);
+      },
+    });
+    const json = JSON.stringify({
+      schemaVersion: 2,
+      appraisals: [makeAppraisal('11111111'), makeAppraisal('22222222')],
+    });
+
+    await expect(importAll(json, 'merge')).rejects.toThrow(
+      /1 appraisal.*written.*not rolled back.*preserved safely/i,
+    );
+
+    expect((await store.get<Appraisal>(appraisalKey('11111111')))?.schemaVersion).toBe(2);
+    expect(await store.get(appraisalKey('22222222'))).toEqual(legacy);
+    expect(await store.get(`${UNREADABLE_PREFIX}22222222`)).toBeUndefined();
+  });
+
+  it('reports written appraisals when a later settings write fails', async () => {
+    const settings = { schemaVersion: 1, counters: { panelOpens: 7, exports: 2, aiRuns: 0 } };
+    await store.set('settings', settings);
+    setStore({
+      ...store,
+      async set(key, value) {
+        if (key === 'settings') throw new Error('Settings write failed');
+        await store.set(key, value);
+      },
+    });
+    const json = JSON.stringify({
+      schemaVersion: 2,
+      appraisals: [makeAppraisal('11111111')],
+      settings,
+    });
+
+    await expect(importAll(json, 'merge')).rejects.toThrow(
+      /1 appraisal.*written.*not rolled back.*Settings write failed/i,
+    );
+
+    expect((await store.get<Appraisal>(appraisalKey('11111111')))?.schemaVersion).toBe(2);
+    expect(await store.get('settings')).toEqual(settings);
+  });
+
+  it.each([
+    { schemaVersion: 2 },
+    { schemaVersion: 2, appraisals: [] },
+    { schemaVersion: 2, appraisals: 'invalid' },
+    { schemaVersion: 2, appraisals: null },
+  ])('rejects an empty or malformed payload before any replacement: %j', async (payload) => {
+    await saveAppraisal(makeAppraisal('11111111'));
+    await saveSettings({ schemaVersion: 1, counters: { panelOpens: 9, exports: 2, aiRuns: 0 } });
+    const before = await store.getAll();
+
+    await expect(importAll(JSON.stringify(payload), 'replace')).rejects.toThrow();
+
+    expect(await store.getAll()).toEqual(before);
+  });
+
   async function exportOf(appraisals: Appraisal[], settings?: Settings): Promise<string> {
     const fresh = createMemoryStore();
     setStore(fresh);
@@ -303,8 +431,11 @@ describe('importAll', () => {
       schemaVersion: 1,
       counters: { panelOpens: 9, exports: 4, aiRuns: 0 },
     });
+    await saveAppraisal(makeAppraisal('11111111'));
+    const existing = await store.get(appraisalKey('11111111'));
     await importAll(json, 'replace');
     expect((await loadSettings()).counters).toEqual({ panelOpens: 9, exports: 4, aiRuns: 0 });
+    expect(await store.get(appraisalKey('11111111'))).toEqual(existing);
   });
 
   // A backup restored onto a device that has kept working must not hand back a
@@ -319,8 +450,11 @@ describe('importAll', () => {
       counters: { panelOpens: 2, exports: 7, aiRuns: 0 },
     });
 
-    await importAll(json, 'merge');
+    await saveAppraisal(makeAppraisal('11111111'));
+    const existing = await store.get(appraisalKey('11111111'));
+    expect(await importAll(json, 'merge')).toEqual({ imported: 0, skipped: 0, settingsOnly: true });
     expect((await loadSettings()).counters).toEqual({ panelOpens: 9, exports: 7, aiRuns: 0 });
+    expect(await store.get(appraisalKey('11111111'))).toEqual(existing);
   });
 
   it('takes the file counters verbatim in replace mode', async () => {
@@ -337,6 +471,116 @@ describe('importAll', () => {
     expect((await loadSettings()).counters).toEqual({ panelOpens: 1, exports: 1, aiRuns: 0 });
   });
 
+  it.each([
+    {},
+    { schemaVersion: 99, counters: { panelOpens: 1, exports: 2, aiRuns: 0 } },
+    { schemaVersion: 1, counters: { panelOpens: 'bad', exports: 2, aiRuns: 0 } },
+  ])('rejects an empty appraisal list with unreadable settings: %j', async (settings) => {
+    await saveAppraisal(makeAppraisal('11111111'));
+    await saveSettings({ schemaVersion: 1, counters: { panelOpens: 9, exports: 2, aiRuns: 0 } });
+    const before = await store.getAll();
+
+    await expect(
+      importAll(JSON.stringify({ schemaVersion: 2, appraisals: [], settings }), 'replace'),
+    ).rejects.toThrow(/contains no appraisals/i);
+
+    expect(await store.getAll()).toEqual(before);
+  });
+
+  // The critical-appraisal rework changed item ids and the shape of an answer, so
+  // a v1 record cannot be read as a v2 one. Nothing had shipped, so it is
+  // rejected rather than migrated — silently half-restoring an appraisal would
+  // be worse than losing it.
+  it('refuses a schemaVersion 1 appraisal instead of half-reading it', async () => {
+    const legacy = {
+      ...makeAppraisal('12345678'),
+      schemaVersion: 1,
+      validity: { rct: { 'rct-blinding': { verdict: 'no', note: 'open label' } } },
+    };
+    await getStore().set(appraisalKey('12345678'), legacy);
+
+    expect(await loadAppraisal('12345678')).toBeNull();
+  });
+
+  it('round trips a per-item source override', async () => {
+    const a = makeAppraisal('12345678', {
+      sourceScope: 'abstract',
+      validity: {
+        rct: {
+          'rct-allocation-concealment': { verdict: 'yes', note: 'IWRS', source: 'full-text' },
+          'rct-prespecification': { verdict: 'unclear', note: '', source: null },
+        },
+      },
+    });
+    await saveAppraisal(a);
+
+    const back = await loadAppraisal('12345678');
+    expect(back?.sourceScope).toBe('abstract');
+    expect(back?.validity['rct']?.['rct-allocation-concealment']?.source).toBe('full-text');
+    // null is "inherit the appraisal scope" and has to survive as null, not become a string.
+    expect(back?.validity['rct']?.['rct-prespecification']?.source).toBeNull();
+  });
+
+  // Reported against d18cb78. The export file's own version was left at 1 while
+  // each appraisal inside moved to 2, so a pre-rework backup passed the version
+  // gate, replace mode deleted everything first, and every appraisal in the file
+  // was then skipped as unreadable: imported 0, skipped 1, stored data gone.
+  // Refusing to migrate old answers and destroying old records are different
+  // decisions, and only the first one was taken deliberately.
+  it('refuses a pre-rework export instead of emptying the store for it', async () => {
+    const legacyFile = JSON.stringify({
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      appraisals: [{ ...makeAppraisal('22222222'), schemaVersion: 1 }],
+      settings: { schemaVersion: 1, counters: { panelOpens: 3, exports: 1, aiRuns: 0 } },
+    });
+    await saveAppraisal(makeAppraisal('11111111'));
+
+    await expect(importAll(legacyFile, 'replace')).rejects.toThrow(
+      /earlier version|cannot be read/i,
+    );
+    expect(await loadAppraisal('11111111')).not.toBeNull();
+  });
+
+  // The same class of failure with a current-version file whose contents are all
+  // unreadable: replace must not empty the store for an import that writes nothing.
+  it('does not delete stored appraisals when the file has nothing usable in it', async () => {
+    const file = JSON.stringify({
+      schemaVersion: EXPORT_SCHEMA_VERSION,
+      exportedAt: new Date().toISOString(),
+      appraisals: [{ nonsense: true }, { pmid: 'not-a-pmid' }],
+      settings: { schemaVersion: 1, counters: { panelOpens: 0, exports: 0, aiRuns: 0 } },
+    });
+    await saveAppraisal(makeAppraisal('11111111'));
+
+    await expect(importAll(file, 'replace')).rejects.toThrow();
+    expect(await loadAppraisal('11111111')).not.toBeNull();
+  });
+
+  it('still replaces when the file does carry readable appraisals', async () => {
+    const json = await exportOf([makeAppraisal('22222222')]);
+    await saveAppraisal(makeAppraisal('11111111'));
+
+    expect(await importAll(json, 'replace')).toEqual({ imported: 1, skipped: 0 });
+    expect(await loadAppraisal('11111111')).toBeNull();
+    expect(await loadAppraisal('22222222')).not.toBeNull();
+  });
+
+  // A stored record we cannot read is not a record we may overwrite.
+  it('sets an unreadable stored appraisal aside rather than letting the next save bury it', async () => {
+    const legacy = { ...makeAppraisal('11111111'), schemaVersion: 1 };
+    await getStore().set(appraisalKey('11111111'), legacy);
+
+    expect(await loadAppraisal('11111111')).toBeNull();
+
+    const all = await getStore().getAll();
+    const quarantined = Object.keys(all).filter((key) => key.includes('11111111'));
+    expect(quarantined.some((key) => key !== appraisalKey('11111111'))).toBe(true);
+    // And it stays out of the normal listing and the export.
+    expect(await listAppraisals()).toHaveLength(0);
+    expect(await exportAll()).not.toContain('11111111');
+  });
+
   it('rejects corrupt JSON', async () => {
     await expect(importAll('{ not json', 'merge')).rejects.toThrow(/valid JSON/i);
     await expect(importAll('[]', 'merge')).rejects.toThrow();
@@ -350,7 +594,7 @@ describe('importAll', () => {
 
   it('skips entries with a bad PMID or a bad schema', async () => {
     const json = JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: EXPORT_SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       appraisals: [
         makeAppraisal('11111111'),
@@ -367,7 +611,7 @@ describe('importAll', () => {
 
   it('never writes a key other than appraisal:* and settings', async () => {
     const json = JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: EXPORT_SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       appraisals: [makeAppraisal('11111111')],
       settings: { schemaVersion: 1, counters: { panelOpens: 1, exports: 0, aiRuns: 0 } },
@@ -383,7 +627,7 @@ describe('importAll', () => {
 
   it('skips an oversized entry instead of failing the whole import', async () => {
     const json = JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: EXPORT_SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       appraisals: [
         makeAppraisal('11111111'),

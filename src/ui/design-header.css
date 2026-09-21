@@ -4,6 +4,10 @@
  * Imported by DesignHeader.tsx. Every colour, size and space is a token from
  * style.css so the block inherits the panel palette in light and dark; nothing
  * here redefines a custom property.
+ *
+ * The block now stacks four short lines — design, subtype, where it came from,
+ * evidence — over two selects, and the panel floor is 320px, so every line is
+ * one line and the controls share a two-column grid instead of wrapping.
  */
 
 .design {
@@ -29,6 +33,28 @@
 .design__name {
   font-size: var(--jc-size);
   font-weight: 600;
+}
+
+/* A subtype is a second fact about one design, not a design: its own line,
+   under the name, never in parentheses after it. */
+.design__subtype {
+  margin: 0;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.design__subtype-name {
+  color: var(--jc-text);
+  font-weight: 600;
+}
+
+/* Where the design came from: detection confidence, or the user. */
+.design__source {
+  margin: 0;
+  font-size: var(--jc-size-sm);
+  line-height: 1.45;
 }
 
 .design__badge {
@@ -85,13 +111,15 @@
   font-weight: 600;
 }
 
-/* -------------------------------------------------------------- the override */
+/* ------------------------------------------------------------- the overrides */
 
+/* Label column sized to its text, selects share the rest, so the two controls
+   line up under each other at 320px without a row each for the labels. */
 .design__controls {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: var(--jc-space-2);
+  gap: var(--jc-space-1) var(--jc-space-2);
   margin-top: var(--jc-space-1);
 }
 
@@ -101,7 +129,7 @@
 }
 
 .design__select {
-  flex: 1 1 140px;
+  width: 100%;
   min-width: 0;
   padding: var(--jc-space-1) var(--jc-space-2);
   border: 1px solid var(--jc-border-strong);
@@ -111,6 +139,12 @@
   font: inherit;
   font-size: var(--jc-size-sm);
   cursor: pointer;
+}
+
+.design__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .design__reset {

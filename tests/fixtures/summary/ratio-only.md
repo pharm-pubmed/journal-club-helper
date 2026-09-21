@@ -22,20 +22,50 @@ Detected from abstract keywords. Evidence: prospective cohort (abstract keyword)
 - Reported relative effect: HR 0.72 (95% CI 0.61–0.85)
 - Absolute effect not reported in the abstract.
 
-## Validity
+## Critical appraisal
+
+Appraised from: Abstract only.
+
+An Unclear verdict means the source above does not settle that question: it records a limit on what the reader could check, not a fault found in the study. Where an item was checked against a different document, that source is shown beside its verdict.
+
+### Internal validity
 
 | # | Item | Verdict |
 | --- | --- | --- |
-| 1 | Can you tell how the exposed and unexposed groups were identified, and did both come from the same source population? | — |
-| 2 | Does the abstract say how exposure was measured, and was the same method applied to everyone rather than leaving it to what people remembered? | — |
-| 3 | Were outcomes sought and classified the same way in both groups, ideally by people who did not know each participant's exposure? | — |
-| 4 | Does the abstract name the other factors that could explain the association, and show that the analysis accounted for them? | — |
-| 5 | Even after adjustment, can you name an important factor that went unmeasured and would push the result in the reported direction? | — |
-| 6 | Do participants appear to have been observed over a period that matches how long the condition of interest takes to develop? | — |
-| 7 | Can you see what share of each group was followed to the end, and whether the people who dropped out differed between the groups? | — |
-| 8 | Is it clear that the exposure was already present before the outcome began, rather than being recorded once the condition was developing? | — |
+| 1 | Were the exposed and unexposed groups drawn from the same underlying population, and did follow-up start at a comparable point for both? | — |
+| 2 | Was the exposure already in place before the outcome began, rather than recorded once the condition may have been developing? | — |
+| 3 | Was exposure classified by one method applied to everyone, using information recorded before anyone knew who would have the outcome? | — |
+| 4 | Did the analysis allow for people who stopped, started or switched exposure during follow-up, rather than fixing everyone at their baseline status? | — |
+| 5 | Were the factors that drive both the exposure and the outcome measured well, and were they allowed for when the groups were compared? | — |
+| 6 | After adjustment, is the result still free of an important influence that nobody measured, or that was captured too crudely to remove? | — |
+| 7 | Were outcomes sought and judged the same way in both groups, by people who did not know who had been exposed? | — |
+| 8 | Is every person who joined the cohort accounted for at the end, with loss to follow-up similar in size and in reason across the groups? | — |
+| 9 | Are the outcomes and analyses in the paper the ones that were planned before anyone looked at the data? | — |
 
-Notes on items answered No or Unclear:
+### Applicability
+
+Applicability is not internal validity. A trial can be conducted impeccably and still not transfer to the patient in front of you, and a trial with real methodological weaknesses can still be about exactly your patient. Nothing below is a verdict on how the study was run.
+
+| # | Item | Verdict |
+| --- | --- | --- |
+| 10 | Are the people studied, the exposure they had and the comparison they were set against close enough to your own patients for the finding to carry over? | — |
+
+### Funding & conflicts
+
+Recorded as fact, never scored. Industry funding is not by itself a source of bias, and a field left blank means nothing was recorded here — not that there was nothing to record.
+
+- Funder: Not recorded.
+- Sponsor or funder role: Not recorded.
+- Author conflicts declared: Not recorded.
+- Where this came from: Not recorded.
+
+### Notes on flagged items
+
+Items answered No — judgements the reader made, about the study or about its fit:
+
+- None.
+
+Items answered Unclear — the source used does not settle these, which is not a finding against the study:
 
 - None.
 

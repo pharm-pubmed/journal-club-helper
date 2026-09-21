@@ -13,7 +13,9 @@ Smith J, Okafor A, Lindqvist P, et al. N Engl J Med. 2024. PMID [38123456](https
 
 ## Study design
 
-**Randomized controlled trial (parallel)**
+**Randomized controlled trial**
+
+Parallel-group design
 
 Detected from publication type. Evidence: Randomized Controlled Trial (publication type), randomly assigned (abstract keyword).
 
@@ -25,25 +27,52 @@ Detected from publication type. Evidence: Randomized Controlled Trial (publicati
 - RRR (relative risk reduction): 38.5%
 - NNT 10 (95% CI 7–29)
 
-## Validity
+## Critical appraisal
+
+Appraised from: Abstract only.
+
+An Unclear verdict means the source above does not settle that question: it records a limit on what the reader could check, not a fault found in the study. Where an item was checked against a different document, that source is shown beside its verdict.
+
+### Internal validity
 
 | # | Item | Verdict |
 | --- | --- | --- |
-| 1 | Can you tell how participants were assigned to the groups, and does the method described rely on chance rather than on a predictable order? | Yes |
-| 2 | Does the abstract tell you whether the people enrolling each participant could have known which group that person was about to get? | Unclear |
-| 3 | Do you know who was kept unaware of the assigned group: the participants, the treating clinicians, the outcome assessors, or none of them? | No |
-| 4 | Does the abstract show that the groups started out alike in the characteristics that drive the outcome, such as age, severity and prior treatment? | Yes |
-| 5 | Can you see how many participants were followed to the end, and whether the losses were similar in size and in reason across the groups? | Yes |
-| 6 | Does the abstract say whether participants were analysed in the group they were assigned to, even if they stopped, switched or never started that treatment? | — |
-| 7 | Is one primary outcome named and defined precisely enough that you could check it against the registered protocol? | Yes |
-| 8 | Do you know who funded the trial and what part the sponsor played in its design, analysis and reporting? | No |
-| 9 | Are the participants, the dose and the comparison close enough to the patients and the usual care you know for the result to carry over? | — |
+| 1 | Was the allocation sequence generated using a genuinely random and unpredictable method? | Yes |
+| 2 | Was allocation concealed until each participant was irreversibly enrolled? | Unclear |
+| 3 | Were there no clinically important baseline imbalances that suggest a problem with the randomization process? | Yes |
+| 4 | Were deviations from the assigned interventions unlikely to bias the result, considering who knew the assigned treatment? | No |
+| 5 | Were outcome data sufficiently complete, with missingness unlikely to bias the estimated treatment effect? | Yes |
+| 6 | Was the outcome measured appropriately and similarly between groups, with outcome assessors blinded when this mattered? | Yes (source: Full text) |
+| 7 | Was the primary analysis appropriate for the treatment effect the trial intended to estimate, while preserving the randomized comparison as far as possible? | — |
+| 8 | Were the primary outcome and primary analysis prespecified, with no evidence that the reported result was selected from multiple outcomes, measurements, time points, or analyses? | No |
 
-Notes on items answered No or Unclear:
+### Applicability
 
-- Item 2 (Unclear): The abstract says "randomly assigned" and nothing about who held the sequence.
-- Item 3 (No): Open label. Mortality is a hard endpoint, so this matters less here than it would for a symptom score.
-- Item 8 (No): (no note)
+Applicability is not internal validity. A trial can be conducted impeccably and still not transfer to the patient in front of you, and a trial with real methodological weaknesses can still be about exactly your patient. Nothing below is a verdict on how the study was run.
+
+| # | Item | Verdict |
+| --- | --- | --- |
+| 9 | Are the participants, interventions, comparator, outcomes, and setting sufficiently similar to the clinical context in which the result would be used? | — |
+
+### Funding & conflicts
+
+Recorded as fact, never scored. Industry funding is not by itself a source of bias, and a field left blank means nothing was recorded here — not that there was nothing to record.
+
+- Funder: Medical Research Council
+- Sponsor or funder role: No role in design, analysis or the decision to publish.
+- Author conflicts declared: None declared.
+- Where this came from: Funding statement in the full text
+
+### Notes on flagged items
+
+Items answered No — judgements the reader made, about the study or about its fit:
+
+- Item 4: Open label. Mortality is a hard endpoint, so this matters less here than it would for a symptom score.
+- Item 8: (no note)
+
+Items answered Unclear — the source used does not settle these, which is not a finding against the study:
+
+- Item 2: The abstract says "randomly assigned" and nothing about who held the sequence. Usually needs the full text — an abstract rarely has this detail.
 
 ## Bottom line
 

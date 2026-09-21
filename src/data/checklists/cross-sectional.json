@@ -1,49 +1,148 @@
 {
   "id": "cross-sectional",
   "title": "Cross-sectional study",
-  "version": 1,
+  "version": 2,
+  "note": "A snapshot can measure how common something is and what it sits alongside, but it cannot put two things in order in time. Judge the sampling first, since it decides who the numbers describe, and treat an unreported method as Unclear rather than as a failure.",
   "items": [
     {
       "id": "cross-sectional-sampling-frame",
       "concept": "sampling-frame",
-      "question": "Can you tell who was eligible and how the sample was drawn from that group, or were participants simply whoever happened to be available?",
-      "why": "A convenience sample over-represents whoever is easiest to reach, so the figure it produces describes that subgroup rather than the population named in the title."
+      "section": "internal-validity",
+      "question": "Was the population eligible for the survey defined in advance, and was the sample drawn from it by a method that did not depend on who was easiest to reach?",
+      "why": "A convenience sample over-represents whoever is most available, so the figure it produces describes that subgroup rather than the population named in the title.",
+      "lookFor": [
+        "the sampling frame, and the eligibility and exclusion rules",
+        "random, consecutive or convenience sampling",
+        "clustering, stratification or weighting built into the design",
+        "the target sample size, and what it was based on"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "cross-sectional-response-rate",
-      "concept": "response-rate",
-      "question": "Does the abstract give the response or participation rate, and is it high enough that the people who declined are unlikely to change the picture?",
-      "why": "Non-responders usually differ from responders on exactly the things being measured, so a low response rate can move an estimate much further than its confidence interval suggests."
+      "id": "cross-sectional-participation",
+      "concept": "participation",
+      "section": "internal-validity",
+      "question": "Did a high enough share of those sampled actually take part, and is anything known about how the people who declined differ?",
+      "why": "Non-responders usually differ from responders on the very things being measured, so a low response rate can move an estimate much further than its confidence interval suggests.",
+      "lookFor": [
+        "the response or participation rate, with the denominator it came from",
+        "any comparison of responders with non-responders",
+        "weighting or adjustment applied for non-response",
+        "questions left blank inside otherwise completed forms"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "cross-sectional-measurement",
       "concept": "measurement-validity",
-      "question": "Do you know what questions, instruments or tests produced the measurements, and whether they have been validated?",
-      "why": "A questionnaire or cut-off that misclassifies people spreads that error through every estimate, and a single-occasion measurement can capture a passing state rather than a stable characteristic."
+      "section": "internal-validity",
+      "question": "Were the questions, instruments or tests behind the main measurements validated, and were they applied in the same way to everyone?",
+      "why": "An instrument or cut-off that misclassifies people spreads that error through every estimate, and a single-occasion measurement can capture a passing state rather than a lasting characteristic.",
+      "lookFor": [
+        "the instrument named, and any validation in a similar population",
+        "the cut-off used, and where it came from",
+        "self-report against measurement, record or laboratory result",
+        "who collected the data, and how they were trained"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "cross-sectional-confounding",
       "concept": "confounding",
-      "question": "Does the analysis account for the obvious alternative explanations, or are the associations presented as plain unadjusted comparisons?",
-      "why": "Unadjusted survey associations largely reflect how characteristics cluster together, so the reported link may belong to a third factor shared by both variables."
+      "section": "internal-validity",
+      "question": "Do the reported associations allow for the other characteristics that travel with both variables, rather than standing as raw comparisons?",
+      "why": "Characteristics cluster together in a population, so an unadjusted survey association often belongs to a third factor shared by the two things being compared.",
+      "lookFor": [
+        "adjusted estimates shown alongside the crude ones",
+        "the covariates in the model, and the reason for choosing them",
+        "results broken down by age, sex or setting",
+        "whether the sampling design was accounted for in the analysis"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "cross-sectional-temporality",
       "concept": "temporality",
-      "question": "Since exposure and outcome were captured at the same moment, can you tell which of the two came first?",
-      "why": "A snapshot cannot put the two in order, so the association is equally compatible with the exposure causing the outcome, the outcome causing the exposure, or neither."
+      "section": "internal-validity",
+      "question": "Is there anything beyond the single measurement occasion that fixes the order of the two variables, such as a dated record of when the exposure began?",
+      "why": "A snapshot cannot put the two in order, so the association fits the exposure causing the outcome, the outcome causing the exposure, or neither, equally well.",
+      "lookFor": [
+        "exposures that are fixed or lifelong, and so cannot follow the outcome",
+        "a dated history collected alongside the survey",
+        "outcomes that plausibly change the exposure, such as illness changing diet or work",
+        "a later wave of the same sample"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "cross-sectional-causal-language",
-      "concept": "prevalence-versus-causation",
-      "question": "Do the conclusions stay inside what a snapshot can support, or do they slide into claims about cause, risk or prevention?",
-      "why": "This design estimates how common something is and what it travels with; wording about causing or preventing promises more than the data can deliver."
+      "id": "cross-sectional-claims",
+      "concept": "interpretation",
+      "section": "internal-validity",
+      "question": "Do the conclusions stay inside what a prevalence estimate and an association can support, without sliding into claims about causing or preventing?",
+      "why": "This design measures how common something is and what it sits beside; wording about causing, reducing or protecting promises more than a single snapshot can deliver.",
+      "lookFor": [
+        "verbs such as leads to, reduces or protects in the conclusion",
+        "a conclusion that goes further than the analysis actually performed",
+        "recommendations that assume changing the exposure would change the outcome",
+        "whether the headline finding was one of many comparisons made"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "cross-sectional-precision",
       "concept": "precision",
-      "question": "Is the sample large enough, and are the estimates reported with confidence intervals rather than as bare percentages?",
-      "why": "A percentage from a small survey can shift by several points on a handful of extra respondents, and without an interval you cannot see how loosely the number is pinned down."
+      "section": "internal-validity",
+      "question": "Are the estimates reported with confidence intervals and denominators, rather than as bare percentages?",
+      "why": "A percentage from a small survey can shift by several points on a handful of extra respondents, and with no interval you cannot see how loosely the number is pinned down.",
+      "lookFor": [
+        "a confidence interval around each prevalence estimate",
+        "the denominator behind every percentage",
+        "subgroup figures resting on very few people",
+        "how many associations were tested to arrive at the ones reported"
+      ],
+      "needs": "abstract"
+    },
+    {
+      "id": "cross-sectional-applicability",
+      "concept": "applicability",
+      "section": "applicability",
+      "question": "Was the survey carried out in a population and a period close enough to yours for its estimate to describe the patients you actually see?",
+      "why": "Prevalence and the patterns around it shift between settings, age structures and years, so a figure can be well measured and still be the wrong number for your population.",
+      "lookFor": [
+        "country, setting and year the data were collected",
+        "age and sex structure against your own population",
+        "the case definition used, against the one you use",
+        "differences in access to care, screening or treatment"
+      ],
+      "needs": "abstract"
     }
-  ]
+  ],
+  "info": {
+    "id": "funding",
+    "title": "Funding & conflicts",
+    "prompt": "Who funded the study, what role did the funder or sponsor have in the design, conduct, analysis and reporting, and what relevant conflicts of interest were declared?",
+    "why": "Industry funding is not itself a risk of bias, and a trial paid for by a manufacturer is not wrong for that reason. What matters is what the sponsor was in a position to do, and what was declared, so record these as facts and let the methodological items above carry the judgement.",
+    "fields": [
+      {
+        "id": "funder",
+        "label": "Funder",
+        "hint": "Who paid: name the company, agency, charity or grant. Record \"not stated\" when no funding statement is given."
+      },
+      {
+        "id": "sponsor-role",
+        "label": "Sponsor or funder role",
+        "hint": "What they did in design, conduct, data collection and custody, analysis, writing, and the decision to publish. A named funder with no role described is \"unclear\", not \"none\"."
+      },
+      {
+        "id": "author-conflicts",
+        "label": "Author conflicts declared",
+        "hint": "Payments, advisory or speaker roles, employment, stock or patents relevant to this intervention, and whether any declaration statement appears at all."
+      },
+      {
+        "id": "info-source",
+        "label": "Where this came from",
+        "hint": "Which document told you: the published abstract, the funding statement in the full text, the disclosure forms, or the registry record. Say if you only had one of them."
+      }
+    ]
+  }
 }

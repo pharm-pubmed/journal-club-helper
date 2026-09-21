@@ -103,12 +103,21 @@ Same page, same checks. The extension loads, the button injects, the panel opens
 
 Edge also surfaced **#43**: once open, the panel follows the user to every tab and shows its empty state on unrelated sites. Not an Edge defect — `side_panel.default_path` makes the panel global in both browsers — but it reads as clutter in a way that reasoning about it did not convey. Deliberately not fixed blind: opening the panel is the highest-risk path in v0.1 and had only just been confirmed working.
 
+### Verified in a browser, 2026-09-21
+
+The critical-appraisal rework and the import fixes were checked on Edge against PMID 36577095.
+
+The appraisal tab renders as designed: Critical appraisal, then internal validity, the non-inferiority group, applicability and the unscored funding panel, numbered 1-13 in one series, with no verdict control anywhere in the funding block and no horizontal scrolling at panel width. Overriding one item's source removes that item's evidence-need hint and no other.
+
+More importantly, the import paths were exercised against real storage. A counters-only backup restored the counts and kept the stored appraisal. A file with no `appraisals` array, a pre-rework export, and a file with neither appraisals nor readable counters were each refused with their own message, **and the saved count did not drop in any of them.** That is the defect the rework introduced, and it is the thing to re-test after any change to `importAll`: an error message appearing is not evidence that nothing was deleted, because the version that had the bug deleted first and reported afterwards.
+
 ### Still unverified
 
-| #   | Not verified                                       | Why it matters                                                                                                             | Issue |
-| --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----- |
-| 1   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for. | —     |
-| 2   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                      | #27   |
+| #   | Not verified                                       | Why it matters                                                                                                                                                                                                                   | Issue |
+| --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| 1   | Storage quota exhaustion                           | The archive-before-overwrite guard is covered by a test that caps a memory store, not by a real `chrome.storage.local` at its 10 MB limit. Reaching that state by hand needs roughly 160 full-size appraisals or console access. | —     |
+| 2   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for.                                                                                                       | —     |
+| 3   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                                                                                                                            | #27   |
 
 Clipboard copy and the `.md` download were both exercised on Edge and work. Reading the downloaded file end to end is what found the export defect in §7 — the file was correct in every structural respect and wrong in one sentence, which no golden-file test could have caught, because the golden encodes an empty appraisal correctly and cannot know the abstract it is describing.
 
@@ -167,6 +176,11 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   Writing that file surfaced one thing: `api.anthropic.com` and `api.openai.com` were declared as optional host permissions with no code able to request them. Removed until v0.2 (#34, #35). Shipped manifest is now `storage`, `sidePanel`, one PubMed host permission, and one optional host for E-utilities.
 - 2026-09-19 (Edge): Edge passes the same checks as Chrome — loads, injects, opens the panel, keeps state across tab switches. It also surfaced #43: the panel follows the user to every tab and shows its empty state on unrelated sites, because `side_panel.default_path` makes it global. Present in Chrome too; nobody had noticed because reasoning about "the panel shows a message on other tabs" does not convey how it feels to have a panel follow you around. Left unfixed on purpose — opening the panel is the riskiest path in v0.1 and had just been confirmed working, so the change needs a browser, not an argument.
   Brave dropped from scope (§7). Clipboard copy and `.md` download both confirmed working on Edge. Reading the exported file end to end is what found the export defect in §7; the structure was right and one sentence was false, which is the class of defect a golden-file test cannot reach.
+- 2026-09-21: **Critical appraisal reworked onto risk-of-bias thinking.** All seven checklists rewritten; the RCT one now follows RoB 2 domains and gains four non-inferiority checks as an additive subtype group. Sections split into internal validity and applicability, funding moved out of scoring into an unscored facts panel, and every item now declares what source can settle it, so an absence of reporting is never read as a flaw the reader has evidence for. `schemaVersion` 2; v1 appraisals are rejected rather than migrated. 420 tests.
+  Two things a future editor should not undo without reading `docs/METHODOLOGY.md`: our Unclear is the _signalling-question_ kind, not RoB 2's abolished domain-level Unclear; and the VV116 regression case in `tests/lib/pipeline.test.ts` is deliberately the trial where the obvious conclusion is false.
+- 2026-09-21 (later): The rework shipped a data-loss bug and it took two review rounds to close. The export file's own version was left behind when each appraisal moved to schemaVersion 2, so a pre-rework backup passed the gate, replace mode deleted first and validated afterwards, and the store emptied while importing nothing. The second round found the same shape still open for a file whose `appraisals` was missing or not an array, and that rejecting every empty list had taken a legitimate counters-only restore with it.
+  All three are fixed, verified on Edge, and the lesson is in the order of operations: validate the whole payload before removing a single key. An error message appearing is not evidence that nothing was deleted.
+  A content-script error also appeared and was never diagnosed — it stopped once the page was reloaded, which is what clears the condition. Two things that were wrong regardless are now tested: `chrome.runtime.sendMessage` throws synchronously on a dead extension context so a lone `.catch` never runs, and a throw while reading the page used to take the button down with it.
   The MCP server as first configured did not work: Chrome's guidance pairs `--categoryExtensions` with `--autoConnect`, but the server's own `--help` says they are incompatible until Chrome 149, and this machine had no Linux Chrome to connect to anyway. Corrected to a pipe connection with an explicit executable path; see §2. Worth remembering that a config lifted from documentation is not a verified config.
 
 ## 7. Decisions and why
@@ -202,6 +216,44 @@ Removing it made `pnpm check:manifest` fail, which is the guard working: it pins
 Brave is not tested and not claimed. Chrome and Edge between them cover the Chromium differences worth paying for, and every hour spent on a third fork is an hour not spent on the checklist wording, which is the actual product.
 
 This is a real trade-off rather than a free one: the pitch is "no servers, no accounts, no analytics", and privacy-minded users are exactly who runs Brave. If Brave reports come in after launch, treat them as signal and test it then — nothing in the code is Chrome-specific, so the likely outcome is that it already works.
+
+### The appraisal follows risk-of-bias thinking, not reporting completeness
+
+The first version of the RCT checklist asked what the abstract said. That is the wrong question, and it produced the wrong answers: a trial was marked down for a method an abstract has no room to describe. The rework separates three things that were tangled together.
+
+**A question is about the study's methods.** No item asks what a document happens to mention — a test enforces that no shipped question contains the phrase "the abstract". Each item instead declares, in `needs`, the weakest source that can usually settle it: allocation concealment needs the full text, prespecification needs the protocol or the registry. The reader records what they are working from once (`Appraisal.sourceScope`), overriding it per item where it differs. When the reader has less than an item needs, the UI and the export both say which document would settle it. **Not reported is Unclear, never No.**
+
+The counterweight, so this is not overstated: poor reporting is empirically associated with larger effects, and an Unclear is not a clean bill of health. `docs/METHODOLOGY.md` states the defensible version — absence of reporting tells you about your evidence base, not about the trial's conduct.
+
+**Internal validity, applicability and funding are three different judgements.** Applicability is in its own section with its own explanation, because a flawless trial can fail to transfer and a flawed one can be exactly about your patient. Funding is not scored at all: it is an `InfoPanel`, recorded as fact, because industry funding is not a risk-of-bias finding and a verdict control there would make it look like one.
+
+**A design subtype adds checks; it never replaces them.** A non-inferiority trial gets four more items and remains a randomised trial that has to survive randomisation, concealment and missing data like any other. The design selector still holds eight designs, with the subtype shown and set separately. `getChecklist(design, subtype)` is what attaches the group.
+
+The distinctions the checklists deliberately refuse to collapse — sequence generation versus concealment, blinding versus the bias it prevents, baseline p-values as a statistical error rather than a quality check, analysis-set labels versus what was done, non-inferiority versus equivalence versus superiority — are set out with their reasoning in `docs/METHODOLOGY.md`. Read it before editing any question.
+
+**To reverse:** you are not reverting a checklist, you are reverting a position on what appraisal means. The wording, the `needs` field, the section split and the unscored funding panel all carry it together.
+
+### Import validation and preservation of unreadable records
+
+An import must contain an `appraisals` array. A non-empty array must contain at least one readable, size-compliant appraisal before replacement may delete stored data. Missing or malformed arrays and non-empty lists with no usable appraisals are rejected before mutation. An empty list with readable v1 settings restores only usage counters: merge keeps the higher counts, while replace takes the file counts verbatim. Both modes preserve every appraisal and skip eviction for settings-only imports. Empty files without readable counters receive an empty-backup message, distinct from unreadable appraisal data.
+
+Loading an unreadable appraisal archives it under `appraisal-unreadable:<pmid>` before removing its original key. If preservation fails, the error is surfaced and the original remains. Saving performs the same check even when the caller has not loaded the record or the UI has released an empty form after a restore error. A smaller overwrite can fit the storage quota when an additional archive cannot, so a failed archive must block that overwrite. After space is available, a subsequent edit retries preservation and saving. Archives remain on-device and require manual recovery; they are not included in ordinary exports.
+
+### The wording guard names its exceptions instead of quoting a headroom number
+
+`tests/lib/checklist-schema.test.ts` compares every shipped question against a corpus of wording from the public instruments. Pairs at or above 0.5 fail the similarity check. Passing means only that this metric found no pair above the threshold in this corpus; it does not prove originality or exclude copying. The second half of the guard is a **reviewed-exceptions list**: any pair at or above 0.30 must carry a recorded reason for accepting the overlap. Tests check the presence and basic structure of that reason, not its authorship, correctness, or human approval; those remain code-review responsibilities. A pair over the bar with no entry fails; an entry whose pair no longer scores over the bar also fails, so the list cannot rot into stale excuses.
+
+The bar is 0.30 because the measured distribution has an empty band there: one pair at 0.333 and the rest at 0.25 and below.
+
+One entry exists today, for the randomisation-sequence question. Its five shared words are the name of the thing being asked about plus the noun "method"; the longest run in common is the two-word term of art. If a future edit pushes another question over the bar, **read that pair and write the reason** — do not move the bar. Raising it makes every entry beneath the new bar stale in the same diff, drawing attention to the change. The tests cannot prevent edits to themselves. Score checks also cannot detect wording changes that preserve the score. The current rationale includes a lower-overlap alternative and explicitly identifies retaining the clinical terminology as a judgement open to disagreement.
+
+**To reverse:** you would be replacing a review step with a number, which is what this replaced.
+
+### PMID 36577095 is the regression case, and it is chosen adversarially
+
+`tests/lib/pipeline.test.ts` runs the real saved page through detection, the checklist and the export. The trial met its non-inferiority criterion for time to sustained clinical recovery (HR 1.17, 95% CI 1.02–1.36, margin 0.8), and no participant in either arm died or progressed to severe Covid-19. So the most tempting summary — non-inferior for preventing severe disease or death — is **false**: that outcome had no events and was never tested.
+
+The test asserts the export carries the caution and cannot produce that claim. Keep it. It is the case where a plausible-sounding conclusion is wrong, which is exactly what this product exists to stop.
 
 ### The export never claims something about the paper it cannot know
 

@@ -1,0 +1,104 @@
+# Oral antiviral versus standard care for time to sustained symptom resolution in mild Covid-19
+
+Tanaka R, Oyelaran B, Petrov I, et al. Lancet Infect Dis. 2024. PMID [99999999](https://pubmed.ncbi.nlm.nih.gov/99999999/). DOI [10.1016/S1473-3099(24)00001-0](https://doi.org/10.1016/S1473-3099(24)00001-0).
+
+## Clinical question (PICO)
+
+| Element | Detail |
+| --- | --- |
+| Population | Outpatient adults under 65 with mild Covid-19 and no chronic illness |
+| Intervention | Five days of an oral antiviral started within 72 hours of symptom onset |
+| Comparison | Standard supportive care |
+| Outcome | Time to sustained resolution of five self-reported symptoms |
+
+## Study design
+
+**Randomized controlled trial**
+
+Non-inferiority design
+
+Detected from publication type. Evidence: Randomized Controlled Trial (publication type), non-inferiority margin (abstract keyword).
+
+## Key results
+
+- Absolute effect not calculated in this appraisal.
+
+## Critical appraisal
+
+Appraised from: Abstract only.
+
+An Unclear verdict means the source above does not settle that question: it records a limit on what the reader could check, not a fault found in the study. Where an item was checked against a different document, that source is shown beside its verdict.
+
+### Internal validity
+
+| # | Item | Verdict |
+| --- | --- | --- |
+| 1 | Was the allocation sequence generated using a genuinely random and unpredictable method? | Yes |
+| 2 | Was allocation concealed until each participant was irreversibly enrolled? | Unclear |
+| 3 | Were there no clinically important baseline imbalances that suggest a problem with the randomization process? | Yes |
+| 4 | Were deviations from the assigned interventions unlikely to bias the result, considering who knew the assigned treatment? | Unclear |
+| 5 | Were outcome data sufficiently complete, with missingness unlikely to bias the estimated treatment effect? | Unclear |
+| 6 | Was the outcome measured appropriately and similarly between groups, with outcome assessors blinded when this mattered? | No |
+| 7 | Was the primary analysis appropriate for the treatment effect the trial intended to estimate, while preserving the randomized comparison as far as possible? | Unclear (source: Full text) |
+| 8 | Were the primary outcome and primary analysis prespecified, with no evidence that the reported result was selected from multiple outcomes, measurements, time points, or analyses? | Unclear |
+
+### Non-inferiority-specific checks
+
+These checks are additional. Every item under Internal validity still applies to this trial; nothing above is replaced or relaxed by what follows.
+
+Carry this result no further than the outcome it was tested on. A non-inferiority finding belongs to one pre-specified endpoint and one pre-specified margin: it is not a finding of equivalence, it is not a finding of superiority, and it says nothing about any other endpoint. An outcome that was not part of that pre-specified test carries no non-inferiority claim, however few events it recorded; where an outcome had no events in either arm, check what was pre-specified and how precise the estimate is before reading anything into it.
+
+| # | Item | Verdict |
+| --- | --- | --- |
+| 9 | Was a non-inferiority design clinically justified, and is there adequate reason to expect the active comparator to retain its established effect in this trial setting? | Unclear |
+| 10 | Was the non-inferiority margin prespecified and justified on both clinical and statistical grounds? | Unclear |
+| 11 | Were adherence, crossover, exclusions, protocol deviations and missing data handled in a way unlikely to bias toward non-inferiority, and were the conclusions consistent across analysis sets? | Unclear |
+| 12 | Does the confidence interval for the primary treatment effect support non-inferiority relative to the prespecified margin, and is the conclusion limited to the outcome actually tested? | No |
+
+### Applicability
+
+Applicability is not internal validity. A trial can be conducted impeccably and still not transfer to the patient in front of you, and a trial with real methodological weaknesses can still be about exactly your patient. Nothing below is a verdict on how the study was run.
+
+| # | Item | Verdict |
+| --- | --- | --- |
+| 13 | Are the participants, interventions, comparator, outcomes, and setting sufficiently similar to the clinical context in which the result would be used? | No |
+
+### Funding & conflicts
+
+Recorded as fact, never scored. Industry funding is not by itself a source of bias, and a field left blank means nothing was recorded here — not that there was nothing to record.
+
+- Funder: Meridian Therapeutics
+- Sponsor or funder role: Not recorded.
+- Author conflicts declared: Two authors are employees of the funder.
+- Where this came from: Not recorded.
+
+### Notes on flagged items
+
+Items answered No — judgements the reader made, about the study or about its fit:
+
+- Item 6: The symptom diary was completed by unblinded participants, and the endpoint is entirely self-reported.
+- Item 12: The abstract concludes the drug is non-inferior for preventing severe disease or death, but no participant in either arm reached either outcome.
+- Item 13: Everyone enrolled was under 65 and free of chronic illness, which is not the group we prescribe this to.
+
+Items answered Unclear — the source used does not settle these, which is not a finding against the study:
+
+- Item 2: Usually needs the full text — an abstract rarely has this detail.
+- Item 4: Open label, and the abstract does not say what happened to participants who stopped early. Usually needs the full text — an abstract rarely has this detail.
+- Item 5: Usually needs the full text — an abstract rarely has this detail.
+- Item 7: The full text reports a per-protocol set alongside the randomised set; which one carried the non-inferiority claim is not stated.
+- Item 8: Usually needs the protocol, the statistical analysis plan or the trial registry.
+- Item 9: Usually needs the full text — an abstract rarely has this detail.
+- Item 10: Usually needs the protocol, the statistical analysis plan or the trial registry.
+- Item 11: Usually needs the full text — an abstract rarely has this detail.
+
+## Bottom line
+
+Non-inferiority was met for time to sustained symptom resolution and for nothing else. No participant in either arm died or progressed to severe disease, so the severe-disease claim in the abstract rests on no events at all. I would not repeat it.
+
+## Discussion questions
+
+1.
+2.
+3.
+
+Generated with Journal Club Helper for educational purposes. Verify against the full text.

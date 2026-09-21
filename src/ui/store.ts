@@ -14,6 +14,7 @@ import type {
   Pico,
   PicoField,
   PubMedArticle,
+  SourceScope,
   StudyDesign,
   ValidityAnswers,
   Verdict,
@@ -31,9 +32,14 @@ export interface AppState {
   activeTab: TabId;
   classification: DesignClassification | null;
   designOverride: StudyDesign | null;
+  subtypeOverride: string | null;
   pico: Pico;
   numbers: NumbersState;
   validity: ValidityAnswers;
+  /** What the reader has in front of them; the default for every item. */
+  sourceScope: SourceScope;
+  /** Funding and conflicts: recorded, never scored. */
+  info: Record<string, string>;
   bottomLine: string;
   /** True once a saved appraisal for the bound PMID has been restored (issue #18). */
   hydrated: boolean;
@@ -62,9 +68,13 @@ export const initialState = (): AppState => ({
   activeTab: 'pico',
   classification: null,
   designOverride: null,
+  subtypeOverride: null,
   pico: emptyPico(),
   numbers: emptyNumbers(),
   validity: {},
+  // Most appraisals start from a PubMed abstract, so that is the honest default.
+  sourceScope: 'abstract',
+  info: {},
   bottomLine: '',
   hydrated: false,
   saveError: null,
@@ -138,7 +148,13 @@ export const actions = {
   },
 
   setDesignOverride(designOverride: StudyDesign | null) {
-    store.set({ designOverride });
+    // A subtype belongs to the design it was detected on, so changing the design
+    // must not leave "non-inferiority" attached to, say, a cohort study.
+    store.set({ designOverride, subtypeOverride: null });
+  },
+
+  setSubtypeOverride(subtypeOverride: string | null) {
+    store.set({ subtypeOverride });
   },
 
   setPicoField(field: PicoField, text: string) {
@@ -162,10 +178,22 @@ export const actions = {
     }));
   },
 
+  setSourceScope(sourceScope: SourceScope) {
+    store.set({ sourceScope });
+  },
+
+  setInfoField(fieldId: string, value: string) {
+    store.set((s) => ({ info: { ...s.info, [fieldId]: value } }));
+  },
+
   setValidityAnswer(checklistId: string, itemId: string, answer: Partial<ItemAnswer>) {
     store.set((s) => {
       const forChecklist = s.validity[checklistId] ?? {};
-      const current: ItemAnswer = forChecklist[itemId] ?? { verdict: null, note: '' };
+      const current: ItemAnswer = forChecklist[itemId] ?? {
+        verdict: null,
+        note: '',
+        source: null,
+      };
       return {
         validity: {
           ...s.validity,
@@ -196,14 +224,25 @@ export const actions = {
     store.set({
       classification: appraisal.designDetected ?? store.get().classification,
       designOverride: appraisal.designOverride,
+      subtypeOverride: appraisal.subtypeOverride,
       pico: appraisal.pico,
       numbers: appraisal.numbers ?? emptyNumbers(),
       validity: appraisal.validity,
+      sourceScope: appraisal.sourceScope,
+      info: appraisal.info,
       bottomLine: appraisal.bottomLine,
       hydrated: true,
     });
   },
 };
+
+/** The subtype the conditional checklist groups key off; override wins over detection. */
+export function effectiveSubtype(s: AppState): string | null {
+  if (s.subtypeOverride !== null) return s.subtypeOverride;
+  // A detected subtype only applies while the detected design is still in force.
+  if (s.designOverride !== null) return null;
+  return s.classification?.subtype ?? null;
+}
 
 /** The design the checklist and the export use: manual override wins over detection. */
 export function effectiveDesign(s: AppState): StudyDesign {
@@ -215,16 +254,19 @@ export function toAppraisal(s: AppState, createdAt: number): Appraisal | null {
   if (!s.article) return null;
   const { title, authors, journal, year, doi } = s.article;
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     pmid: s.article.pmid,
     createdAt,
     updatedAt: Date.now(),
     citation: { title, authors, journal, year, doi },
     designDetected: s.classification,
     designOverride: s.designOverride,
+    subtypeOverride: s.subtypeOverride,
     pico: s.pico,
     numbers: s.numbers.result || s.numbers.sourceCandidate ? s.numbers : null,
     validity: s.validity,
+    sourceScope: s.sourceScope,
+    info: s.info,
     bottomLine: s.bottomLine,
     discussionQuestions: [],
   };

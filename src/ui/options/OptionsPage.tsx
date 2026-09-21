@@ -160,10 +160,18 @@ export function OptionsPage() {
       const text = await file.text();
       // importAll throws a sentence meant for the user on a malformed file;
       // it is shown as-is rather than being swallowed or rethrown.
-      const { imported, skipped } = await importAll(text, importMode);
+      const { imported, skipped, settingsOnly } = await importAll(text, importMode);
       await refresh();
-      setMessage({ tone: 'ok', text: importSummary(imported, skipped, importMode) });
+      setMessage({
+        tone: 'ok',
+        text: settingsOnly
+          ? 'Restored usage counts. Existing appraisals were kept.'
+          : importSummary(imported, skipped, importMode),
+      });
     } catch (error) {
+      // Storage failures can leave a partially applied import. Show the actual
+      // saved list and counters alongside the progress reported by the error.
+      await refresh();
       setMessage({
         tone: 'error',
         text: messageOf(
@@ -318,7 +326,8 @@ export function OptionsPage() {
               <span class="options__choice-title">Replace</span>
               <span class="options__choice-hint">
                 Deletes every appraisal saved here first, then loads the file. Anything saved here
-                that is not in the file is gone.
+                that is not in the file is gone. A backup containing only usage counts keeps all
+                existing appraisals.
               </span>
             </span>
           </label>

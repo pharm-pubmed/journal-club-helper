@@ -1,55 +1,162 @@
 {
   "id": "case-control",
   "title": "Case-control study",
-  "version": 1,
+  "version": 2,
+  "note": "Everything here turns on two things: that cases and controls came from the same population, and that exposure was found out the same way in both. Remember what the design can and cannot produce: an odds ratio, never a risk. A method that is simply not described is Unclear, not a failure.",
   "items": [
     {
       "id": "case-control-case-definition",
       "concept": "case-definition",
-      "question": "Can you tell exactly how a case was defined, and was that same definition applied to everyone considered for the study?",
-      "why": "A loose or shifting case definition mixes people who have the condition with people who do not, which waters down any real difference in exposure between the groups."
+      "section": "internal-validity",
+      "question": "Was one explicit definition of a case applied to everyone considered, using the same kind of evidence for each person?",
+      "why": "A loose or shifting definition mixes people who have the condition with people who do not, which waters down any real difference in exposure between the two groups.",
+      "lookFor": [
+        "the diagnostic criteria, and who applied them",
+        "new cases as they arose, or people who already had the condition",
+        "where cases came from: a registry, a hospital, a clinic, a database",
+        "how borderline or unconfirmed diagnoses were settled"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "case-control-control-selection",
+      "id": "case-control-control-source",
       "concept": "control-selection",
-      "question": "Do the controls come from the same population as the cases, so that a control who developed the condition would have been enrolled as a case?",
-      "why": "Controls drawn from elsewhere carry a different background level of exposure, and the odds ratio then reflects that mismatch rather than any link with the condition."
+      "section": "internal-validity",
+      "question": "Do the controls come from the population that produced the cases, so that a control who developed the condition would have entered the study as a case?",
+      "why": "Controls drawn from somewhere else carry a different background level of exposure, and the odds ratio then reflects that mismatch rather than any link with the condition.",
+      "lookFor": [
+        "where controls were recruited, against where cases arose",
+        "hospital controls whose own illness is tied to the exposure",
+        "the same eligibility rules applied to both groups",
+        "more than one control group, and whether they agree"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "case-control-exposure-measurement",
-      "concept": "exposure-measurement",
-      "question": "Was exposure established the same way for cases and controls, preferably from records made before anyone knew who would become a case?",
-      "why": "People who are already ill search their history for explanations and report past exposures more thoroughly than healthy controls, so a difference in remembering looks exactly like a difference in exposure."
+      "id": "case-control-exposure-ascertainment",
+      "concept": "exposure-ascertainment",
+      "section": "internal-validity",
+      "question": "Was exposure established for cases and controls from the same source, ideally from records made before anyone knew who would become a case?",
+      "why": "An exposure history assembled once the diagnosis is known can differ between the groups through documentation alone, and that looks exactly like a difference in exposure.",
+      "lookFor": [
+        "the source: dispensing or occupational records, stored samples, interview, questionnaire",
+        "the same instrument, interviewer and time window used on both sides",
+        "the exposure window counted back from a defined date",
+        "how missing or unobtainable exposure information was treated"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "case-control-assessor-blinding",
-      "concept": "assessor-blinding",
-      "question": "Do you know whether the people collecting the exposure information knew which participants were cases?",
-      "why": "An interviewer who knows the diagnosis probes harder in one group, and that extra probing produces extra exposures without any real difference existing."
+      "id": "case-control-information-bias",
+      "concept": "recall-and-interviewer-bias",
+      "section": "internal-validity",
+      "question": "Were steps taken to stop knowledge of who was a case from shaping the exposure information, on the part of both the interviewer and the participant?",
+      "why": "An interviewer who knows the diagnosis probes harder on one side, and someone who is ill searches their own history for an explanation, so extra exposures appear where no real difference exists.",
+      "lookFor": [
+        "interviewers kept unaware of case status, or data taken from records instead",
+        "a structured questionnaire used identically in both groups",
+        "any check of what was reported against an independent record",
+        "how the study was described to participants before they answered"
+      ],
+      "needs": "full-text"
     },
     {
-      "id": "case-control-matching",
+      "id": "case-control-matching-adjustment",
       "concept": "matching-and-adjustment",
-      "question": "Does the abstract say which variables cases and controls were matched or adjusted for, and does that list cover the obvious competing explanations?",
-      "why": "Without accounting for factors such as age, smoking and social circumstances, an apparent link may simply track the company the exposure keeps."
+      "section": "internal-validity",
+      "question": "Were the obvious competing explanations handled by matching or by adjustment, and was any matching then carried through into the analysis?",
+      "why": "Without allowing for things like age, smoking and social circumstances, an apparent link can simply track the company the exposure keeps. Matching also has to be respected in the analysis, or it distorts the very estimate it was meant to protect.",
+      "lookFor": [
+        "the variables matched on, and how many controls per case",
+        "a conditional or stratified analysis where matching was used",
+        "the covariates in the model, and why they were chosen",
+        "anything matched or adjusted for that sits on the path from exposure to disease"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "case-control-participation",
-      "concept": "participation-rate",
-      "question": "Can you see how many of the people invited actually took part, and was participation similar among cases and controls?",
-      "why": "Those who agree to take part differ from those who refuse, and when that difference is larger on one side the measured exposure gap partly reflects who was willing to answer."
+      "concept": "participation",
+      "section": "internal-validity",
+      "question": "Did a similar and reasonably high share of the cases and of the controls who were approached agree to take part?",
+      "why": "People who agree differ from people who refuse, and when that difference is larger on one side, part of the measured exposure gap is really a gap in who was willing to answer.",
+      "lookFor": [
+        "numbers approached and numbers enrolled, given separately for cases and controls",
+        "reasons for refusal, and any comparison of those who joined with those who did not",
+        "relatives answering on behalf of cases who had died or were too ill",
+        "how long after diagnosis cases were approached"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "case-control-temporality",
       "concept": "temporality",
-      "question": "Is it clear that the exposure came before the condition started, rather than being a consequence of early disease or of its treatment?",
-      "why": "Early symptoms change behaviour and prescribing, so an exposure recorded close to diagnosis can be an effect of the condition dressed up as its cause."
+      "section": "internal-validity",
+      "question": "Did the exposure clearly come before the condition started, rather than following early symptoms or the treatment those symptoms prompted?",
+      "why": "Early symptoms change behaviour and prescribing, so an exposure recorded close to diagnosis can be a consequence of the condition dressed up as its cause.",
+      "lookFor": [
+        "a period immediately before diagnosis that was deliberately ignored",
+        "the date symptoms began rather than the date of diagnosis",
+        "any analysis that lags the exposure by months or years",
+        "conditions that quietly alter exposure long before they are recognised"
+      ],
+      "needs": "full-text"
     },
     {
       "id": "case-control-effect-measure",
-      "concept": "effect-measure-interpretation",
-      "question": "Does the report stay with an odds ratio, rather than presenting a risk or a rate that this design cannot actually measure?",
-      "why": "The number of cases and controls is fixed by the investigators, so the study says nothing about how common the outcome is, and reading its odds ratio as a risk overstates the effect when the outcome is frequent."
+      "concept": "effect-measure",
+      "section": "internal-validity",
+      "question": "Does the report keep to an odds ratio, rather than presenting a risk, a rate or a prevalence that this design cannot measure?",
+      "why": "The investigators fixed how many cases and controls there would be, so the study cannot say how common the outcome is, and reading its odds ratio as a risk overstates the effect when the outcome is common.",
+      "lookFor": [
+        "the measure actually named in the results",
+        "absolute risks or numbers needed to treat quoted from these data",
+        "how controls were sampled, which decides what the odds ratio estimates",
+        "conclusions phrased as though the study had followed people forward"
+      ],
+      "needs": "full-text"
+    },
+    {
+      "id": "case-control-applicability",
+      "concept": "applicability",
+      "section": "applicability",
+      "question": "Are the cases, the population they came from and the exposure studied close enough to your own patients for the association to be worth acting on?",
+      "why": "An odds ratio from one source population need not hold where the exposure, the case mix or the background risk differs, and on its own it tells you nothing about how common the outcome is among your patients.",
+      "lookFor": [
+        "where and when the cases arose",
+        "how the exposure is defined, and whether it means the same thing in your setting",
+        "how common the condition is among the patients you see",
+        "whether the exposure is something anyone can actually change"
+      ],
+      "needs": "abstract"
     }
-  ]
+  ],
+  "info": {
+    "id": "funding",
+    "title": "Funding & conflicts",
+    "prompt": "Who funded the study, what role did the funder or sponsor have in the design, conduct, analysis and reporting, and what relevant conflicts of interest were declared?",
+    "why": "Industry funding is not itself a risk of bias, and a trial paid for by a manufacturer is not wrong for that reason. What matters is what the sponsor was in a position to do, and what was declared, so record these as facts and let the methodological items above carry the judgement.",
+    "fields": [
+      {
+        "id": "funder",
+        "label": "Funder",
+        "hint": "Who paid: name the company, agency, charity or grant. Record \"not stated\" when no funding statement is given."
+      },
+      {
+        "id": "sponsor-role",
+        "label": "Sponsor or funder role",
+        "hint": "What they did in design, conduct, data collection and custody, analysis, writing, and the decision to publish. A named funder with no role described is \"unclear\", not \"none\"."
+      },
+      {
+        "id": "author-conflicts",
+        "label": "Author conflicts declared",
+        "hint": "Payments, advisory or speaker roles, employment, stock or patents relevant to this intervention, and whether any declaration statement appears at all."
+      },
+      {
+        "id": "info-source",
+        "label": "Where this came from",
+        "hint": "Which document told you: the published abstract, the funding statement in the full text, the disclosure forms, or the registry record. Say if you only had one of them."
+      }
+    ]
+  }
 }
