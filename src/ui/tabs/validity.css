@@ -1,0 +1,320 @@
+/**
+ * Validity tab (issue #15). Every colour, space and size is a token from
+ * style.css; no shared class is restyled here.
+ *
+ * The floor is a 320px side panel, which leaves roughly 268px inside a card.
+ * Everything below either wraps or scrolls vertically — nothing in this tab may
+ * make the panel scroll sideways.
+ */
+
+.validity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jc-space-2);
+}
+
+.validity__title {
+  margin: 0;
+  font-size: var(--jc-size);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- progress */
+
+.validity__progress {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+.validity__count {
+  white-space: nowrap;
+}
+
+/* The separator is a real text node, not generated content: the line has to
+   read correctly in the DOM and to a screen reader, not only on screen. */
+.validity__separator {
+  margin: 0 var(--jc-space-1);
+  color: var(--jc-border-strong);
+}
+
+.validity__count--no {
+  color: var(--jc-danger);
+  font-weight: 600;
+}
+
+.validity__count--unclear {
+  color: var(--jc-warning);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------- design hint and note */
+
+.validity__hint,
+.validity__note {
+  margin: 0;
+  padding: var(--jc-space-2);
+  border-radius: var(--jc-radius-sm);
+  font-size: var(--jc-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.validity__hint {
+  border: 1px solid var(--jc-border);
+  border-left: 3px solid var(--jc-warning);
+  background: var(--jc-surface);
+  color: var(--jc-text);
+}
+
+.validity__note {
+  background: var(--jc-accent-soft);
+  color: var(--jc-text);
+}
+
+/* ----------------------------------------------------- Yes / No / Unclear help */
+
+.validity-help {
+  border: 1px solid var(--jc-border);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-surface);
+  font-size: var(--jc-size-sm);
+}
+
+.validity-help__summary {
+  padding: var(--jc-space-2);
+  color: var(--jc-text-muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.validity-help__summary:focus-visible {
+  outline-offset: -2px;
+}
+
+.validity-help__list {
+  margin: 0;
+  padding: 0 var(--jc-space-2) var(--jc-space-2);
+}
+
+.validity-help__term {
+  margin-top: var(--jc-space-2);
+  font-weight: 600;
+}
+
+.validity-help__desc {
+  margin: 0;
+  color: var(--jc-text-muted);
+}
+
+/* ------------------------------------------------------------------- items */
+
+.validity__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jc-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.validity-item {
+  padding: var(--jc-space-2);
+  border: 1px solid var(--jc-border);
+  border-left-width: 3px;
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+}
+
+/* An untouched item has to look untouched, even at a glance while scrolling. */
+.validity-item--unanswered {
+  border-left-style: dashed;
+  border-left-color: var(--jc-border-strong);
+}
+
+.validity-item--yes {
+  border-left-color: var(--jc-accent);
+}
+
+.validity-item--no {
+  border-left-color: var(--jc-danger);
+}
+
+.validity-item--unclear {
+  border-left-color: var(--jc-warning);
+}
+
+.validity-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--jc-space-2);
+  margin-bottom: var(--jc-space-1);
+}
+
+.validity-item__concept {
+  min-width: 0;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.validity-item__flag {
+  flex: none;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  font-style: italic;
+}
+
+.validity-item__clear {
+  flex: none;
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--jc-accent);
+  font: inherit;
+  font-size: var(--jc-size-sm);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------- the three choices */
+
+.validity-item__fieldset {
+  /* Fieldsets size to their content by default and would widen the panel. */
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.validity-item__question {
+  display: block;
+  width: 100%;
+  margin-bottom: var(--jc-space-2);
+  padding: 0;
+  font-size: var(--jc-size);
+  overflow-wrap: anywhere;
+}
+
+.validity-choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--jc-space-1);
+}
+
+.validity-choice {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+/* The real radio stays in the DOM and keeps focus and arrow keys; only its
+   native look is replaced. It must never be display:none. */
+.validity-choice__input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.validity-choice__face {
+  display: block;
+  padding: var(--jc-space-1);
+  border: 1px solid var(--jc-border-strong);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.validity-choice:hover .validity-choice__face {
+  background: var(--jc-surface-hover);
+}
+
+.validity-choice__input:focus-visible + .validity-choice__face {
+  outline: 2px solid var(--jc-focus);
+  outline-offset: 2px;
+}
+
+.validity-choice__input:checked + .validity-choice__face {
+  border-color: var(--jc-accent);
+  background: var(--jc-accent-soft);
+  color: var(--jc-text);
+  font-weight: 600;
+}
+
+.validity-choice--no .validity-choice__input:checked + .validity-choice__face {
+  border-color: var(--jc-danger);
+  background: var(--jc-surface);
+  color: var(--jc-danger);
+}
+
+.validity-choice--unclear .validity-choice__input:checked + .validity-choice__face {
+  border-color: var(--jc-warning);
+  background: var(--jc-surface);
+  color: var(--jc-warning);
+}
+
+@media (forced-colors: active) {
+  .validity-choice__input:checked + .validity-choice__face {
+    border-color: Highlight;
+    color: Highlight;
+  }
+}
+
+/* ------------------------------------------------- why it matters / the note */
+
+.validity-item__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--jc-space-3);
+  margin-top: var(--jc-space-2);
+}
+
+.validity-disclosure {
+  min-width: 0;
+  font-size: var(--jc-size-sm);
+}
+
+/* Closed, the two sit side by side; opened, one takes the whole row so its
+   body gets the full width instead of half of 268px. */
+.validity-disclosure[open] {
+  flex: 1 1 100%;
+}
+
+.validity-disclosure__summary {
+  color: var(--jc-accent);
+  cursor: pointer;
+}
+
+.validity-disclosure__body {
+  margin: var(--jc-space-1) 0 0;
+  color: var(--jc-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.validity-note {
+  display: block;
+  width: 100%;
+  padding: var(--jc-space-2);
+  border: 1px solid var(--jc-border-strong);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+  color: var(--jc-text);
+  font: inherit;
+  font-size: var(--jc-size-sm);
+  resize: vertical;
+}

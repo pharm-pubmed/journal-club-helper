@@ -1,0 +1,53 @@
+Early mobilisation and 90-day mortality in adults receiving mechanical ventilation
+Smith J, Okafor A, Lindqvist P, et al. N Engl J Med. 2024. PMID 38123456 (https://pubmed.ncbi.nlm.nih.gov/38123456/). DOI 10.1056/NEJMoa2400001 (https://doi.org/10.1056/NEJMoa2400001).
+
+CLINICAL QUESTION (PICO)
+  Population:   Adults in intensive care ventilated for at least 48 hours
+  Intervention: Structured early mobilisation started within 72 hours of intubation
+  Comparison:   Usual physiotherapy at the discretion of the treating team
+  Outcome:      Death from any cause within 90 days
+
+STUDY DESIGN
+  Randomized controlled trial (parallel)
+  Detected from publication type. Evidence: Randomized Controlled Trial (publication type), randomly assigned (abstract keyword).
+
+KEY RESULTS
+  CER (control event rate):      26.0%
+  EER (experimental event rate): 16.0%
+  ARR (absolute risk reduction): 10.0 percentage points (95% CI 3.5 to 16.5)
+  RRR (relative risk reduction): 38.5%
+  NNT 10 (95% CI 7–29)
+
+VALIDITY
+  1. Can you tell how participants were assigned to the groups, and does the method described rely on chance rather than on a predictable order?
+     Verdict: Yes
+  2. Does the abstract tell you whether the people enrolling each participant could have known which group that person was about to get?
+     Verdict: Unclear
+  3. Do you know who was kept unaware of the assigned group: the participants, the treating clinicians, the outcome assessors, or none of them?
+     Verdict: No
+  4. Does the abstract show that the groups started out alike in the characteristics that drive the outcome, such as age, severity and prior treatment?
+     Verdict: Yes
+  5. Can you see how many participants were followed to the end, and whether the losses were similar in size and in reason across the groups?
+     Verdict: Yes
+  6. Does the abstract say whether participants were analysed in the group they were assigned to, even if they stopped, switched or never started that treatment?
+     Verdict: —
+  7. Is one primary outcome named and defined precisely enough that you could check it against the registered protocol?
+     Verdict: Yes
+  8. Do you know who funded the trial and what part the sponsor played in its design, analysis and reporting?
+     Verdict: No
+  9. Are the participants, the dose and the comparison close enough to the patients and the usual care you know for the result to carry over?
+     Verdict: —
+  Notes on items answered No or Unclear:
+    Item 2 (Unclear): The abstract says "randomly assigned" and nothing about who held the sequence.
+    Item 3 (No): Open label. Mortality is a hard endpoint, so this matters less here than it would for a symptom score.
+    Item 8 (No): (no note)
+
+BOTTOM LINE
+  A 10 percentage point difference in 90-day mortality is large for this population, and the trial was stopped early at an interim look, so the estimate is probably optimistic. I would read the methods before taking the size of the effect at face value.
+
+DISCUSSION QUESTIONS
+  1.
+  2.
+  3.
+
+Generated with Journal Club Helper for educational purposes. Verify against the full text.

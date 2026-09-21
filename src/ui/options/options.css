@@ -1,0 +1,312 @@
+/**
+ * Options page layout (issue #21).
+ *
+ * src/ui/style.css owns the palette, the base type and the shared .button /
+ * .icon-button; this file only adds what a full-tab page needs on top, and
+ * every colour and space here comes from a --jc-* token so light and dark keep
+ * matching the side panel. No external font and no remote image: the page must
+ * make no network request at all (spec §7 privacy claim).
+ */
+
+.options {
+  /* A settings page is read, so the measure is capped even on a wide tab. */
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: var(--jc-space-5) var(--jc-space-4);
+}
+
+/* -------------------------------------------------------------- masthead */
+
+.options__masthead {
+  margin-bottom: var(--jc-space-5);
+}
+
+.options__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.options__tagline {
+  margin: var(--jc-space-1) 0 0;
+  max-width: 60ch;
+  color: var(--jc-text-muted);
+}
+
+/* -------------------------------------------------------------- sections */
+
+.options__section {
+  margin-bottom: var(--jc-space-4);
+  padding: var(--jc-space-4);
+  background: var(--jc-surface);
+  border: 1px solid var(--jc-border);
+  border-radius: var(--jc-radius);
+}
+
+.options__heading {
+  margin: 0 0 var(--jc-space-2);
+  font-size: var(--jc-size-lg);
+  font-weight: 600;
+}
+
+.options__subheading {
+  margin: var(--jc-space-4) 0 var(--jc-space-1);
+  font-size: var(--jc-size);
+  font-weight: 600;
+}
+
+.options__note {
+  margin: 0 0 var(--jc-space-2);
+  max-width: 68ch;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+.options__note--warning {
+  color: var(--jc-warning);
+}
+
+.options__about {
+  margin: 0 0 var(--jc-space-2);
+  max-width: 68ch;
+}
+
+/* ------------------------------------------------------------- your data */
+
+.options__count {
+  display: flex;
+  align-items: baseline;
+  gap: var(--jc-space-2);
+  margin: 0 0 var(--jc-space-2);
+}
+
+.options__count-value {
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.options__count-label {
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+.options__list {
+  margin: 0 0 var(--jc-space-2);
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--jc-border);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+}
+
+.options__list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--jc-space-2) var(--jc-space-3);
+  border-bottom: 1px solid var(--jc-border);
+}
+
+.options__list-item:last-child {
+  border-bottom: 0;
+}
+
+.options__list-title {
+  /* Article titles are long and arbitrary; they wrap rather than widen the page. */
+  overflow-wrap: anywhere;
+}
+
+.options__list-meta {
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+/* --------------------------------------------------------------- actions */
+
+.options__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jc-space-2);
+  margin: var(--jc-space-2) 0;
+}
+
+.options .button {
+  padding: var(--jc-space-2) var(--jc-space-3);
+}
+
+.options .button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.options .button:disabled:hover {
+  background: var(--jc-bg);
+}
+
+.options__button--primary {
+  background: var(--jc-accent);
+  border-color: var(--jc-accent);
+  color: var(--jc-accent-contrast);
+  font-weight: 600;
+}
+
+.options__button--primary:hover {
+  background: var(--jc-accent);
+  filter: brightness(1.08);
+}
+
+.options .options__button--primary:disabled:hover {
+  background: var(--jc-accent);
+}
+
+.options__button--danger {
+  border-color: var(--jc-danger);
+  color: var(--jc-danger);
+}
+
+.options__button--danger:hover {
+  background: var(--jc-danger);
+  border-color: var(--jc-danger);
+  color: var(--jc-bg);
+}
+
+.options .options__button--danger:disabled:hover {
+  background: var(--jc-bg);
+  color: var(--jc-danger);
+}
+
+/* The button next to it is the accessible control that opens the picker. */
+.options__file-input {
+  display: none;
+}
+
+/* ---------------------------------------------------------- import modes */
+
+.options__choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jc-space-2);
+  margin: 0 0 var(--jc-space-2);
+  padding: var(--jc-space-3);
+  border: 1px solid var(--jc-border);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+}
+
+.options__legend {
+  padding: 0 var(--jc-space-1);
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+  font-weight: 600;
+}
+
+.options__choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--jc-space-2);
+  cursor: pointer;
+}
+
+.options__choice input {
+  margin: 3px 0 0;
+  flex: none;
+}
+
+.options__choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.options__choice-title {
+  font-weight: 600;
+}
+
+.options__choice-hint {
+  max-width: 62ch;
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+/* --------------------------------------------------- confirm and message */
+
+.options__confirm {
+  margin: var(--jc-space-2) 0;
+  padding: var(--jc-space-3);
+  border: 1px solid var(--jc-danger);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+}
+
+.options__confirm-text {
+  margin: 0;
+  max-width: 68ch;
+}
+
+.options__message {
+  margin: var(--jc-space-3) 0 0;
+  padding: var(--jc-space-2) var(--jc-space-3);
+  max-width: 68ch;
+  border: 1px solid var(--jc-border);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+  font-size: var(--jc-size-sm);
+}
+
+/* The live region stays mounted so it can announce; empty, it shows nothing. */
+.options__message:empty {
+  display: none;
+}
+
+.options__message--ok {
+  border-color: var(--jc-accent);
+  background: var(--jc-accent-soft);
+}
+
+.options__message--error {
+  border-color: var(--jc-danger);
+  color: var(--jc-danger);
+}
+
+/* ----------------------------------------------------------------- usage */
+
+.options__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jc-space-2);
+  margin: 0 0 var(--jc-space-2);
+}
+
+.options__stat {
+  flex: 1 1 8rem;
+  padding: var(--jc-space-3);
+  border: 1px solid var(--jc-border);
+  border-radius: var(--jc-radius-sm);
+  background: var(--jc-bg);
+}
+
+.options__stat-label {
+  color: var(--jc-text-muted);
+  font-size: var(--jc-size-sm);
+}
+
+.options__stat-value {
+  margin: var(--jc-space-1) 0 0;
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----------------------------------------------------------------- links */
+
+.options__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jc-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--jc-size-sm);
+}

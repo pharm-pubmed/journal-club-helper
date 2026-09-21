@@ -1,0 +1,5 @@
+{
+  "yes": "The abstract gives you enough to say the study handled this point.",
+  "no": "The abstract shows the study did not handle this point, or handled it in a way that weakens the result.",
+  "unclear": "The abstract does not say. Record it as Unclear rather than guessing: a method missing from the abstract is itself worth raising in a journal club, and the full text may settle it."
+}
