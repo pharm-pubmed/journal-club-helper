@@ -51,6 +51,18 @@ for (const entry of everything) {
   if (FORBIDDEN.includes(entry)) problems.push(`forbidden permission present: ${entry}`);
 }
 
+// #43: `side_panel.default_path` makes the panel global, and a global panel
+// follows the reader onto every other site. Chrome will not honour a per-tab
+// disable over it — verified in Chrome 153 — so the key's absence is what keeps
+// the panel on PubMed tabs. WXT derives it from the sidepanel entrypoint and a
+// hook in wxt.config.ts deletes it again; if that hook ever stops running, the
+// bug comes back silently, with nothing failing but the reader's window.
+if (manifest.side_panel !== undefined) {
+  problems.push(
+    `side_panel must not be declared (#43), got ${JSON.stringify(manifest.side_panel)}`,
+  );
+}
+
 if (manifest.minimum_chrome_version !== '116') {
   problems.push(
     `minimum_chrome_version must be "116" (issue #1 B6), got ${manifest.minimum_chrome_version}`,

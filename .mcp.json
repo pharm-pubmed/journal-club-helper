@@ -8,7 +8,7 @@
         "--categoryExtensions",
         "--isolated",
         "--executablePath",
-        "${JCH_CHROME_PATH:-google-chrome}"
+        "${JCH_CHROME_PATH:-/usr/bin/google-chrome}"
       ],
       "env": {}
     }

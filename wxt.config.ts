@@ -10,6 +10,23 @@ export default defineConfig({
   vite: () => ({
     plugins: [preact()],
   }),
+  hooks: {
+    /**
+     * Drops the `side_panel.default_path` WXT derives from the sidepanel
+     * entrypoint (#43).
+     *
+     * That key is what makes the panel *globally* available, and a global panel
+     * is one panel for the whole window: once the reader opened it, it followed
+     * them onto every other site, showing "Open a PubMed abstract page to start"
+     * on top of whatever they were reading. Per-tab `setOptions({enabled:false})`
+     * does not override it — measured in Chrome 153, where the non-PubMed tab
+     * kept the 386px panel until this key was gone. The panel is now handed to
+     * one tab at a time by `src/entrypoints/background.ts`.
+     */
+    'build:manifestGenerated': (_wxt, manifest) => {
+      delete manifest.side_panel;
+    },
+  },
   manifest: {
     name: 'Journal Club Helper: Critical Appraisal for PubMed',
     short_name: 'Journal Club Helper',
@@ -29,8 +46,8 @@ export default defineConfig({
     action: {
       default_title: 'Open Journal Club Helper',
     },
-    // side_panel and options_ui are derived by WXT from the entrypoints
-    // (src/entrypoints/sidepanel, src/entrypoints/options).
+    // options_ui is derived by WXT from src/entrypoints/options. `side_panel` is
+    // derived too, and then removed again by the hook above — see #43.
     icons: {
       16: '/icon/16.png',
       32: '/icon/32.png',
