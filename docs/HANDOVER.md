@@ -46,7 +46,13 @@ pnpm build   # .output/chrome-mv3 is what the agent loads
 - The extension tools only work over a **pipe connection**, i.e. a browser the MCP server started. `--autoConnect`, `--browserUrl` and `--wsEndpoint` are documented as unsupported with `--categoryExtensions` until Chrome 149. Chrome's own guidance currently suggests `--categoryExtensions --autoConnect` together; that combination does not work.
 - On WSL it must be a **Linux** Chrome. A Windows Chrome or Edge under `/mnt/c` cannot be driven this way, because the paths the server passes to the browser are Linux paths.
 
-The config resolves the binary as `${JCH_CHROME_PATH:-google-chrome}`, so it works unchanged wherever Chrome is on `PATH`. Set `JCH_CHROME_PATH` to point somewhere else.
+The config resolves the binary as `${JCH_CHROME_PATH:-/usr/bin/google-chrome}`, which is where the `.deb` puts it. **`--executablePath` is not looked up on `PATH`.** A bare `google-chrome` fails with _Browser was not found at the configured executablePath_ even on a machine where `which google-chrome` answers, because the server only resolves the value against its own working directory. So give it an absolute path:
+
+```bash
+export JCH_CHROME_PATH="$HOME/opt/chrome-pkg/opt/google/chrome/google-chrome"
+```
+
+Export it before starting the agent; `.mcp.json` is read when the session starts, so a change there needs a restart.
 
 Where `sudo` is unavailable, Chrome installs fine into the home directory:
 
@@ -101,7 +107,7 @@ Loaded unpacked against PMID 36577095 (one of the saved fixtures, so the expecte
 
 Same page, same checks. The extension loads, the button injects, the panel opens, and tab switching preserves the appraisal. `chrome.sidePanel` behaves as it does in Chrome.
 
-Edge also surfaced **#43**: once open, the panel follows the user to every tab and shows its empty state on unrelated sites. Not an Edge defect — `side_panel.default_path` makes the panel global in both browsers — but it reads as clutter in a way that reasoning about it did not convey. Deliberately not fixed blind: opening the panel is the highest-risk path in v0.1 and had only just been confirmed working.
+Edge also surfaced **#43**: once open, the panel follows the user to every tab and shows its empty state on unrelated sites. Not an Edge defect — `side_panel.default_path` makes the panel global in both browsers — but it reads as clutter in a way that reasoning about it did not convey. Deliberately not fixed blind: opening the panel is the highest-risk path in v0.1 and had only just been confirmed working. Fixed on 2026-09-22 — see below, including why the fix #43 itself proposed does not work.
 
 ### Verified in a browser, 2026-09-21
 
@@ -111,13 +117,37 @@ The appraisal tab renders as designed: Critical appraisal, then internal validit
 
 More importantly, the import paths were exercised against real storage. A counters-only backup restored the counts and kept the stored appraisal. A file with no `appraisals` array, a pre-rework export, and a file with neither appraisals nor readable counters were each refused with their own message, **and the saved count did not drop in any of them.** That is the defect the rework introduced, and it is the thing to re-test after any change to `importAll`: an error message appearing is not evidence that nothing was deleted, because the version that had the bug deleted first and reported afterwards.
 
+### Verified in Chrome, 2026-09-22 — #43 fixed
+
+The side panel is browser UI, so this one had to be **measured**, not looked at. CDP cannot screenshot the panel, and `document.visibilityState` lies here: a background tab reports `visible` as readily as the active one. What does not lie is the page's own `window.innerWidth` — the panel takes 386 px out of it, 945 px against 559 px in this window. Chrome 153, PMIDs 36577095 and 34844936.
+
+| #   | Step                                   | Measured                                                            |
+| --- | -------------------------------------- | ------------------------------------------------------------------- |
+| 0   | Fresh install, no tab touched          | PubMed tab enabled, other tab disabled, icon greyed with a reason   |
+| 1   | `Journal Club` clicked on an abstract  | panel opens, 945 → 559                                              |
+| 2   | Switch to a non-PubMed tab             | **945 — no panel.** This is #43                                     |
+| 3   | Switch back                            | 559, and the VV116 appraisal is there again                         |
+| 4   | Toolbar icon on a non-PubMed tab       | nothing opens; icon disabled, tooltip says where it works           |
+| 5   | Same tab navigated off PubMed          | panel closes, 0 panel documents, icon greys                         |
+| 6   | Navigated back to a PubMed search page | icon lit again                                                      |
+| 7   | Toolbar icon on that PubMed tab        | panel opens — `openPanelOnActionClick` works with no global default |
+| 8   | Result list → abstract, same tab       | panel stays open and binds the article with no second click         |
+| 9   | Second PubMed tab                      | panel does **not** follow; one click needed there                   |
+| 10  | Clicked there                          | that tab gets its own panel; two documents                          |
+| 11  | Back to the first tab                  | its own panel intact, still on its own article                      |
+
+Closing a tab with the panel open logs nothing.
+
+**The control run matters more than the result.** With `side_panel.default_path` restored at runtime and everything else unchanged, step 2 measured 559 px: the panel followed. The per-tab `setOptions({ tabId, enabled: false })` that #43 proposed does **not** override the global default, with or without a `path` alongside it. Deleting the manifest key is what fixes it, which is why `scripts/check-manifest.mjs` now fails if the key comes back.
+
 ### Still unverified
 
-| #   | Not verified                                       | Why it matters                                                                                                                                                                                                                   | Issue |
-| --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| 1   | Storage quota exhaustion                           | The archive-before-overwrite guard is covered by a test that caps a memory store, not by a real `chrome.storage.local` at its 10 MB limit. Reaching that state by hand needs roughly 160 full-size appraisals or console access. | —     |
-| 2   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for.                                                                                                       | —     |
-| 3   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                                                                                                                            | #27   |
+| #   | Not verified                                       | Why it matters                                                                                                                                                                                                                                                     | Issue |
+| --- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| 1   | Storage quota exhaustion                           | The archive-before-overwrite guard is covered by a test that caps a memory store, not by a real `chrome.storage.local` at its 10 MB limit. Reaching that state by hand needs roughly 160 full-size appraisals or console access.                                   | —     |
+| 2   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for.                                                                                                                                         | —     |
+| 3   | **#43 on Edge**                                    | Fixed and measured on Chrome 153 only. The MCP server drives a Linux Chrome, and the Edge on this machine is a Windows binary under `/mnt/c` that it cannot launch (§2). The mechanism is Chromium's, so the risk is low, but it is not the same as having looked. | #43   |
+| 4   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                                                                                                                                                              | #27   |
 
 Clipboard copy and the `.md` download were both exercised on Edge and work. Reading the downloaded file end to end is what found the export defect in §7 — the file was correct in every structural respect and wrong in one sentence, which no golden-file test could have caught, because the golden encodes an empty appraisal correctly and cannot know the abstract it is describing.
 
@@ -182,6 +212,9 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   All three are fixed, verified on Edge, and the lesson is in the order of operations: validate the whole payload before removing a single key. An error message appearing is not evidence that nothing was deleted.
   A content-script error also appeared and was never diagnosed — it stopped once the page was reloaded, which is what clears the condition. Two things that were wrong regardless are now tested: `chrome.runtime.sendMessage` throws synchronously on a dead extension context so a lone `.catch` never runs, and a throw while reading the page used to take the button down with it.
   The MCP server as first configured did not work: Chrome's guidance pairs `--categoryExtensions` with `--autoConnect`, but the server's own `--help` says they are incompatible until Chrome 149, and this machine had no Linux Chrome to connect to anyway. Corrected to a pipe connection with an explicit executable path; see §2. Worth remembering that a config lifted from documentation is not a verified config.
+- 2026-09-22: **#43 fixed, and the fix the issue proposed was the wrong one.** #43 reasoned that a per-tab `sidePanel.setOptions({ enabled: false })` would scope the panel to PubMed tabs. Measured in Chrome 153, it does not: the panel kept following the reader onto every other site. `side_panel.default_path` makes the panel _global_, one panel for the whole window, and a per-tab option does not override it. The manifest key is now deleted by a `build:manifestGenerated` hook in `wxt.config.ts`, the panel is handed to one tab at a time by the background worker, and `scripts/check-manifest.mjs` fails if the key ever returns — the only thing that would fail otherwise is the reader's window.
+  Two things worth keeping from how this was checked. The side panel is browser UI, so CDP cannot screenshot it, and `document.visibilityState` is useless here — a background tab reports `visible` too. The page's own `window.innerWidth` is the honest signal, 386 px narrower when the panel is showing. And the run that settled it was the _control_: putting the global default back at runtime reproduced the old behaviour on the same build, which is what turned "the panel does not appear" from an absence of evidence into a measurement. The table is in §4.
+  The fix changes one thing for the reader, recorded in §7: the panel is per-tab now, so a second PubMed tab needs its own click. 457 tests.
 
 ## 7. Decisions and why
 
@@ -210,6 +243,18 @@ The shipped permissions are now `storage` and `sidePanel`, plus the PubMed host 
 Removing it made `pnpm check:manifest` fail, which is the guard working: it pins the exact array, so no permission can change quietly in either direction. `activeTab` is now on the guard's forbidden list too, so it cannot come back by accident.
 
 **Deviation from the spec.** `docs/SPEC.ja.md` §5 still lists `activeTab`. That file is kept as the original product definition and is deliberately not edited; this section is the operative record of what ships. If you would rather the spec track the product, edit §5 there and say so here.
+
+### The panel belongs to one tab at a time (#43) — done 2026-09-22
+
+The extension declares no `side_panel` key at all. WXT derives one from the sidepanel entrypoint and a hook in `wxt.config.ts` deletes it again; CI fails if it survives.
+
+That key is what made the panel global, and a global panel is one panel per window: once opened it followed the reader onto every unrelated site, showing "Open a PubMed abstract page to start" over whatever they were actually reading. #43 assumed a per-tab disable would be enough. It is not — measured, not argued (§4). Without the global default, the background worker sets a path on PubMed tabs and disables the rest, and the panel appears only where the extension can do something.
+
+The toolbar icon is disabled on those other tabs, with a tooltip saying where the extension works. A lit icon whose click does nothing is the worse failure: the reader cannot tell it from a broken extension. Nothing is lost by it, because the panel has no view that works without an article — no saved-appraisal browser, no history. Export and import live on the options page, which is reachable from anywhere.
+
+Scoping is by **host**, not by abstract page, so the panel survives the trip back to a result list between two articles. Closing it on every such trip would mean reopening it for each paper, which is the whole session.
+
+The cost, and it is a real one: **a second PubMed tab does not inherit an open panel.** A per-tab panel cannot be opened without a user gesture, so there is no way to hand it to a new tab by itself, and `sidePanel.open()` from a tab-switch handler would be rejected. The reader clicks `Journal Club` once per tab. That is the price of the panel not being somewhere it has no business being, and it was paid knowingly. If it turns out to annoy people, the honest alternatives are worse: a global panel is the bug, and auto-opening is not available.
 
 ### Browser support stops at Chrome and Edge (#25)
 

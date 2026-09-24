@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsePmidFromUrl } from '../../src/lib/pubmed-url';
+import { isPubMedUrl, parsePmidFromUrl } from '../../src/lib/pubmed-url';
 
 describe('parsePmidFromUrl', () => {
   it('reads the PMID from a canonical abstract URL', () => {
@@ -58,5 +58,36 @@ describe('parsePmidFromUrl', () => {
     expect(parsePmidFromUrl('/36577095/')).toBeNull();
     expect(parsePmidFromUrl('')).toBeNull();
     expect(parsePmidFromUrl('not a url')).toBeNull();
+  });
+});
+
+describe('isPubMedUrl', () => {
+  it('accepts an abstract page', () => {
+    expect(isPubMedUrl('https://pubmed.ncbi.nlm.nih.gov/36577095/')).toBe(true);
+  });
+
+  it('accepts the search results page the abstract matcher rejects', () => {
+    // The panel is scoped to the host, not the page, so it survives the trip
+    // back to the result list between two articles (#43).
+    expect(isPubMedUrl('https://pubmed.ncbi.nlm.nih.gov/?term=statins')).toBe(true);
+    expect(parsePmidFromUrl('https://pubmed.ncbi.nlm.nih.gov/?term=statins')).toBeNull();
+  });
+
+  it('rejects another site', () => {
+    expect(isPubMedUrl('https://example.com/')).toBe(false);
+  });
+
+  it('rejects a lookalike host', () => {
+    expect(isPubMedUrl('https://pubmed.ncbi.nlm.nih.gov.evil.test/36577095/')).toBe(false);
+  });
+
+  it('rejects a url the browser withheld', () => {
+    expect(isPubMedUrl(undefined)).toBe(false);
+    expect(isPubMedUrl('')).toBe(false);
+  });
+
+  it('rejects a browser page', () => {
+    expect(isPubMedUrl('chrome://extensions/')).toBe(false);
+    expect(isPubMedUrl('about:blank')).toBe(false);
   });
 });
