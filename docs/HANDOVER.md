@@ -116,9 +116,64 @@ The hook reads `gh pr view --json statusCheckRollup` rather than `gh pr checks -
 - **`src/lib` may not touch the DOM or `chrome.*`**, also enforced by ESLint, with `src/lib/pubmed-dom.ts` as the single exception. That is what keeps the whole appraisal engine unit-testable without a browser.
 - **All cross-module types live in `src/lib/types.ts`** and are re-exported by the module that owns the behaviour. Add a new shared type there, not in the consuming module.
 
+### Stored data
+
+Everything is in `chrome.storage.local`, on the device only. No server holds a copy and there is no account. The code is `src/lib/storage.ts` and the types are in `src/lib/types.ts`.
+
+| Key                           | Holds                                                                                                                                                                                                                                     | Version           |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `appraisal:<PMID>`            | One `Appraisal`: citation, detected design, design and subtype overrides, PICO, the Numbers state, each answer with its note and source, the default source (`sourceScope`), the unscored facts (`info`), the bottom line, and timestamps | `schemaVersion` 2 |
+| `settings`                    | Local usage counters (`panelOpens`, `exports`, `aiRuns`), shown in Settings and sent nowhere                                                                                                                                              | `schemaVersion` 1 |
+| `appraisal-unreadable:<PMID>` | A stored record this version cannot read, moved aside instead of overwritten                                                                                                                                                              | as found          |
+
+- **Limits.** At most 500 appraisals, with the least recently updated evicted first, and 64 KB per appraisal. The extension does not request `unlimitedStorage`, so the browser's 10 MB quota applies.
+- **Versioning.** A record whose `schemaVersion` is not the current one is **not migrated**. Version 1 records came from before the 2026-09-21 rework, which renamed item ids, and nothing had shipped yet. A future bump that has to keep users' work needs a migration in `isAppraisal`'s place. Do not simply relax the check.
+- **Backups.** Settings → Export all writes `{ schemaVersion: 2, exportedAt, appraisals, settings }`, which is `EXPORT_SCHEMA_VERSION`. Import validates the whole file before removing a single key (§6, 2026-09-21), and `merge` keeps whichever copy of an article is newer.
+- **Answers are keyed by item id.** Renaming an item id in a checklist orphans every saved answer to it.
+- **Numbers are saved only once they mean something.** The Numbers state is stored when there is a result or a candidate was used (`toAppraisal` in `src/ui/store.ts`). Figures typed in by hand that never produced a result are not saved.
+- **An edit less than 500 ms old may be lost.** Autosave is debounced by 500 ms and flushes on unmount. Closing the side panel tears its document down without unmounting it, so that flush does not run. This comes from reading the code and has not been measured.
+
+### Editing the checklists
+
+The questions are data, in `src/data/checklists/<id>.json`, one file per checklist. `unclear.json` is the generic fallback, and non-randomized trials reuse `rct.json`.
+
+- **Structure.** Each item has `id` (prefixed with the checklist id), `concept`, `section` (`internal-validity` or `applicability`), `question` (one question, ending in `?`), `why`, `lookFor` (concrete things to look for), and `needs` (the weakest source that can settle it). `groups` hold subtype-specific extras. Each group has an `id`, a `title`, its `subtypes`, a `note` and its own `items`, and the non-inferiority checks are one group in `rct.json`. A group's subtype must be one the classifier or the header can produce. `info` holds unscored facts such as funding.
+- **Tests.** `tests/lib/checklist-schema.test.ts` enforces the structure. It also enforces several limits an editor will hit without warning:
+  - 6–10 general items per checklist. `cohort.json` already has 10.
+  - Questions of at most 200 characters.
+  - No instrument names in shipped text.
+  - A similarity check against copied wording. `REVIEWED_EXCEPTIONS` lists the reviewed exceptions, and `tests/fixtures/forbidden-phrases.json` lists the banned phrases.
+
+  Changing a question's wording also changes the golden summaries in `tests/fixtures/summary/`, so update them in the same commit.
+
+- **Wording.** Every sentence is original. `docs/METHODOLOGY.md` §2 explains why and records which instruments each checklist draws on. Read its §10 before changing how Unclear or funding is treated.
+- **Versions.** Each file has a `version`, but nothing reads it yet and it is not stored with an appraisal. Bumping it does not invalidate old answers. What protects answers is keeping the item `id` stable.
+
+### The arithmetic and where it comes from
+
+All of it is in `src/lib/effect-measures.ts`, a pure module with one function per input shape: `fromRates`, `fromCounts`, and `fromRatio`.
+
+- ARR = CER − EER.
+- RRR = ARR ÷ CER.
+- NNT = ⌈1 ÷ |ARR|⌉, taken after rounding to 12 significant digits. It is labelled NNH when the intervention is worse.
+- A ratio is converted at a reader-supplied baseline risk (ACR). For RR and HR, EER = ratio × ACR. For an OR, the conversion goes through the odds.
+- The 95% CI comes from the counts (a Wald interval on the ARR) or from a ratio's own CI, converted the same way as the estimate. Rates carry no group sizes, so they give no CI.
+
+The references are the Cochrane Handbook §12.5 and the CEBM NNT material, both linked from the Numbers tab's _How this is calculated_. The one trap already found is floating point. `111/370 − 74/370` evaluates to 0.09999999999999998, whose reciprocal rounds up to 11 instead of 10. The 12-digit rounding in `ceilPatients` is the fix, pinned by `tests/lib/effect-measures.test.ts`. No QA value lands on a whole number, so the manual pass does not catch it.
+
 ## 3. Release
 
-Not available yet. Filled in for v0.3 (Chrome Web Store submission steps, version bump, changelog, zip upload, review notes).
+The Chrome Web Store steps will be written for v0.3: submission, changelog, and review notes.
+
+**v0.1 is an internal release**, a GitHub pre-release with no store listing:
+
+1. `version` in `package.json` is the release version. WXT copies it into the manifest.
+2. `main` is green in CI at the release commit. That covers unit tests, e2e on saved pages, `check:manifest` and the zip.
+3. Build the zip at that commit with `pnpm install --frozen-lockfile && pnpm zip`. Put it on a **draft** pre-release aimed at that commit: `gh release create v<version> .output/journal-club-helper-<version>-chrome.zip --draft --prerelease --target <sha> --title v<version> --notes "QA pending"`.
+   - A draft creates no tag, and `--target` pins the tag to the commit that will be tested, not to whatever `main` is when the release is published.
+   - Do not use the CI artifact for this. It arrives wrapped in a second zip, expires after 14 days, and is missing for a run that `cancel-in-progress` cancelled.
+4. Someone downloads the zip from the draft, runs `docs/QA.md` against it, and fills in the results table. Also run `pnpm test:e2e:live` once by hand; it is the only check against live PubMed (§4, row 3).
+5. Put the QA results into the notes and publish, which creates the tag. `gh` 2.4 has no `release edit`, so use the API: `gh api -X PATCH repos/<owner>/<repo>/releases/<id> -F draft=false -F body=@<notes>`.
 
 ## 4. Known issues
 
@@ -190,6 +245,14 @@ Two design limitations that are deliberate, not defects:
 - **Design detection reads the whole abstract**, so "previous randomized trials" in a Background section yields `rct` at medium confidence. The header shows the phrase that caused it and the user can overrule it. Pinned by a test.
 - **PICO candidate recall is weak for Intervention and Comparison.** Real abstracts write "comparing supplemental oxygen with ambient air", which matches none of the cue phrases, so those fields often fall back to the title. Precision was chosen over recall because a wrong candidate costs the user more than a missing one, and arbitrary text can be selected by hand. If users complain, widening the I and C cues is where to spend, not filtering.
 
+One set of gaps is not deliberate, and is tracked in **#49**. The number extractor misses three common forms that turned up while writing the QA script:
+
+- BMJ's bare `v` between two results (`24.2% v 29.8%`).
+- A fraction pair with prose between its arms. ISIS-2's primary result is written this way.
+- Thousands grouped with a thin space (`18 061`; U+2009 in the source, a plain space once `pubmed-dom.ts` normalises whitespace). This also makes one PICO candidate start mid-number.
+
+Manual entry in the Numbers tab covers all three, and `docs/QA.md` expects the gaps, so they do not block v0.1.
+
 The e2e smoke tests (§5) drive the built extension in Chromium, side panel included: the panel is browser UI rather than a Playwright page, but its document is a CDP target, and `evaluateInPanel` in `tests/e2e/fixtures.ts` runs script inside it. The smoke run uses that for the design header and the Numbers tab only. There is **no component test harness in the repo**. The UI was checked with throwaway Preact + happy-dom harnesses that were not committed, so those checks do not run in CI. Adding `@testing-library/preact` is the obvious next step if the UI starts changing often; it was left out because the spec's dependency budget (§5) is deliberately tight.
 
 ## 5. External dependencies
@@ -255,6 +318,12 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
 - 2026-09-25: **#24, the smoke tests, and the part of it that cannot be built.** The plan was a weekly Playwright run against live PubMed. PubMed now answers an automated Chromium with a 403 (headless) or a reCAPTCHA Enterprise page (headed, residential IP), so no scheduled job can reach it, and none was written. CI instead runs the built extension on every PR against the saved pages served at the real URLs, and `pnpm test:e2e:live` runs the same scenarios against the live site with a human passing the check. The reasoning is in §7.
   The fixture run was checked for failing when it should, not just for passing: breaking the abstract selector in `pubmed-dom.ts` fails scenario 2 with a message naming the file, removing the content script's URL gate fails scenario 1, and rounding the NNT down in `effect-measures.ts` makes the panel show NNT 10 and fails scenario 3. That last one is also the proof that the panel checks read the build, not the source. The live run was only started, never taken through the check, so it has neither passed nor been seen to fail; it is in §4's unverified list.
   A fresh-context review of the first version found real defects, the most useful being that the side panel's document _can_ be read over CDP. The first version had assumed otherwise and recomputed the NNT from `src/lib` in Node, which asserted nothing the unit tests did not.
+- 2026-09-25 (week 3 checkpoint, #9, #26): **The v0.1 release gate is written down; running it is left to a person.**
+  - `docs/QA.md` is a manual pass of about ten minutes over five records: RCT, SR/MA, cohort, case-control, and an unstructured abstract. Every expected value in it was produced by running the shipped code over the record's abstract, not recalled. That is how #49 was found: three common ways of writing a result that the extractor misses. None blocks v0.1, because manual entry covers them.
+  - The two new records were confirmed through E-utilities. The first candidate recalled for the case-control slot turned out to be an HPV vaccine trial.
+  - **Permissions audit.** The built manifest declares `storage`, `sidePanel`, host `https://pubmed.ncbi.nlm.nih.gov/*`, and optional host `https://eutils.ncbi.nlm.nih.gov/*`, and `check:manifest` passes. This is narrower than the spec §5 draft by `activeTab` and the two AI hosts. Both removals are deliberate (§7, _Declared permissions track the code_).
+  - §2 now covers the storage schema, how to edit a checklist, and where the arithmetic comes from. Week 2 of #9 had asked for the last two and they had never been written. §3 has the v0.1 release steps.
+  - **Still needed before the tag, and only a person can do it:** run `docs/QA.md`, and take `pnpm test:e2e:live` through PubMed's check once (§4, row 3).
 
 ## 7. Decisions and why
 

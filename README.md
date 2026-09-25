@@ -19,6 +19,7 @@ Pre-alpha. Work is tracked in GitHub issues and milestones (v0.1 MVP → v0.2 Pa
 
 - [docs/SPEC.ja.md](docs/SPEC.ja.md) — product spec. Japanese by design; it is the only Japanese document in this repo. Code, commits, UI copy, and all other docs are English.
 - [docs/HANDOVER.md](docs/HANDOVER.md) — accounts, build and release procedures, known issues, external dependencies. Updated at the end of every milestone week.
+- [docs/QA.md](docs/QA.md) — the manual pass, about ten minutes, run before each tagged release, with expected values.
 - `docs/PRIVACY.md`, `docs/STORE-LISTING.md` — added for v0.3.
 
 ## Development
