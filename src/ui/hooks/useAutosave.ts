@@ -4,12 +4,13 @@
  * Spec §3-5: typing in a tab is saved per PMID and reopening the same article
  * brings everything back. Writes are debounced so a burst of keystrokes costs
  * one `chrome.storage.local` write, and any pending write is flushed when the
- * panel unmounts — closing the panel must not lose the last edit.
+ * panel goes away — closing the panel must not lose the last edit. "Goes away"
+ * is not unmount: see the listeners in `useAutosave`.
  */
 import { useEffect, useRef } from 'preact/hooks';
 import { loadAppraisal, saveAppraisal } from '../../lib/storage';
 import type { Appraisal, PubMedArticle } from '../../lib/types';
-import { actions, toAppraisal, useStore } from '../store';
+import { actions, store, toAppraisal, useStore } from '../store';
 
 export const AUTOSAVE_DEBOUNCE_MS = 500;
 
@@ -145,7 +146,7 @@ function createdAtFor(pmid: string): number {
  *   }
  *
  * It restores the stored appraisal as soon as an article is bound, then saves
- * every later change, and flushes on unmount.
+ * every later change, and flushes when the panel is hidden, closed or unmounted.
  */
 export function useAutosave(options: AutosaveOptions = {}): void {
   const state = useStore((s) => s);
@@ -162,10 +163,24 @@ export function useAutosave(options: AutosaveOptions = {}): void {
   useEffect(() => {
     // Closing the side panel tears its document down without unmounting the
     // component, so the cleanup below never runs there and an edit still inside
-    // the debounce was lost. Measured in Chromium: `beforeunload` and
-    // `visibilitychange` fire early enough for a storage write started in them
-    // to land; one started in `pagehide` does not. Flushing twice is harmless.
+    // the debounce was lost. Measured in Chromium:
+    //   - a storage write started in `beforeunload` or in `visibilitychange`
+    //     lands; one started in `pagehide` does not;
+    //   - the panel's own `window.close()` fires both, and `sidePanel.close()`
+    //     fires only `visibilitychange`;
+    //   - closing the tab, or leaving PubMed so the panel is disabled, gives no
+    //     event in which a write lands at all. That is a known limit (HANDOVER §2).
+    // The store changes synchronously on input, but the effect below that
+    // schedules the write runs a frame later, so the listener takes the latest
+    // state itself rather than trusting what is pending. Flushing twice is
+    // harmless: the second finds nothing new.
     const flushNow = (): void => {
+      const s = store.get();
+      // Primed means restored and settled; before that there is no edit to keep.
+      if (s.article !== null && s.hydrated && primedFor.current === s.article) {
+        const latest = toAppraisal(s, createdAtFor(s.article.pmid));
+        if (latest) controller.schedule(latest);
+      }
       void controller.flush();
     };
     const flushIfHidden = (): void => {

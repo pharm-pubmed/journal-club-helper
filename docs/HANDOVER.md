@@ -131,7 +131,11 @@ Everything is in `chrome.storage.local`, on the device only. No server holds a c
 - **Backups.** Settings → Export all writes `{ schemaVersion: 2, exportedAt, appraisals, settings }`, which is `EXPORT_SCHEMA_VERSION`. Import validates the whole file before removing a single key (§6, 2026-09-21), and `merge` keeps whichever copy of an article is newer.
 - **Answers are keyed by item id.** Renaming an item id in a checklist orphans every saved answer to it.
 - **Numbers are saved only once they mean something.** The Numbers state is stored when there is a result or a candidate was used (`toAppraisal` in `src/ui/store.ts`). Figures typed in by hand that never produced a result are not saved.
-- **Closing the panel does not unmount it.** Autosave is debounced by 500 ms, and closing the side panel tears its document down without unmounting the component, so a flush on unmount never runs. `useAutosave` therefore also flushes on `beforeunload` and on `visibilitychange` to hidden. A write started in `pagehide` does **not** land, which was measured, so do not move the flush there. Smoke scenario 4 closes the panel 0 ms after an edit and fails without this.
+- **Closing the panel does not unmount it.** Autosave is debounced by 500 ms, and closing the side panel tears its document down without unmounting the component, so a flush on unmount never runs.
+  - `useAutosave` also flushes on `visibilitychange` to hidden, and on `beforeunload`. It takes the latest state from the store at that moment rather than what is pending, because the effect that schedules a write runs a frame after the edit.
+  - Measured in Chromium: `sidePanel.close()` fires only `visibilitychange`, and the panel's own `window.close()` fires both. A write started in `pagehide` does **not** land, so do not move the flush there.
+  - Smoke scenario 4 closes the panel both ways, 0 ms after an edit. Both variants fail without `visibilitychange`; the self-close variant alone passes with only `beforeunload`.
+  - **Known limit:** closing the tab, or leaving PubMed so that the panel is disabled, gives no event in which a write lands, as measured in review. An edit made in the last half-second before either is lost.
 
 ### Editing the checklists
 
@@ -327,6 +331,7 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
 - 2026-09-26: **An edit made just before closing the panel was lost, and the review that suspected it was right.** The review of the QA script had flagged this from reading the code alone, and a spike confirmed it: edits made 0, 20 and 100 ms before `window.close()` were lost, while one made 800 ms before survived. The 800 ms case is the control, and it is what showed the harness measured the right thing.
   - Flushing on `pagehide` changed nothing. A probe then showed that a storage write started in `beforeunload` or in `visibilitychange` lands, and one started in `pagehide` does not.
   - Flushing on the first two kept every edit, 0 ms included. Smoke scenario 4 now pins this, and it fails on the old build.
+  - A second fresh-context review found that the `beforeunload` flush had nothing to write at 0 ms: the edit only becomes pending a frame later, and `visibilitychange` had been doing all the work. The listeners now snapshot the store themselves. Scenario 4 gained a `sidePanel.close()` variant, which fires no `beforeunload` at all. The same review measured the limit now in §2: closing the tab or leaving PubMed loses the last half-second.
   - The QA review also corrected Numbers-tab copy that said only Counts mode gives a CI; ratio mode does too (#51).
 
 ## 7. Decisions and why

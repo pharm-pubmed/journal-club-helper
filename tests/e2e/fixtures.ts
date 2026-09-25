@@ -43,6 +43,9 @@ const LIVE_PROFILE = process.env.JCH_E2E_PROFILE ?? join(homedir(), '.cache', 'j
 /** How long a live run waits for a human to get through PubMed's check. */
 const HUMAN_CHECK_TIMEOUT = 5 * 60_000;
 
+/** How long `evaluateInPanel` waits for the panel to answer. */
+const PANEL_REPLY_TIMEOUT = 10_000;
+
 /**
  * Stands in for a search results page. It carries an Abstract heading on
  * purpose: if the content script stopped gating on the URL, the button would
@@ -210,7 +213,8 @@ export async function getArticle(serviceWorker: Worker, url: string): Promise<Ge
  * directly, so this uses the older message-passing form of the Target domain;
  * if Chromium ever drops it, this is the function to rewrite.
  *
- * Assumes one open panel, which is what the tests arrange.
+ * Assumes one open panel, which is what the tests arrange. Rejects rather than
+ * hanging if the panel closes before it answers.
  */
 export async function evaluateInPanel<T>(
   page: Page,
@@ -232,12 +236,18 @@ export async function evaluateInPanel<T>(
       id?: number;
       result?: { result: { value: T }; exceptionDetails?: unknown };
     }
-    const reply = new Promise<Reply>((resolveReply) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const reply = new Promise<Reply>((resolveReply, rejectReply) => {
       session.on('Target.receivedMessageFromTarget', (event) => {
         if (event.sessionId !== sessionId) return;
         const message = JSON.parse(event.message) as Reply;
         if (message.id === 1) resolveReply(message);
       });
+      // A panel that closes mid-evaluation never answers.
+      timer = setTimeout(
+        () => rejectReply(new Error('The side panel did not answer; it may have closed')),
+        PANEL_REPLY_TIMEOUT,
+      );
     });
     await session.send('Target.sendMessageToTarget', {
       sessionId,
@@ -247,7 +257,7 @@ export async function evaluateInPanel<T>(
         params: { expression, returnByValue: true, awaitPromise: true },
       }),
     });
-    const { result } = await reply;
+    const { result } = await reply.finally(() => clearTimeout(timer));
     await session.send('Target.detachFromTarget', { sessionId });
     if (result === undefined || result.exceptionDetails !== undefined) {
       throw new Error(`Evaluating in the side panel failed: ${JSON.stringify(result)}`);
