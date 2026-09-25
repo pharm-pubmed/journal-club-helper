@@ -26,12 +26,14 @@ pnpm lint            # ESLint
 pnpm format:check    # Prettier
 pnpm typecheck       # wxt prepare && tsc --noEmit
 pnpm test            # Vitest (src/lib unit tests)
+pnpm test:e2e        # Playwright smoke: built extension in Chromium, saved pages (run after `pnpm build`)
+pnpm test:e2e:live   # the same against live PubMed, headed; a human passes PubMed's check (§5)
 pnpm check:manifest  # permission guard, run after `pnpm build`
 ```
 
 Load the unpacked extension from `.output/chrome-mv3` in `chrome://extensions` with developer mode on.
 
-CI (`.github/workflows/ci.yml`) runs lint, format, typecheck, tests with coverage, build, the manifest guard, and zip on every push to `main` and every pull request, then uploads the zip as a 14-day artifact.
+CI (`.github/workflows/ci.yml`) runs lint, format, typecheck, tests with coverage, build, the manifest guard, the e2e smoke tests, and zip on every push to `main` and every pull request, then uploads the zip as a 14-day artifact.
 
 ### Driving the extension from an agent
 
@@ -157,7 +159,7 @@ Two design limitations that are deliberate, not defects:
 - **Design detection reads the whole abstract**, so "previous randomized trials" in a Background section yields `rct` at medium confidence. The header shows the phrase that caused it and the user can overrule it. Pinned by a test.
 - **PICO candidate recall is weak for Intervention and Comparison.** Real abstracts write "comparing supplemental oxygen with ambient air", which matches none of the cue phrases, so those fields often fall back to the title. Precision was chosen over recall because a wrong candidate costs the user more than a missing one, and arbitrary text can be selected by hand. If users complain, widening the I and C cues is where to spend, not filtering.
 
-There is **no component test harness in the repo**. The UI was checked with throwaway Preact + happy-dom harnesses that were not committed, so those checks do not run in CI. Adding `@testing-library/preact` is the obvious next step if the UI starts changing often; it was left out because the spec's dependency budget (§5) is deliberately tight.
+The e2e smoke tests (§5) drive the built extension in Chromium, but they stop at the edge of the side panel: the panel is browser UI, so they can see its document open and cannot read what it renders. There is **no component test harness in the repo**. The UI was checked with throwaway Preact + happy-dom harnesses that were not committed, so those checks do not run in CI. Adding `@testing-library/preact` is the obvious next step if the UI starts changing often; it was left out because the spec's dependency budget (§5) is deliberately tight.
 
 ## 5. External dependencies
 
@@ -189,7 +191,8 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
 
 - **The extension is unaffected.** The content script reads a page the user's own browser already loaded and passed the challenge for.
 - **Refreshing the HTML fixtures needs a real browser.** The current ones were taken from the Internet Archive's raw-replay endpoint (`https://web.archive.org/web/<timestamp>id_/<pubmed url>`), which returns the unmodified original response; a 2023 and a 2026 snapshot of the same record have identical markup shape.
-- **The weekly Playwright smoke run (issue #24) will meet the same challenge from a CI datacenter IP.** Plan for a headed browser, or accept that the smoke test has to run somewhere with a residential IP, or drop it in favour of fixture tests plus the E-utilities check. This was not anticipated when issue #24 was written.
+- **An automated browser does not get through at all.** Measured 2026-09-25 from a residential IP with Playwright's Chromium 153: headless gets a flat **403** on its `HeadlessChrome` user agent; with a normal user agent, and headed, it gets a **reCAPTCHA Enterprise** "Checking your browser" page that never resolves by itself. This is no longer the proof-of-work page `curl` sees. Getting past it would mean defeating bot detection, which is not something to build. A CI datacenter IP can only do worse.
+- **So the smoke tests (#24) run in two modes** (`tests/e2e/fixtures.ts`). In CI, Playwright answers the real PubMed URLs with the saved pages and aborts every other request, and the built extension runs against them: button injection, URL gating, `GET_ARTICLE`, and the side panel actually opening. That checks the extension, not PubMed. `pnpm test:e2e:live` runs the same scenarios headed against the live site with a persistent profile (`~/.cache/jch-e2e-profile`, or `JCH_E2E_PROFILE`), and waits up to five minutes per page for a human to pass the check in the window. **That live run is the only thing that notices a PubMed markup change**, and it happens only when someone runs it: do it before each release, and whenever a user reports the button or the article missing.
 
 ## 6. Weekly log
 
@@ -217,6 +220,8 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   Two things worth keeping from how this was checked. The side panel is browser UI, so CDP cannot screenshot it, and `document.visibilityState` is useless here — a background tab reports `visible` too. The page's own `window.innerWidth` is the honest signal, 386 px narrower when the panel is showing. And the run that settled it was the _control_: putting the global default back at runtime reproduced the old behaviour on the same build, which is what turned "the panel does not appear" from an absence of evidence into a measurement. The table is in §4.
   The fix changes one thing for the reader, recorded in §7: the panel is per-tab now, so a second PubMed tab needs its own click. 457 tests.
 - 2026-09-24: #43 confirmed on Edge. The first report said the panel still followed; Edge was loading the Windows-side copy of the 2026-09-21 build, which had never been refreshed. Re-copied, reloaded, and it behaves as in Chrome. A failed check on a stale build looks exactly like a failed fix — look at what is loaded before concluding anything.
+- 2026-09-25: **#24, the smoke tests, and the part of it that cannot be built.** The plan was a weekly Playwright run against live PubMed. PubMed now answers an automated Chromium with a 403 (headless) or a reCAPTCHA Enterprise page (headed, residential IP), so no scheduled job can reach it, and none was written. CI instead runs the built extension on every PR against the saved pages served at the real URLs, and `pnpm test:e2e:live` runs the same scenarios against the live site with a human passing the check. The reasoning is in §7.
+  Both halves were checked for failing when they should, not just for passing. Breaking the abstract selector in `pubmed-dom.ts` fails scenario 2 with a message that names the file, and removing the content script's URL gate puts the button on the search page and fails scenario 1. The live run was only started, not taken through the check, so it has not yet passed end to end.
 
 ## 7. Decisions and why
 
@@ -257,6 +262,14 @@ The toolbar icon is disabled on those other tabs, with a tooltip saying where th
 Scoping is by **host**, not by abstract page, so the panel survives the trip back to a result list between two articles. Closing it on every such trip would mean reopening it for each paper, which is the whole session.
 
 The cost, and it is a real one: **a second PubMed tab does not inherit an open panel.** A per-tab panel cannot be opened without a user gesture, so there is no way to hand it to a new tab by itself, and `sidePanel.open()` from a tab-switch handler would be rejected. The reader clicks `Journal Club` once per tab. That is the price of the panel not being somewhere it has no business being, and it was paid knowingly. If it turns out to annoy people, the honest alternatives are worse: a global panel is the bug, and auto-opening is not available.
+
+### The smoke tests run on saved pages in CI, and live only by hand (#24)
+
+Spec §9 asked for a weekly CI run against live PubMed so that markup changes surface early. That run cannot exist: PubMed answers an automated browser with a 403 or a reCAPTCHA page (§5), and getting past it is bot-detection evasion.
+
+What runs instead is split by what each half can actually check. CI serves the saved pages at the real URLs on every push and pull request, which catches the extension breaking: a manifest change, a content script that stops injecting or gating, messaging, the panel failing to open. The live run is local and headed, a human passes the check, and it is the only thing that catches PubMed changing. There is no weekly schedule, because a scheduled job that can only fail teaches everyone to ignore it.
+
+**To reverse:** you need a sanctioned way for an automated client to load PubMed pages, which NCBI does not offer; E-utilities returns XML, not the page the content script reads.
 
 ### Browser support stops at Chrome and Edge (#25)
 

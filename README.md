@@ -31,6 +31,7 @@ pnpm dev           # WXT dev server with HMR
 pnpm build         # production build into .output/chrome-mv3
 pnpm zip           # store-ready zip
 pnpm test          # Vitest, unit tests for src/lib
+pnpm test:e2e      # Playwright: the built extension in Chromium, on saved PubMed pages
 pnpm lint          # ESLint
 pnpm typecheck     # wxt prepare && tsc --noEmit
 pnpm check:manifest  # fails if the built manifest's permissions drift from the spec
@@ -38,7 +39,7 @@ pnpm check:manifest  # fails if the built manifest's permissions drift from the 
 
 Load the unpacked extension from `.output/chrome-mv3`.
 
-Stack: WXT, TypeScript (strict), Preact, Vitest, pnpm. Playwright smoke tests come later.
+Stack: WXT, TypeScript (strict), Preact, Vitest, Playwright, pnpm.
 
 ### Layout
 

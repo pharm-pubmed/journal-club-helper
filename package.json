@@ -20,6 +20,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:live": "JCH_LIVE=1 playwright test",
     "check:manifest": "node scripts/check-manifest.mjs"
   },
   "dependencies": {
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.63.0",
     "@preact/preset-vite": "^2.10.6",
     "@types/chrome": "^0.2.9",
     "@vitest/coverage-v8": "^4.1.11",

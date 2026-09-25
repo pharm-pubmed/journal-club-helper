@@ -44,6 +44,24 @@ jobs:
       - name: Manifest permission guard
         run: pnpm check:manifest
 
+      # Serves saved PubMed pages, so no network and no PubMed dependency; the
+      # live run is local-only because PubMed blocks automated browsers
+      # (HANDOVER §4). Runs against the build above.
+      - name: Install Chromium for e2e
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: E2E smoke tests
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: e2e-traces
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14
+
       - name: Zip
         run: pnpm zip
 
