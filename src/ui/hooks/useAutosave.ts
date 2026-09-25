@@ -160,7 +160,22 @@ export function useAutosave(options: AutosaveOptions = {}): void {
   const primedFor = useRef<PubMedArticle | null>(null);
 
   useEffect(() => {
+    // Closing the side panel tears its document down without unmounting the
+    // component, so the cleanup below never runs there and an edit still inside
+    // the debounce was lost. Measured in Chromium: `beforeunload` and
+    // `visibilitychange` fire early enough for a storage write started in them
+    // to land; one started in `pagehide` does not. Flushing twice is harmless.
+    const flushNow = (): void => {
+      void controller.flush();
+    };
+    const flushIfHidden = (): void => {
+      if (document.visibilityState === 'hidden') flushNow();
+    };
+    window.addEventListener('beforeunload', flushNow);
+    document.addEventListener('visibilitychange', flushIfHidden);
     return () => {
+      window.removeEventListener('beforeunload', flushNow);
+      document.removeEventListener('visibilitychange', flushIfHidden);
       void controller.flush();
     };
   }, [controller]);

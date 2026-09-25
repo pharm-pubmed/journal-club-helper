@@ -133,3 +133,49 @@ test('3. the panel turns the percent pair in the abstract into an NNT', async ({
     })
     .toBe(RCT_PERCENT_PAIR.nnt);
 });
+
+test('4. an edit made just before the panel closes is there when it reopens', async ({
+  page,
+  serviceWorker,
+  extensionId,
+}) => {
+  await readRecord(page, serviceWorker, RCT);
+  await openPanel(page, extensionId, RCT);
+
+  // Runs in the panel: switch to the Export tab and read the bottom line. The
+  // tab renders on the next frame, so callers poll until the field is there.
+  const readBottomLine = `(() => {
+    const tab = [...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent.trim() === 'Export');
+    if (!tab) return 'no Export tab';
+    tab.click();
+    const field = document.querySelector('.export__textarea');
+    return field ? 'field: ' + field.value : 'no bottom-line field';
+  })()`;
+  await expect
+    .poll(() => evaluateInPanel<string>(page, extensionId, readBottomLine))
+    .toMatch(/^field: /);
+
+  // Autosave is debounced, and closing the panel destroys its document without
+  // unmounting it, so this edit is still pending when the panel goes.
+  const bottomLine = `Written just before closing, ${Date.now()}`;
+  const typeAndClose = `(() => {
+    const field = document.querySelector('.export__textarea');
+    field.value = ${JSON.stringify(bottomLine)};
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    setTimeout(() => window.close(), 0);
+    return 'closing';
+  })()`;
+  expect(await evaluateInPanel<string>(page, extensionId, typeAndClose)).toBe('closing');
+  await expect
+    .poll(() =>
+      evaluateInPanel<string>(page, extensionId, '1').catch((error: Error) => error.message),
+    )
+    .toContain('not open');
+
+  await openPanel(page, extensionId, RCT);
+  await expect
+    .poll(() => evaluateInPanel<string>(page, extensionId, readBottomLine), {
+      message: 'the edit made just before the panel closed was not restored',
+    })
+    .toBe(`field: ${bottomLine}`);
+});
