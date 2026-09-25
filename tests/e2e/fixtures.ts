@@ -4,16 +4,19 @@
  * Two modes, because PubMed cannot be reached by an automated browser: a
  * headless Chromium gets 403 on its user agent, and a headed one gets a
  * reCAPTCHA Enterprise "Checking your browser" page, even from a residential
- * IP (measured 2026-09-25, HANDOVER §4).
+ * IP (measured 2026-09-25, HANDOVER §5).
  *
  * - Default (CI): every PubMed URL the tests open is answered with the saved
- *   page from tests/fixtures/pubmed/, and every other request is aborted. The
- *   URL is the real one, so the content script's match pattern fires and the
- *   whole extension runs as shipped. This checks the extension, not PubMed.
+ *   page from tests/fixtures/pubmed/, and every other request from a page is
+ *   aborted, PubMed's own scripts included. The URL is the real one, so the
+ *   content script's match pattern fires and the extension runs as shipped.
+ *   This checks the extension, not PubMed.
  * - JCH_LIVE=1 (local, by hand): headed, a persistent profile, the real site.
- *   The run waits while a human passes the browser check in the window; the
- *   profile keeps the result for later runs. This is the check that notices
- *   PubMed changing its markup.
+ *   The run waits while a human passes the browser check in the window. This
+ *   is the check that notices PubMed changing its markup.
+ *
+ * One browser serves the whole run, so a live run meets the check once rather
+ * than once per test. Each test gets fresh tabs and its pages are closed after.
  */
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
@@ -43,7 +46,8 @@ const HUMAN_CHECK_TIMEOUT = 5 * 60_000;
 /**
  * Stands in for a search results page. It carries an Abstract heading on
  * purpose: if the content script stopped gating on the URL, the button would
- * land here and the "no button" check would catch it.
+ * land here and the "no button" check would catch it. The live search page has
+ * no such heading, so in a live run that check is weaker.
  */
 const SEARCH_PAGE = `<!doctype html><html><head><title>VV116 - Search Results - PubMed</title></head>
 <body><main><div id="abstract"><h2 class="title">Abstract</h2></div></main></body></html>`;
@@ -66,86 +70,189 @@ async function serveFixtures(context: BrowserContext): Promise<void> {
         return route.fulfill({ contentType: 'text/html; charset=utf-8', body: SEARCH_PAGE });
       }
     }
-    // Stylesheets, scripts and trackers the saved pages reference. Nothing the
-    // content script reads comes from them, and a hermetic run cannot flake.
+    // Stylesheets, scripts and trackers the saved pages reference. The content
+    // script reads none of them. The cost: a PubMed script that re-renders the
+    // abstract after load cannot be caught here, only by a live run.
     return route.abort();
   });
 }
 
-interface Fixtures {
+const isExtensionWorker = (worker: Worker): boolean =>
+  worker.url().startsWith('chrome-extension://');
+
+interface TestFixtures {
   context: BrowserContext;
+  page: Page;
+}
+
+interface WorkerFixtures {
+  extensionContext: BrowserContext;
   serviceWorker: Worker;
   extensionId: string;
 }
 
-export const test = base.extend<Fixtures>({
-  // Playwright requires the first argument to be a destructuring pattern.
-  // eslint-disable-next-line no-empty-pattern
-  context: async ({}, use, testInfo) => {
-    if (!existsSync(join(EXTENSION_DIR, 'manifest.json'))) {
-      throw new Error('No build at .output/chrome-mv3. Run `pnpm build` before the e2e tests.');
+export const test = base.extend<TestFixtures, WorkerFixtures>({
+  extensionContext: [
+    // Playwright requires the first argument to be a destructuring pattern.
+    // eslint-disable-next-line no-empty-pattern
+    async ({}, use) => {
+      if (!existsSync(join(EXTENSION_DIR, 'manifest.json'))) {
+        throw new Error('No build at .output/chrome-mv3. Run `pnpm build` before the e2e tests.');
+      }
+      const userDataDir = LIVE ? LIVE_PROFILE : mkdtempSync(join(tmpdir(), 'jch-e2e-'));
+      const context = await chromium.launchPersistentContext(userDataDir, {
+        // The full Chromium build: extensions do not load in the headless shell.
+        channel: 'chromium',
+        headless: !LIVE,
+        args: [`--disable-extensions-except=${EXTENSION_DIR}`, `--load-extension=${EXTENSION_DIR}`],
+      });
+      try {
+        if (!LIVE) await serveFixtures(context);
+        await context.tracing.start({ screenshots: true, snapshots: true });
+        await use(context);
+      } finally {
+        await context.close();
+        if (!LIVE) rmSync(userDataDir, { recursive: true, force: true });
+      }
+    },
+    { scope: 'worker' },
+  ],
+
+  serviceWorker: [
+    async ({ extensionContext }, use) => {
+      const running = extensionContext.serviceWorkers().find(isExtensionWorker);
+      await use(
+        running ??
+          (await extensionContext.waitForEvent('serviceworker', { predicate: isExtensionWorker })),
+      );
+    },
+    { scope: 'worker' },
+  ],
+
+  extensionId: [
+    async ({ serviceWorker }, use) => {
+      await use(new URL(serviceWorker.url()).host);
+    },
+    { scope: 'worker' },
+  ],
+
+  context: async ({ extensionContext }, use, testInfo) => {
+    // The first tab stays open for the whole run: closing a browser's last
+    // window can end the browser.
+    const keep = extensionContext.pages()[0] ?? (await extensionContext.newPage());
+    await extensionContext.tracing.startChunk();
+    try {
+      await use(extensionContext);
+    } finally {
+      if (testInfo.status !== testInfo.expectedStatus) {
+        const path = testInfo.outputPath('trace.zip');
+        await extensionContext.tracing.stopChunk({ path });
+        await testInfo.attach('trace', { path, contentType: 'application/zip' });
+      } else {
+        await extensionContext.tracing.stopChunk();
+      }
+      for (const page of extensionContext.pages()) {
+        if (page !== keep) await page.close();
+      }
     }
-    const userDataDir = LIVE ? LIVE_PROFILE : mkdtempSync(join(tmpdir(), 'jch-e2e-'));
-    const context = await chromium.launchPersistentContext(userDataDir, {
-      // The full Chromium build: extensions do not load in the headless shell.
-      channel: 'chromium',
-      headless: !LIVE,
-      args: [`--disable-extensions-except=${EXTENSION_DIR}`, `--load-extension=${EXTENSION_DIR}`],
-    });
-    if (!LIVE) await serveFixtures(context);
-    await context.tracing.start({ screenshots: true, snapshots: true });
-
-    await use(context);
-
-    const failed = testInfo.status !== testInfo.expectedStatus;
-    await context.tracing.stop(failed ? { path: testInfo.outputPath('trace.zip') } : undefined);
-    await context.close();
-    if (!LIVE) rmSync(userDataDir, { recursive: true, force: true });
   },
 
-  serviceWorker: async ({ context }, use) => {
-    const [running] = context.serviceWorkers();
-    await use(running ?? (await context.waitForEvent('serviceworker')));
-  },
-
-  extensionId: async ({ serviceWorker }, use) => {
-    await use(new URL(serviceWorker.url()).host);
+  page: async ({ context }, use) => {
+    await use(await context.newPage());
   },
 });
 
 /**
- * Opens a PubMed URL. In a live run, first waits for the page to stop being
- * PubMed's browser check, which a human has to pass in the open window.
+ * Opens a PubMed page. In a live run, first waits for the page itself to
+ * appear, which may need a human to pass PubMed's browser check in the window.
+ * The wait is for a sign of the real page, not for the check to go away, so an
+ * interstitial nobody anticipated also ends up here rather than passing.
  */
-export async function openPubMed(page: Page, url: string): Promise<void> {
+export async function openPubMed(
+  page: Page,
+  url: string,
+  kind: 'article' | 'search',
+): Promise<void> {
   await page.goto(url);
-  if (LIVE) {
-    await expect(page, 'Pass the PubMed browser check in the open Chromium window').not.toHaveTitle(
-      /Checking your browser|reCAPTCHA|^403$/i,
-      { timeout: HUMAN_CHECK_TIMEOUT },
-    );
+  if (!LIVE) return;
+  const message = 'Pass the PubMed browser check in the open Chromium window';
+  if (kind === 'article') {
+    await expect(page.locator('h1.heading-title'), message).toBeVisible({
+      timeout: HUMAN_CHECK_TIMEOUT,
+    });
+  } else {
+    await expect(page, message).toHaveTitle(/PubMed/, { timeout: HUMAN_CHECK_TIMEOUT });
   }
 }
 
 /**
  * Asks the content script in the tab showing `url` for its article, the same
  * message the side panel sends. Sent from the service worker, which may message
- * any tab on a host the extension holds.
+ * any tab on a host the extension holds. The URL is matched as a prefix, so a
+ * query or fragment PubMed adds does not lose the tab.
  */
 export async function getArticle(serviceWorker: Worker, url: string): Promise<GetArticleResponse> {
-  return serviceWorker.evaluate(async (tabUrl) => {
-    const [tab] = await chrome.tabs.query({ url: tabUrl });
+  const response = await serviceWorker.evaluate(async (tabUrl) => {
+    const [tab] = await chrome.tabs.query({ url: `${tabUrl}*` });
     if (tab?.id === undefined) throw new Error(`No tab is showing ${tabUrl}`);
-    return chrome.tabs.sendMessage(tab.id, { type: 'GET_ARTICLE' });
+    return (await chrome.tabs.sendMessage(tab.id, { type: 'GET_ARTICLE' })) as unknown;
   }, url);
+  if (typeof response !== 'object' || response === null || !('article' in response)) {
+    throw new Error(`The content script answered GET_ARTICLE with ${JSON.stringify(response)}`);
+  }
+  return response as GetArticleResponse;
 }
 
-/** URLs of every document the browser has open, extension pages included. */
-export async function openDocumentUrls(page: Page): Promise<string[]> {
+/**
+ * Evaluates `expression` inside the side panel's document and returns the
+ * value. The panel is browser UI, not a Playwright page, but its document is an
+ * ordinary CDP target. Playwright's CDP session cannot address a child session
+ * directly, so this uses the older message-passing form of the Target domain;
+ * if Chromium ever drops it, this is the function to rewrite.
+ *
+ * Assumes one open panel, which is what the tests arrange.
+ */
+export async function evaluateInPanel<T>(
+  page: Page,
+  extensionId: string,
+  expression: string,
+): Promise<T> {
   const session = await page.context().newCDPSession(page);
   try {
+    const panelUrl = `chrome-extension://${extensionId}/sidepanel.html`;
     const { targetInfos } = await session.send('Target.getTargets');
-    return targetInfos.map((target) => target.url);
+    const panel = targetInfos.find((target) => target.url === panelUrl);
+    if (panel === undefined) throw new Error('The side panel is not open');
+
+    const { sessionId } = await session.send('Target.attachToTarget', {
+      targetId: panel.targetId,
+      flatten: false,
+    });
+    interface Reply {
+      id?: number;
+      result?: { result: { value: T }; exceptionDetails?: unknown };
+    }
+    const reply = new Promise<Reply>((resolveReply) => {
+      session.on('Target.receivedMessageFromTarget', (event) => {
+        if (event.sessionId !== sessionId) return;
+        const message = JSON.parse(event.message) as Reply;
+        if (message.id === 1) resolveReply(message);
+      });
+    });
+    await session.send('Target.sendMessageToTarget', {
+      sessionId,
+      message: JSON.stringify({
+        id: 1,
+        method: 'Runtime.evaluate',
+        params: { expression, returnByValue: true, awaitPromise: true },
+      }),
+    });
+    const { result } = await reply;
+    await session.send('Target.detachFromTarget', { sessionId });
+    if (result === undefined || result.exceptionDetails !== undefined) {
+      throw new Error(`Evaluating in the side panel failed: ${JSON.stringify(result)}`);
+    }
+    return result.result.value;
   } finally {
     await session.detach();
   }
