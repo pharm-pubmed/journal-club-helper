@@ -77,7 +77,37 @@ cp -r .output/chrome-mv3/. /mnt/c/Users/<user>/journal-club-helper-build/
 
 Then `edge://extensions/` → Developer mode → Load unpacked.
 
-**Repo setting still to do by hand:** enable branch protection on `main` requiring the CI check to pass. Not scriptable from the repo, so it has to be set in GitHub settings and re-set if the repo is transferred to a new org.
+### `main` is not branch-protected, and cannot be on the current plan
+
+GitHub offers neither branch protection nor rulesets on a private repository owned by a free personal account. The API answers 403, _Upgrade to GitHub Pro or make this repository public_, and so does the settings page. A free organization has the same limit for private repositories, so the org move (§7) does not fix this by itself.
+
+Until it can be fixed, `.claude/settings.json` runs `scripts/require-green-checks.mjs` before every shell command an agent runs in this checkout, and refuses `gh pr merge` unless every check on the PR's head commit has passed. Pending checks and a commit no check has reported on yet both count as not green, and if the checks cannot be read at all the merge is refused. It is a stand-in, not protection: the merge button on github.com, a merge from another machine, and a `gh api` call to the merge endpoint all go around it.
+
+When the plan allows it (Pro, or the org on Team), add the real thing. The required check is `check`, the job name, not the workflow name `CI`:
+
+```bash
+gh api -X POST repos/<owner>/<repo>/rulesets --input - <<'EOF'
+{
+  "name": "main requires CI",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": { "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] } },
+  "rules": [
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "required_status_checks": [{ "context": "check" }]
+      }
+    }
+  ]
+}
+EOF
+```
+
+Not yet run, because the current plan refuses the endpoint. Re-apply it after any transfer, and keep the hook or delete it; once the ruleset exists the hook is redundant but harmless.
+
+The hook reads `gh pr view --json statusCheckRollup` rather than `gh pr checks --json`, because the `gh` in Ubuntu's archive (2.4.0) predates the latter.
 
 ### Things that will bite a new owner
 
@@ -221,6 +251,7 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   Two things worth keeping from how this was checked. The side panel is browser UI, so CDP cannot screenshot it, and `document.visibilityState` is useless here — a background tab reports `visible` too. The page's own `window.innerWidth` is the honest signal, 386 px narrower when the panel is showing. And the run that settled it was the _control_: putting the global default back at runtime reproduced the old behaviour on the same build, which is what turned "the panel does not appear" from an absence of evidence into a measurement. The table is in §4.
   The fix changes one thing for the reader, recorded in §7: the panel is per-tab now, so a second PubMed tab needs its own click. 457 tests.
 - 2026-09-24: #43 confirmed on Edge. The first report said the panel still followed; Edge was loading the Windows-side copy of the 2026-09-21 build, which had never been refreshed. Re-copied, reloaded, and it behaves as in Chrome. A failed check on a stale build looks exactly like a failed fix — look at what is loaded before concluding anything.
+- 2026-09-25: Went to add the branch protection §2 had listed as a manual step, and found it cannot be set at all: a private repository on a free personal account gets a 403 from both the rulesets and the branch-protection API. The note calling it "not scriptable" was wrong about the reason. `gh api` can set it; the plan refuses it. In its place, a Claude Code hook now refuses `gh pr merge` from an agent unless the PR's checks are green. It does not guard the web UI. The ruleset to add once the plan allows it is in §2.
 - 2026-09-25: **#24, the smoke tests, and the part of it that cannot be built.** The plan was a weekly Playwright run against live PubMed. PubMed now answers an automated Chromium with a 403 (headless) or a reCAPTCHA Enterprise page (headed, residential IP), so no scheduled job can reach it, and none was written. CI instead runs the built extension on every PR against the saved pages served at the real URLs, and `pnpm test:e2e:live` runs the same scenarios against the live site with a human passing the check. The reasoning is in §7.
   The fixture run was checked for failing when it should, not just for passing: breaking the abstract selector in `pubmed-dom.ts` fails scenario 2 with a message naming the file, removing the content script's URL gate fails scenario 1, and rounding the NNT down in `effect-measures.ts` makes the panel show NNT 10 and fails scenario 3. That last one is also the proof that the panel checks read the build, not the source. The live run was only started, never taken through the check, so it has neither passed nor been seen to fail; it is in §4's unverified list.
   A fresh-context review of the first version found real defects, the most useful being that the side panel's document _can_ be read over CDP. The first version had assumed otherwise and recomputed the NNT from `src/lib` in Node, which asserted nothing the unit tests did not.
