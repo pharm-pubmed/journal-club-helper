@@ -63,8 +63,10 @@ const MODE_LABELS: Record<CalculatorMode, string> = {
 
 const MODE_HINTS: Record<CalculatorMode, string> = {
   rates: 'Two event rates as percentages. Percentages carry no group sizes, so there is no CI.',
-  counts: 'Events and participants in each group. The only mode that can give a 95% CI.',
-  ratio: 'An RR, HR or OR plus the baseline risk you want to apply it to.',
+  counts:
+    'Events and participants in each group. The only mode that computes its own 95% CI from the data.',
+  ratio:
+    'An RR, HR or OR plus the baseline risk you want to apply it to. Enter the ratio’s 95% CI to carry it over.',
 };
 
 const RATIO_MEASURES: readonly RatioMeasure[] = ['RR', 'HR', 'OR'];
@@ -528,12 +530,14 @@ function HowThisIsCalculated() {
             arithmetic and is reported as an NNH: the number treated for one extra event to occur.
           </dd>
 
-          <dt class="numbers__formula">95% CI — Counts mode only</dt>
+          <dt class="numbers__formula">95% CI</dt>
           <dd class="numbers__how-text">
-            A Wald interval on the ARR (the risk difference plus or minus 1.96 standard errors),
-            inverted to give the two NNT bounds. Percentages on their own carry no group sizes, so
-            Rates mode gives a point estimate and no interval. When the ARR interval includes zero,
-            the two NNT bounds sit on opposite sides of infinity.
+            In Counts mode, a Wald interval on the ARR (the risk difference plus or minus 1.96
+            standard errors), inverted to give the two NNT bounds. In Ratio mode, the ratio&rsquo;s
+            own interval, when you enter it, goes through the same conversion as the estimate at the
+            same baseline risk. Percentages on their own carry no group sizes, so Rates mode gives a
+            point estimate and no interval. When the ARR interval includes zero, the two NNT bounds
+            sit on opposite sides of infinity.
           </dd>
 
           <dt class="numbers__formula">From an RR or HR: EER = ratio × ACR</dt>
