@@ -1,6 +1,6 @@
 # Manual QA script
 
-A pass of about ten minutes over five real PubMed records, run by a person in a real browser before each tagged release. It covers what the automated suites cannot: the live PubMed page, the side panel as a reader sees it, the clipboard, the downloaded file, and persistence across a closed panel. The e2e smoke run (`pnpm test:e2e`) already checks button injection, URL gating, extraction and one NNT on saved pages, so this script spends its time elsewhere.
+A pass of about ten minutes over five real PubMed records, run by a person in a real browser before each tagged release. It covers what the automated suites cannot: the live PubMed page, the side panel as a reader sees it, the clipboard, the downloaded file, and persistence across a closed panel. The e2e smoke run (`pnpm test:e2e`) already checks button injection, URL gating, extraction, one NNT and one close-and-restore on saved pages, so this script spends its time elsewhere.
 
 Every expected value below was produced by the shipped code, not written from memory: the classifier, the number extractor, the PICO candidate finder and the effect-measure functions were run over each record's abstract. For 36577095, 36740866 and 34844936 that input was the saved page in `tests/fixtures/pubmed/`. For 38537944 and 2899772 it was the E-utilities `efetch` text, because live PubMed does not serve pages to an automated client (HANDOVER §5). If the live page disagrees with a value here, that is a finding: note it rather than passing the step.
 
