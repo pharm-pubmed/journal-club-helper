@@ -266,7 +266,7 @@ The e2e smoke tests (§5) drive the built extension in Chromium, side panel incl
 | PubMed abstract page DOM (`pubmed.ncbi.nlm.nih.gov/<PMID>/`) | Source of abstract text, publication types, MeSH, citation | Markup can change without notice; the site now blocks non-browser fetches  | Fixture tests in CI catch our regressions, not PubMed's changes; only the manual live run does (§7). E-utilities fallback deferred to v0.3 |
 | NCBI E-utilities `efetch`                                    | Fallback when DOM parsing fails                            | Rate limit ≤ 3 req/s without key; requires tool name + email in User-Agent | Optional host permission, requested only when enabled                                                                                      |
 | ExtensionPay (v0.2)                                          | Billing                                                    | Transferability on sale unknown                                            | `src/lib/license.ts` abstraction; Stripe Checkout + license key as fallback                                                                |
-| Anthropic / OpenAI APIs (v0.2)                               | AI extraction with user's key                              | API changes, cost                                                          | Provider abstraction; prompts in `src/prompts/*.md`                                                                                        |
+| Anthropic / OpenAI APIs (v0.2)                               | AI extraction with user's key                              | API changes, cost, model retirement                                        | Provider abstraction (`src/lib/ai/`); prompts in `src/prompts/*.md`; model ids and prices in `anthropic.ts`, checked 2026-09-26            |
 | Chrome Side Panel API                                        | Panel UI                                                   | `sidePanel.open()` needs Chrome 116+ and a user gesture                    | `minimum_chrome_version` is `"116"` and CI enforces it; verify on Edge / Brave                                                             |
 
 ### PubMed DOM: what the markup actually does
@@ -333,6 +333,11 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   - Flushing on the first two kept every edit, 0 ms included. Smoke scenario 4 now pins this, and it fails on the old build.
   - A second fresh-context review found that the `beforeunload` flush had nothing to write at 0 ms: the edit only becomes pending a frame later, and `visibilitychange` had been doing all the work. The listeners now snapshot the store themselves. Scenario 4 gained a `sidePanel.close()` variant, which fires no `beforeunload` at all. The same review measured the limit now in §2: closing the tab or leaving PubMed loses the last half-second.
   - The QA review also corrected Numbers-tab copy that said only Counts mode gives a CI; ratio mode does too (#51).
+- 2026-09-26 (later): **#34, the AI extraction core, while the v0.1 QA waits for a person.**
+  - Provider contract, prompt, Anthropic client and answer guard are in `src/lib/ai/`. No UI uses them yet, so the shipped build is unchanged (§7, _AI extraction_).
+  - A fresh-context review found that the first version enforced "never invent a number" only in the number candidates. A computed difference in a discussion question passed, and a fixture in the tests was modelling exactly that as a correct answer. Grounding now covers every field.
+  - The same review found that a cancel landing after the answer arrived still produced a result, and that a key pasted with a zero-width space was reported as a network failure. Both are fixed and tested.
+  - The new guards were checked by removing each one: every removal fails a test.
 
 ## 7. Decisions and why
 
@@ -444,6 +449,31 @@ Two removals in v0.1 follow the same rule, and it is worth stating as a rule bec
 - `api.anthropic.com` and `api.openai.com` were declared as optional host permissions before any code could request them. A reviewer asking what the extension does with `api.anthropic.com` would have found no answer in the binary. They return with #34/#35 in v0.2; `eutils.ncbi.nlm.nih.gov` stays because #23 is the near-term use.
 
 Restoring an optional host permission at a version bump is a manifest change, not a re-review of the item, so there is no cost to waiting. `CHROMEWEBSTORE.md` holds the per-permission justification a reviewer asks for and must be updated in the same commit as any manifest change.
+
+### AI extraction: what the code enforces, not the prompt (#34)
+
+`src/lib/ai/` holds the provider-independent contract, the Anthropic client, and the guard that reads its answer. A prompt is a request, not a guarantee, so four things are enforced in code:
+
+- **What is sent.** The request body reads the title, the abstract and the publication types by name, so a caller handing over a whole appraisal still cannot send the user's notes. A test does exactly that and asserts that no note reaches the body. Tags that delimit those fields are defused inside them, so an abstract cannot close its own block.
+- **No invented figures.** `groundExtraction` checks the answer against the abstract:
+  - A number candidate is kept only if its text appears in the abstract verbatim, whitespace aside, and holds at least two figures.
+  - Anywhere else, every figure must appear in the title or the abstract. A limitation or question carrying a computed difference is dropped, and a PICO field is emptied.
+  - What it cannot check is whether a real figure is attached to the right group. That stays with the reader, who accepts each candidate.
+- **Shape.** Structured output makes the API return the schema, and `parseExtraction` checks it again anyway.
+  - A wrong type, or a well-formed empty answer, is a parse failure. It is retried once, then reported, and the UI falls back to manual entry (spec §4.7).
+  - A cut-off answer is reported without a retry, since the same budget would cut it off again.
+- **When not to send.** An empty or malformed key and a record without a real abstract are refused before any request. The second matters because a model given only a well-known title answers from memory.
+
+The failure kinds are what #35 needs to word its messages. `timeout` is separate from `aborted`, because a cancel shows nothing and a timeout has to say so. `forbidden` is Anthropic's HTTP 403, not a declined browser permission.
+
+The default model is Claude Sonnet 5, at about a cent a run. Opus 5.5 is the other choice. Haiku 4.5 is left out although it is cheaper: its retirement date is "not sooner than October 15, 2026", and a stored setting pointing at a retired model fails every run. Model ids and prices are hard-coded in `anthropic.ts`, checked against Anthropic's docs on 2026-09-26. Recheck them whenever a model is retired.
+
+**Not in #34, on purpose:**
+
+- The optional host permission for `api.anthropic.com`. No entrypoint imports `src/lib/ai/` yet, so the shipped build contains none of it, and declaring the host now would repeat what the section above removed.
+  - It lands with the UI in #35, together with the key and model settings, `check:manifest` and `CHROMEWEBSTORE.md`.
+  - #35 should first check whether it is needed at all. The browser-access header exists so that Anthropic answers cross-origin requests, and an extension page can fetch a CORS-enabled origin without a host permission. If that works, declaring nothing is the better answer.
+- A test against the real API. The acceptance run with a real key is manual and has not been done.
 
 ### Billing: ask before building (#37, #36)
 
