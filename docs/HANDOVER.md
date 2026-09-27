@@ -427,6 +427,11 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   - `docs/QA.md` record D was re-derived by running the `efetch` record through the classifier, the Numbers tab and the export in happy-dom. D3 now expects the note in three places and its absence on the OR result, and D4 expects it to go with the Cohort override.
   - Smoke scenario 3 now overrides the RCT to case-control and checks both places in the built extension, then resets the design, because the profile outlives the test.
   - Each placement was removed in turn and a test failed each time: the note above the candidates, the one beside the result (in the smoke run too, on a rebuilt extension), the export line, the Ratio exemption, and the case-control branch of the wording function. 671 tests.
+- 2026-09-27 (after #58): **The landing page gets its real output example and a short demo video (#62, #63).** The strategy revision's §11, still uncommitted when this was written, asks for both before recruiting anyone. Neither promises a paid feature.
+  - `/sample/` is the file the panel's Download .md saved for the store images' appraisal, unedited. A note above it says which parts a person typed or chose, that the absolute figures are recomputed from the ratio, and that the bottom line is not a clinical conclusion. The page is `noindex`.
+  - Writing that note showed the store images answered checklist item 1 Yes from the abstract, which names a PROSPERO record but not its date. The checklist says the question needs the registry, so it is now Unclear with a note on what to check, and the affected images were re-rendered.
+  - A fresh-context review of the builder found a loop that never ended on a line such as `#1 finding`, which predates this change, and DOI links cut at a parenthesis. Both are fixed and tested. Markdown the summary never produces is still refused or passed through as text, not supported.
+  - `pnpm store:video` records the panel over CDP and needs ffmpeg with libx264. It shares its input with the store images through `store/scenario.ts`, and after that move `pnpm store:assets` reproduced every image byte for byte. Only sampled frames have been looked at; a person should watch the video through before the site goes live, and Safari playback is untested. 677 tests.
 
 ## 7. Decisions and why
 
