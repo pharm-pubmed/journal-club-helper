@@ -310,6 +310,34 @@ hospitalisation or a rare harm, and the gap is widest exactly where readers most
 want to close it. This is the same discipline as RoB 2's rule that a risk-of-bias
 judgement attaches to a specific result rather than to a trial.
 
+**A proportion is not a risk unless the study followed people to it.** The
+Numbers tab reads two proportions as event rates in two groups, which is what a
+trial or a cohort reports. A case-control study samples on the outcome: the
+pairs in its abstract are the share of cases exposed and the share of controls
+exposed, and even outcome-among-exposed is fixed by how many controls the
+investigators chose per case. Neither is a risk, so an ARR, NNT or NNH worked out
+from them describes the sampling, not the exposure. The odds ratio is the measure
+that survives case-control sampling, which is why applying it to a baseline risk
+the reader supplies (Ratio mode) is the route the tool points to. When the design
+in force is case-control, the tab says so above the detected candidates and
+beside any Rates or Counts result, and the export carries the same sentence
+under that result. It does not remove the candidates or refuse the arithmetic:
+which numbers to use is the reader's call, and the tool only says what the
+result is not.
+
+A cross-sectional study has a milder version of the problem, and gets a milder,
+differently worded note. It samples without regard to exposure or outcome, so
+the arithmetic on its proportions is sound; what it measures is prevalence at
+one moment, not risk over time. The difference is a prevalence difference, and
+an NNT built on it counts no events caused or prevented. That note appears only
+beside a Rates or Counts result and in the export. Nothing is wrong with using
+the candidates, so there is no note above them, and in Ratio mode the baseline
+is the reader's own figure, already flagged by the baseline-risk warning. The
+wording for both lives in one place, `src/lib/design-caveats.ts`, and is pinned
+word for word by its tests. Other designs get no note; a diagnostic accuracy
+study's proportions are not event rates either, and deciding its wording is
+left open rather than guessed.
+
 ---
 
 ## 7. Non-inferiority trials
