@@ -30,7 +30,7 @@ import {
   type Worker,
 } from '@playwright/test';
 import type { GetArticleResponse } from '../../src/lib/types';
-import { RECORDS } from './pmids';
+import { RCT, RECORDS } from './pmids';
 
 export { expect };
 
@@ -54,6 +54,19 @@ const PANEL_REPLY_TIMEOUT = 10_000;
  */
 const SEARCH_PAGE = `<!doctype html><html><head><title>VV116 - Search Results - PubMed</title></head>
 <body><main><div id="abstract"><h2 class="title">Abstract</h2></div></main></body></html>`;
+
+/**
+ * A PubMed page whose abstract markup has changed under us (#23): the RCT page
+ * with its abstract container renamed, so the Abstract heading and the button
+ * are still there but the content script can read nothing. A test serves it at
+ * the RCT's own URL with `page.route`, which takes precedence over the routes
+ * below.
+ */
+export function unreadablePage(): string {
+  return readFileSync(join(FIXTURE_DIR, RCT.fixture), 'utf8')
+    .replace('class="abstract-content selected"', 'class="abstract-content-renamed"')
+    .replace('id="eng-abstract"', 'id="eng-abstract-renamed"');
+}
 
 async function serveFixtures(context: BrowserContext): Promise<void> {
   const pages = new Map(
@@ -220,6 +233,8 @@ export async function evaluateInPanel<T>(
   page: Page,
   extensionId: string,
   expression: string,
+  /** Run as if the user had acted, which a permission prompt requires. */
+  { userGesture = false }: { userGesture?: boolean } = {},
 ): Promise<T> {
   const session = await page.context().newCDPSession(page);
   try {
@@ -254,7 +269,7 @@ export async function evaluateInPanel<T>(
       message: JSON.stringify({
         id: 1,
         method: 'Runtime.evaluate',
-        params: { expression, returnByValue: true, awaitPromise: true },
+        params: { expression, returnByValue: true, awaitPromise: true, userGesture },
       }),
     });
     const { result } = await reply.finally(() => clearTimeout(timer));

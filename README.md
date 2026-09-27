@@ -60,7 +60,7 @@ Stack: WXT, TypeScript (strict), Preact, Vitest, Playwright, pnpm.
 
 ## Permissions
 
-Two: `storage` and `sidePanel`, plus a host permission for `pubmed.ncbi.nlm.nih.gov` and nothing else. One optional host permission for NCBI E-utilities, requested only when that feature is turned on. No `tabs`, no `<all_urls>`, no `scripting`.
+Two: `storage` and `sidePanel`, plus a host permission for `pubmed.ncbi.nlm.nih.gov` and nothing else. One optional host permission for NCBI E-utilities, requested only when a page cannot be read and you ask the panel to fetch the record from NCBI instead. No `tabs`, no `<all_urls>`, no `scripting`.
 
 Declared permissions track what the code can actually do, not the roadmap: the AI provider hosts arrive with the AI features in v0.2. [CHROMEWEBSTORE.md](CHROMEWEBSTORE.md) carries the per-permission justification for store review.
 

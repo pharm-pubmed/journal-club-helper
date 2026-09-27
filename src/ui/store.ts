@@ -20,15 +20,23 @@ import type {
   Verdict,
 } from '../lib/types';
 
-export type ArticleStatus = 'idle' | 'loading' | 'ready' | 'unsupported' | 'error';
+/**
+ * `unreadable`: an abstract page whose content could not be read, so the panel
+ * can offer to fetch the same record from NCBI instead (#23).
+ */
+export type ArticleStatus = 'idle' | 'loading' | 'ready' | 'unsupported' | 'unreadable' | 'error';
 
 export type TabId = 'pico' | 'numbers' | 'validity' | 'export';
 
 export interface AppState {
   status: ArticleStatus;
   article: PubMedArticle | null;
-  /** Message shown when status is 'error'. */
+  /** Message shown when status is 'error', 'unsupported' or 'unreadable'. */
   error: string | null;
+  /** The PMID of the abstract page that could not be read; set only while 'unreadable'. */
+  unreadablePmid: string | null;
+  /** The PMID being fetched from NCBI, from the click until the answer (#23). */
+  ncbiPending: string | null;
   activeTab: TabId;
   classification: DesignClassification | null;
   designOverride: StudyDesign | null;
@@ -65,6 +73,8 @@ export const initialState = (): AppState => ({
   status: 'idle',
   article: null,
   error: null,
+  unreadablePmid: null,
+  ncbiPending: null,
   activeTab: 'pico',
   classification: null,
   designOverride: null,
@@ -105,7 +115,12 @@ class Store {
 
   /** Called when the panel binds to a different PMID; tab answers must not leak across articles. */
   resetForArticle(article: PubMedArticle | null): void {
-    this.state = { ...initialState(), activeTab: this.state.activeTab, article };
+    this.state = {
+      ...initialState(),
+      activeTab: this.state.activeTab,
+      ncbiPending: this.state.ncbiPending,
+      article,
+    };
     for (const listener of this.listeners) listener();
   }
 }
@@ -131,8 +146,16 @@ export function useStore<T>(select: (s: AppState) => T): T {
 /* ------------------------------------------------------------------- actions */
 
 export const actions = {
-  setStatus(status: ArticleStatus, error: string | null = null) {
-    store.set({ status, error });
+  setStatus(status: Exclude<ArticleStatus, 'unreadable'>, error: string | null = null) {
+    store.set({ status, error, unreadablePmid: null });
+  },
+
+  setUnreadable(pmid: string, error: string | null = null) {
+    store.set({ status: 'unreadable', error, unreadablePmid: pmid });
+  },
+
+  setNcbiPending(ncbiPending: string | null) {
+    store.set({ ncbiPending });
   },
 
   setActiveTab(activeTab: TabId) {

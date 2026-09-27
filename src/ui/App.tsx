@@ -55,9 +55,11 @@ function GearIcon() {
 }
 
 export function App() {
-  const { article, status, reload } = useArticle();
+  const { article, status, reload, fetchFromNcbi } = useArticle();
   useAppraisalSession(article);
   const error = useStore((s) => s.error);
+  const unreadablePmid = useStore((s) => s.unreadablePmid);
+  const ncbiPending = useStore((s) => s.ncbiPending);
   const activeTab = useStore((s) => s.activeTab);
   const ready = status === 'ready';
 
@@ -77,7 +79,14 @@ export function App() {
             <TabBody id={activeTab} />
           </div>
         ) : (
-          <EmptyState status={status} message={error} onRetry={reload} />
+          <EmptyState
+            status={status}
+            message={error}
+            pmid={unreadablePmid}
+            ncbiPending={ncbiPending}
+            onRetry={reload}
+            onFetchFromNcbi={fetchFromNcbi}
+          />
         )}
       </main>
       <footer class="footer">

@@ -12,7 +12,9 @@ const PUBMED_RECORD = 'https://pubmed.ncbi.nlm.nih.gov/';
 function citationLine(article: PubMedArticle): string {
   const first = article.authors[0];
   const byline = first ? (article.authors.length > 1 ? `${first} et al.` : first) : '';
-  return [byline, article.journal, article.year].filter((part) => part !== '').join(' · ');
+  // Says where the record came from when it was not the page the reader sees (#23).
+  const via = article.source === 'eutils' ? 'via NCBI E-utilities' : '';
+  return [byline, article.journal, article.year, via].filter((part) => part !== '').join(' · ');
 }
 
 export function Header() {
