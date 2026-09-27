@@ -18,13 +18,15 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import {
   MAX_APPRAISALS,
-  deleteAppraisal,
+  countUnreadableAppraisals,
+  deleteAllAppraisals,
   exportAll,
   importAll,
   listAppraisals,
   loadSettings,
 } from '../../lib/storage';
 import type { Appraisal, Settings } from '../../lib/storage';
+import type { AppraisalsReplacedMessage } from '../../lib/types';
 import { PRODUCT_NAME } from '../labels';
 import './options.css';
 
@@ -84,6 +86,40 @@ function extensionVersion(): string | null {
   return chrome.runtime.getManifest().version;
 }
 
+/**
+ * Tells any open side panel that the appraisals under it changed, so it drops
+ * the one it holds in memory and reads storage again (useAutosave.ts). Without
+ * this, the panel's next edit wrote a deleted appraisal back. Sent after a
+ * failed attempt too, which may have changed some keys before it stopped.
+ * With no panel open nobody answers, and that is not an error.
+ */
+async function announceAppraisalsReplaced(): Promise<void> {
+  if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return;
+  const message: AppraisalsReplacedMessage = { type: 'APPRAISALS_REPLACED' };
+  try {
+    // Inside the try: on a dead extension context this throws synchronously.
+    await chrome.runtime.sendMessage(message);
+  } catch {
+    // Nobody listening, or no one answering: either way there is nothing to do.
+  }
+}
+
+/** Stored records `listAppraisals` hides, set aside or never reopened (storage.ts). */
+function unreadablePhrase(count: number): string {
+  return plural(count, 'record this version could not read', 'records this version could not read');
+}
+
+/**
+ * "3 saved appraisals", "3 saved appraisals and 2 records this version could
+ * not read", or only the second half when those are all there is.
+ */
+function recordsPhrase(readable: number, unreadable: number, one: string, many: string): string {
+  const hidden = unreadablePhrase(unreadable);
+  if (unreadable === 0) return plural(readable, one, many);
+  if (readable === 0) return hidden;
+  return `${plural(readable, one, many)} and ${hidden}`;
+}
+
 function importSummary(imported: number, skipped: number, mode: ImportMode): string {
   const head =
     mode === 'replace'
@@ -101,6 +137,8 @@ function importSummary(imported: number, skipped: number, mode: ImportMode): str
 
 export function OptionsPage() {
   const [appraisals, setAppraisals] = useState<AppraisalSummary[] | null>(null);
+  /** Records the list above hides because this version cannot read them. */
+  const [unreadable, setUnreadable] = useState(0);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [message, setMessage] = useState<Message | null>(null);
@@ -111,9 +149,14 @@ export function OptionsPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const [list, loaded] = await Promise.all([listAppraisals(), loadSettings()]);
+      const [list, loaded, hidden] = await Promise.all([
+        listAppraisals(),
+        loadSettings(),
+        countUnreadableAppraisals(),
+      ]);
       setAppraisals(list);
       setSettings(loaded);
+      setUnreadable(hidden);
       setLoadError(null);
     } catch (error) {
       setAppraisals([]);
@@ -161,6 +204,7 @@ export function OptionsPage() {
       // importAll throws a sentence meant for the user on a malformed file;
       // it is shown as-is rather than being swallowed or rethrown.
       const { imported, skipped, settingsOnly } = await importAll(text, importMode);
+      await announceAppraisalsReplaced();
       await refresh();
       setMessage({
         tone: 'ok',
@@ -171,6 +215,7 @@ export function OptionsPage() {
     } catch (error) {
       // Storage failures can leave a partially applied import. Show the actual
       // saved list and counters alongside the progress reported by the error.
+      await announceAppraisalsReplaced();
       await refresh();
       setMessage({
         tone: 'error',
@@ -185,23 +230,25 @@ export function OptionsPage() {
   }
 
   /**
-   * There is no bulk delete in storage.ts on purpose (one key per PMID), so the
-   * page walks the list. Settings are left alone: the usage counts are not part
-   * of "your data" in the sense the button promises.
+   * Everything under an appraisal key goes, including the records this version
+   * could not read and does not list. Settings are left alone: the usage counts
+   * are not part of "your data" in the sense the button promises.
    */
   async function handleDeleteAll(): Promise<void> {
     setBusy(true);
     setMessage(null);
     try {
-      const list = await listAppraisals();
-      for (const item of list) await deleteAppraisal(item.pmid);
+      const { deleted, unreadable: removed } = await deleteAllAppraisals();
+      await announceAppraisalsReplaced();
       await refresh();
       setConfirmingDelete(false);
       setMessage({
         tone: 'ok',
-        text: `Deleted ${plural(list.length, 'appraisal', 'appraisals')}. The usage counts below were kept.`,
+        text: `Deleted ${recordsPhrase(deleted, removed, 'appraisal', 'appraisals')}. The usage counts below were kept.`,
       });
     } catch (error) {
+      await announceAppraisalsReplaced();
+      await refresh();
       setMessage({ tone: 'error', text: messageOf(error, 'Could not delete your appraisals.') });
     } finally {
       setBusy(false);
@@ -242,10 +289,16 @@ export function OptionsPage() {
                 {MAX_APPRAISALS.toLocaleString()}
               </span>
             </p>
-            {count === 0 ? (
+            {count === 0 && unreadable === 0 ? (
               <p class="options__note">
                 Nothing saved yet. Open a PubMed abstract and start an appraisal in the side panel —
                 it is saved here automatically.
+              </p>
+            ) : null}
+            {unreadable > 0 ? (
+              <p class="options__note">
+                Also stored here: {unreadablePhrase(unreadable)}. They are kept rather than
+                overwritten, but not listed or exported. Delete all removes them too.
               </p>
             ) : null}
             {nearCap ? (
@@ -358,10 +411,10 @@ export function OptionsPage() {
         {confirmingDelete ? (
           <div class="options__confirm" role="group" aria-label="Confirm deleting all appraisals">
             <p class="options__confirm-text">
-              Delete {plural(count, 'saved appraisal', 'saved appraisals')}? They are stored only in
-              this browser, on this device. There is no copy on a server and no account to restore
-              from, so this cannot be undone. Export a backup first if there is any chance you want
-              them back.
+              Delete {recordsPhrase(count, unreadable, 'saved appraisal', 'saved appraisals')}? They
+              are stored only in this browser, on this device. There is no copy on a server and no
+              account to restore from, so this cannot be undone. Export a backup first if there is
+              any chance you want them back.
             </p>
             <div class="options__actions">
               <button
@@ -395,7 +448,7 @@ export function OptionsPage() {
                   setMessage(null);
                   setConfirmingDelete(true);
                 }}
-                disabled={busy || loading || count === 0}
+                disabled={busy || loading || count + unreadable === 0}
               >
                 Delete all appraisals
               </button>

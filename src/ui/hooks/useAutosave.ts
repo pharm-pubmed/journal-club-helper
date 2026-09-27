@@ -9,7 +9,7 @@
  */
 import { useEffect, useRef } from 'preact/hooks';
 import { loadAppraisal, saveAppraisal } from '../../lib/storage';
-import type { Appraisal, PubMedArticle } from '../../lib/types';
+import type { Appraisal, AppraisalsReplacedMessage, PubMedArticle } from '../../lib/types';
 import { actions, store, toAppraisal, useStore } from '../store';
 
 export const AUTOSAVE_DEBOUNCE_MS = 500;
@@ -137,6 +137,14 @@ function createdAtFor(pmid: string): number {
   return lastRestore?.pmid === pmid ? lastRestore.createdAt : Date.now();
 }
 
+function isAppraisalsReplaced(message: unknown): message is AppraisalsReplacedMessage {
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    (message as { type?: unknown }).type === 'APPRAISALS_REPLACED'
+  );
+}
+
 /**
  * Mount once, near the root of the panel:
  *
@@ -193,6 +201,36 @@ export function useAutosave(options: AutosaveOptions = {}): void {
       document.removeEventListener('visibilitychange', flushIfHidden);
       void controller.flush();
     };
+  }, [controller]);
+
+  useEffect(() => {
+    // Settings → Delete all, or an import, changes storage under an open panel
+    // that still holds the old appraisal in memory. Its next edit wrote the
+    // deleted record back, or its stale copy over the imported one. So the
+    // options page announces the change and the panel drops what it holds: the
+    // pending edit belongs to a record that is gone, and clearing both refs
+    // makes the effect below restore and prime again as on a fresh bind.
+    //
+    // A message rather than `chrome.storage.onChanged` on our own key: every
+    // autosave fires onChanged for that key too, and telling our writes from
+    // someone else's would mean tracking which of ours are still in flight. The
+    // message comes only for the operations that replace data under the panel,
+    // and one extension page reaches another directly, so the background worker
+    // relays nothing.
+    // Known window: a debounced write whose timer fires after the options page
+    // has changed storage but before this message arrives still lands. The gap
+    // is one message delivery, and it has not been measured.
+    if (typeof chrome === 'undefined' || !chrome.runtime?.onMessage) return;
+    const onMessage = (message: unknown): false => {
+      if (!isAppraisalsReplaced(message)) return false;
+      controller.cancel();
+      restoringFor.current = null;
+      primedFor.current = null;
+      actions.discardAppraisal();
+      return false;
+    };
+    chrome.runtime.onMessage.addListener(onMessage);
+    return () => chrome.runtime.onMessage.removeListener(onMessage);
   }, [controller]);
 
   useEffect(() => {

@@ -6,8 +6,9 @@
  * key in Settings.
  *
  * Layout:
- *   appraisal:<PMID>  one Appraisal
- *   settings          one Settings
+ *   appraisal:<PMID>             one Appraisal
+ *   settings                     one Settings
+ *   appraisal-unreadable:<PMID>  a record this version could not read, set aside
  */
 import { getStore } from './kv-store';
 import type {
@@ -248,6 +249,43 @@ export async function saveAppraisal(appraisal: Appraisal): Promise<void> {
 export async function deleteAppraisal(pmid: string): Promise<void> {
   if (!isValidPmid(pmid)) return;
   await getStore().remove(appraisalKey(pmid));
+}
+
+/**
+ * Every appraisal record in `all`, readable or not, and how many of them this
+ * version cannot read: those set aside under `UNREADABLE_PREFIX`, and those
+ * still under `appraisal:` that were never reopened (a schemaVersion 1 record,
+ * say). `listAppraisals` hides the unreadable ones.
+ */
+function appraisalRecords(all: Record<string, unknown>): { keys: string[]; unreadable: number } {
+  const keys: string[] = [];
+  let unreadable = 0;
+  for (const [key, value] of Object.entries(all)) {
+    const setAside = key.startsWith(UNREADABLE_PREFIX);
+    if (!setAside && !key.startsWith(APPRAISAL_PREFIX)) continue;
+    keys.push(key);
+    if (setAside || !isAppraisal(value)) unreadable += 1;
+  }
+  return { keys, unreadable };
+}
+
+/** So the options page can say that records it does not list are still stored. */
+export async function countUnreadableAppraisals(): Promise<number> {
+  return appraisalRecords(await getStore().getAll()).unreadable;
+}
+
+/**
+ * Settings → Delete all. Every appraisal record goes, readable or not, in one
+ * `remove`: a delete that walked `listAppraisals` left behind everything the
+ * listing hides, and the privacy policy promises that Delete removes every
+ * saved appraisal. `settings` is not an appraisal and stays. `unreadable` counts the records removed that
+ * this version could not read, for the confirmation message.
+ */
+export async function deleteAllAppraisals(): Promise<{ deleted: number; unreadable: number }> {
+  const store = getStore();
+  const { keys, unreadable } = appraisalRecords(await store.getAll());
+  if (keys.length > 0) await store.remove(keys);
+  return { deleted: keys.length - unreadable, unreadable };
 }
 
 /** Newest first: the options page lists recent work at the top. */
