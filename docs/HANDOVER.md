@@ -432,6 +432,7 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   - Writing that note showed the store images answered checklist item 1 Yes from the abstract, which names a PROSPERO record but not its date. The checklist says the question needs the registry, so it is now Unclear with a note on what to check, and the affected images were re-rendered.
   - A fresh-context review of the builder found a loop that never ended on a line such as `#1 finding`, which predates this change, and DOI links cut at a parenthesis. Both are fixed and tested. Markdown the summary never produces is still refused or passed through as text, not supported.
   - `pnpm store:video` records the panel over CDP and needs ffmpeg with libx264. It shares its input with the store images through `store/scenario.ts`, and after that move `pnpm store:assets` reproduced every image byte for byte. Only sampled frames have been looked at; a person should watch the video through before the site goes live, and Safari playback is untested. 677 tests.
+- 2026-09-27 (strategy revision, #65): **The strategy revision is committed, and the issues follow it.** Free release first, then a small cohort, then one paid export tested at $39 a year. §7 _Monetization_ has the summary and the issue changes. `docs/LAUNCH.md` was rewritten for it: recruiting through colleagues, an observation-session guide, a validation record kept outside the repository, and the §8.1 gates with their definitions. The weekly-user and export-rate gates are gone, as is the Reddit-first plan; the subreddit drafts stay, for use one at a time and after each subreddit's rules. The feedback form now also asks whether it was used for a presentation.
 
 ## 7. Decisions and why
 
@@ -586,7 +587,16 @@ The first price to test is `$39/year`, an unvalidated hypothesis replacing `$4/m
 
 ExtensionPay is a candidate, not a dependency selected for implementation. Check current fees, payment restoration, refunds and transfer options before billing goes live. A transferability question must not block free release or demand validation; do not build a custom Stripe licensing backend solely for a hypothetical sale. Billing will require updated network, privacy and permission disclosures.
 
-Existing issues #35–#37 and milestone labels have not been updated by this documentation change. Reconcile their acceptance criteria with the revised spec before implementation. The historical weekly log records the former decision to block the AI panel on billing; that is no longer the roadmap dependency.
+The issues were brought in line with the revised spec on 2026-09-27.
+
+- **#35:** AI is an optional free beta, not gated on a licence.
+- **#39:** the Pro candidate is one PPTX template, moved to v0.2 and mocked up by hand before any code.
+- **#36:** billing comes after #39.
+- **#37:** records the provider's terms instead of deciding a custom fallback.
+- **#38 and #40:** off the v1.0 milestone, as backlog.
+- **#32:** now the first cohort and the §8.1 gates, with `docs/LAUNCH.md` as its guide.
+
+The historical weekly log records the former decision to block the AI panel on billing; that is no longer the roadmap dependency.
 
 ### English only until after v1.0 (#41)
 
