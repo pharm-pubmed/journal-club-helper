@@ -7,7 +7,7 @@ The permission arrays below are enforced, not described: `scripts/check-manifest
 - **Item:** Journal Club Helper: Critical Appraisal for PubMed
 - **Version:** 0.1.0 (not yet submitted)
 - **Minimum Chrome version:** 116 — `chrome.sidePanel.open()` is not available before it
-- **Listing assets:** #27 · **Privacy policy:** #28 · **Submission:** #31
+- **Listing text and assets:** [docs/STORE-LISTING.md](docs/STORE-LISTING.md), `store/` (#27) · **Privacy policy:** [docs/PRIVACY.md](docs/PRIVACY.md) (#28) · **Submission:** #31
 
 ## Single purpose
 
@@ -43,17 +43,21 @@ The AI provider hosts (`api.anthropic.com`, `api.openai.com`) were declared here
 
 ## Data handling
 
-For the store's data-use disclosure form:
+For the store's data-use disclosure form. The store's User Data FAQ says handling has to be disclosed "even when data is processed or stored locally on a user's device and is not transmitted", so the categories below are ticked for what the extension keeps on the device, not for anything it sends to the developer. It sends the developer nothing.
 
-- **Personally identifiable information:** none collected.
-- **Health information:** none collected. The extension reads published abstracts, not patient data, and the user's own notes never leave the device.
-- **Financial, authentication, personal communications, location, web history, user activity:** none collected.
-- **Website content:** read locally from the PubMed page the user is viewing, to populate the appraisal form. Not transmitted, with one exception from the next release: when the page cannot be read and the user asks, its PMID is sent to NCBI E-utilities to fetch the same record.
-- **Sold to third parties:** no. **Used or transferred for purposes unrelated to the single purpose:** no. **Used or transferred to determine creditworthiness:** no.
+**Tick these three:**
 
-In 0.1.0 the extension makes **no network request of any kind**. The options page states this to the user and invites them to confirm it in the Network tab.
+- **Website content.** The extension reads the abstract, citation, publication types and MeSH terms from the PubMed page the user is viewing. It stores the citation, the detected design with its evidence, and the abstract sentence behind any number the user works with. When the user asks, it sends the page's PMID to NCBI E-utilities.
+- **Web history.** Each saved appraisal records which article it is for (PMID and title) and when it was created and last edited. Together they are a local list of the articles the user worked on.
+- **User activity.** Three local counters record how many articles were opened in the panel, how many summaries were exported and how many AI runs there were. They are shown back to the user on the settings page.
 
-From the next release there is one exception. When a PubMed page cannot be read, the panel offers to fetch the same record from NCBI E-utilities. Nothing is sent until the user clicks that offer, and the first time also grants the optional host permission. The request carries the PMID of the page and the tool name `journal-club-helper`, plus what any HTTPS request carries (IP address, user agent). The contact address NCBI asks for is added once the project mailbox exists (#30). None of the user's own notes or answers are in it. When the AI features land in 0.2 this section has to be rewritten: the abstract text, title and publication types would be sent to the provider the user chose, with the user's own API key, and the user's own notes would still never be sent.
+**Leave the rest unticked:** personally identifiable information, health information (the extension reads published abstracts, not anyone's health data, and the user's notes never leave the device), financial and payment information, authentication information, personal communications and location.
+
+**Certifications, all three true:** the data is not sold to third parties, not used or transferred for purposes unrelated to the single purpose, and not used or transferred to determine creditworthiness or for lending.
+
+The 0.1.0 internal build made **no network request of any kind**. The build on `main` since #23 (2026-09-27) has one exception. When a PubMed page cannot be read, the panel offers to fetch the same record from NCBI E-utilities. Nothing is sent until the user clicks that offer, and the first time also grants the optional host permission. The request carries the PMID of the page, the database and format parameters and the tool name `journal-club-helper`, plus what any HTTPS request carries (IP address, user agent, the extension's origin). The contact address NCBI asks for is added once the project mailbox exists (#30). None of the user's own notes or answers are in it.
+
+When the AI features ship this section has to be rewritten: the abstract text, title and publication types would be sent to the provider the user chose, with the user's own API key, and the user's own notes would still never be sent. Billing would add its own requests and data. Update `docs/PRIVACY.md` in the same change, and publish it before the release.
 
 ## Remote code
 
@@ -63,9 +67,9 @@ None. No `eval`, no remotely hosted scripts, no CDN. Everything executed is in t
 
 - Educational tool for clinicians and health-professions students. No user-generated content, no social features, no ads.
 - The output carries a fixed line: "Generated with Journal Club Helper for educational purposes. Verify against the full text."
-- Not affiliated with the U.S. National Library of Medicine or the NIH. PubMed is a registered trademark of the NLM; the listing must not imply endorsement. The name is descriptive of the page the tool works on.
+- Not affiliated with the U.S. National Library of Medicine, the NIH or HHS. The PubMed wordmark and logo are registered trademarks of the U.S. Department of Health and Human Services, according to PubMed's own disclaimer. The listing must not imply endorsement. The name describes the site the tool works on.
 - The validity checklists are original text written for this product, not reproduced from CASP, JBI, CONSORT, STROBE, PRISMA or QUADAS. A test (`tests/lib/checklist-schema.test.ts`) compares every shipped question against a corpus of those instruments' wording and fails CI on a near match.
 
-## Reviewer notes (paste into the submission form)
+## Reviewer notes (the dashboard's test instructions tab)
 
-> The extension runs only on `https://pubmed.ncbi.nlm.nih.gov/<PMID>/`. On such a page it adds one button next to the Abstract heading; clicking it opens a side panel containing an appraisal form the user fills in. It holds two permissions, `storage` and `sidePanel`, plus one host permission for PubMed. It collects no data. Its only network request, to NCBI E-utilities, is made when a page cannot be read and the user asks for it and grants the optional permission; it sends the PMID. Source: https://github.com/piroshi1989/journal-club-helper
+> The extension runs only on `https://pubmed.ncbi.nlm.nih.gov/<PMID>/`, for example https://pubmed.ncbi.nlm.nih.gov/36740866/. On such a page it adds one button next to the Abstract heading, and the toolbar icon also opens it. Clicking either opens a side panel containing an appraisal form the user fills in. It holds two permissions, `storage` and `sidePanel`, plus one host permission for PubMed. Everything it stores stays in `chrome.storage.local` on the device; it has no server and sends the developer nothing. Its only network request, to NCBI E-utilities, is made when a page cannot be read and the user asks for it and grants the optional permission; it sends the PMID. No login or test account is needed. Source: TBD(#30), the public repository.
