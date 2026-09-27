@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Journal Club Helper: critical appraisal beside the PubMed abstract</title>
+    <meta
+      name="description"
+      content="A free Chrome extension for journal club: study design, PICO, the absolute effect with NNT, and a risk-of-bias checklist, next to the PubMed abstract you are reading."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="brand" href="/"
+        ><img src="/favicon.svg" alt="" width="28" height="28" />Journal Club Helper</a
+      >
+      <a href="/privacy/">Privacy</a>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero__inner">
+          <h1>Critical appraisal, next to the abstract you are reading</h1>
+          <p>
+            A side panel for PubMed that sets up your journal club appraisal: the study design,
+            PICO, the absolute effect with the NNT, and a checklist for the design. It does not
+            summarize the paper and it does not tell you what to conclude. You make every judgement.
+          </p>
+          <!-- TBD(#31): the Chrome Web Store listing URL, once the item is published. -->
+          <a class="cta" href="TBD(#31)">Add to Chrome, free</a>
+          <span class="cta__note">Chrome and Edge. No account, no analytics.</span>
+        </div>
+      </section>
+
+      <section class="section demo" aria-labelledby="demo">
+        <div>
+          <h2 id="demo">See it in use</h2>
+          <p>
+            One appraisal of a published meta-analysis, in about half a minute: the detected design
+            and its evidence, a PICO in the reader's words, the abstract's relative risk turned into
+            an NNT, one checklist question with a note, and the bottom line that goes into the
+            one-page summary.
+          </p>
+          <p class="demo__note">
+            No sound. Recorded from the extension's side panel on a saved copy of the abstract.
+          </p>
+        </div>
+        <video
+          controls
+          muted
+          playsinline
+          preload="none"
+          width="400"
+          height="720"
+          poster="/video/demo-poster.png"
+          aria-label="Demo: appraising a meta-analysis in the Journal Club Helper side panel"
+        >
+          <source src="/video/demo.mp4" type="video/mp4" />
+          <a href="/video/demo.mp4">Download the demo video</a>
+        </video>
+      </section>
+
+      <section class="section" aria-labelledby="features">
+        <h2 id="features">What it does</h2>
+
+        <div class="feature">
+          <div>
+            <h3>The absolute effect, not just the relative one</h3>
+            <p>
+              Pick a result from the abstract and see the absolute risk reduction, the relative risk
+              reduction and the number needed to treat, with a 95% confidence interval when the
+              numbers allow one. You confirm every number before it is used.
+            </p>
+          </div>
+          <img
+            src="/img/numbers.png"
+            width="400"
+            height="720"
+            alt="The Numbers tab: a relative risk of 0.83 (95% CI 0.73 to 0.94) applied to a baseline risk of 29.8% gives NNT 20 (95% CI 13 to 56), with the ARR and its CI."
+          />
+        </div>
+
+        <div class="feature">
+          <div>
+            <h3>Risk of bias, one question at a time</h3>
+            <p>
+              A checklist written for each study design. Every question says what to look for, why
+              it matters, and whether the abstract can settle it or you need the full text.
+            </p>
+          </div>
+          <img
+            src="/img/appraisal.png"
+            width="400"
+            height="720"
+            loading="lazy"
+            alt="The Appraisal tab for a meta-analysis: the prespecified question and search comprehensiveness both answered Unclear, each with a note on what to check in the full record."
+          />
+        </div>
+
+        <div class="feature">
+          <div>
+            <h3>A one-page summary for journal club</h3>
+            <p>
+              Citation, clinical question, design, key results with the absolute effect, validity
+              and your own bottom line. Copy it as Markdown or plain text, or download it.
+            </p>
+            <p class="feature__more"><a href="/sample/">See an example summary</a></p>
+          </div>
+          <img
+            src="/img/export.png"
+            width="400"
+            height="720"
+            loading="lazy"
+            alt="The Export tab: the reader's bottom line, with buttons to copy the summary as Markdown or plain text, or download it."
+          />
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="who">
+        <h2 id="who">Who it is for</h2>
+        <div class="panel">
+          <ul>
+            <li>Medical and pharmacy residents preparing journal club.</li>
+            <li>Medical, pharmacy and nursing students learning evidence-based medicine.</li>
+            <li>Anyone who teaches critical appraisal and wants a shared structure.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="privacy">
+        <h2 id="privacy">Your notes stay on your device</h2>
+        <p>
+          There is no account, no server and no analytics. Appraisals are saved in your browser, one
+          per article, and you can export or delete them at any time. The extension's only network
+          request is made when you ask for it: if a page cannot be read, it can fetch the same
+          record from NCBI, sending the article's PubMed ID and nothing you wrote.
+          <a href="/privacy/">Read the privacy policy</a>.
+        </p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <nav>
+        <a href="/privacy/">Privacy policy</a>
+        <!-- TBD(#30): the project's contact address and public repository. -->
+        <a href="TBD(#30)">Contact</a>
+      </nav>
+      <p>
+        Educational use only. Journal Club Helper is not clinical decision support and gives no
+        clinical advice. Check everything against the full text.
+      </p>
+      <p>
+        Not affiliated with NLM, NIH or HHS. The PubMed wordmark is a registered trademark of the
+        U.S. Department of Health and Human Services.
+      </p>
+    </footer>
+  </body>
+</html>

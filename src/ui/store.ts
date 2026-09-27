@@ -238,6 +238,27 @@ export const actions = {
     store.set({ saveError });
   },
 
+  /**
+   * Forget the appraisal held in memory, keeping the bound article, its status
+   * and the detected design, so that it is restored from storage again. Used
+   * when Settings deletes or imports appraisals under an open panel.
+   */
+  discardAppraisal() {
+    const fresh = initialState();
+    store.set({
+      designOverride: fresh.designOverride,
+      subtypeOverride: fresh.subtypeOverride,
+      pico: fresh.pico,
+      numbers: fresh.numbers,
+      validity: fresh.validity,
+      sourceScope: fresh.sourceScope,
+      info: fresh.info,
+      bottomLine: fresh.bottomLine,
+      hydrated: false,
+      saveError: null,
+    });
+  },
+
   /** Restore a saved appraisal onto the currently bound article (issue #18). */
   hydrateFrom(appraisal: Appraisal | null) {
     if (!appraisal) {

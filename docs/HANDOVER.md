@@ -8,8 +8,8 @@ Everything a new owner needs to build, release, and operate this extension. Star
 | ------------------------------------------- | --------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
 | GitHub repository                           | `piroshi1989/journal-club-helper` | personal account | Spec §10 requires a dedicated GitHub Org. Transfer the repo once the org exists (tracked in issues). |
 | Google account (Chrome Web Store developer) | —                                 | not created      | Must be a dedicated account, never the personal one. Needed before v0.3 submission.                  |
-| Domain (landing page, privacy policy)       | —                                 | not registered   | Use a registrar that makes transfer easy.                                                            |
-| ExtensionPay / Stripe                       | —                                 | not created      | v0.2. Check transferability before committing (spec §10).                                            |
+| Domain (landing page, privacy policy)       | —                                 | not registered   | Use a registrar that makes transfer easy. Hosting is GitHub Pages; see §3, _Landing site_.           |
+| ExtensionPay / Stripe                       | —                                 | not created      | After demand validation. Check costs and operating/transfer terms before billing (spec §4.8).        |
 | Anthropic / OpenAI                          | none                              | n/a              | Users bring their own API keys. The project holds no provider account.                               |
 | Bank account for revenue / costs            | —                                 | not created      | Keep separate from personal finances.                                                                |
 
@@ -129,6 +129,9 @@ Everything is in `chrome.storage.local`, on the device only. No server holds a c
 - **Limits.** At most 500 appraisals, with the least recently updated evicted first, and 64 KB per appraisal. The extension does not request `unlimitedStorage`, so the browser's 10 MB quota applies.
 - **Versioning.** A record whose `schemaVersion` is not the current one is **not migrated**. Version 1 records came from before the 2026-09-21 rework, which renamed item ids, and nothing had shipped yet. A future bump that has to keep users' work needs a migration in `isAppraisal`'s place. Do not simply relax the check.
 - **Backups.** Settings → Export all writes `{ schemaVersion: 2, exportedAt, appraisals, settings }`, which is `EXPORT_SCHEMA_VERSION`. Import validates the whole file before removing a single key (§6, 2026-09-21), and `merge` keeps whichever copy of an article is newer.
+- **Deleting.** Settings → Delete all removes every key under `appraisal:` and `appraisal-unreadable:` in one `remove` (`deleteAllAppraisals`), including the records this version cannot read and so does not list: those set aside, and version 1 records never reopened. `settings` stays. The page counts those records (`countUnreadableAppraisals`), names them in the confirmation and the result, and keeps the button enabled when they are all that is stored.
+- **An open panel is told.** After Delete all or an import, the options page sends `APPRAISALS_REPLACED` with `chrome.runtime.sendMessage`. The side panel drops its pending edit and the appraisal it holds, and restores its article from storage again: a fresh form after a delete, the imported copy after an import. Without this, the panel's next edit wrote the deleted appraisal back. A message was chosen over `chrome.storage.onChanged` because the panel's own autosaves fire that too (the reasoning is in `useAutosave`). Smoke scenario 6 pins it.
+  - **Known limit:** a debounced write whose timer fires after storage changes but before the message arrives still lands. The gap is one message delivery and has not been measured.
 - **Answers are keyed by item id.** Renaming an item id in a checklist orphans every saved answer to it.
 - **Numbers are saved only once they mean something.** The Numbers state is stored when there is a result or a candidate was used (`toAppraisal` in `src/ui/store.ts`). Figures typed in by hand that never produced a result are not saved.
 - **Closing the panel does not unmount it.** Autosave is debounced by 500 ms, and closing the side panel tears its document down without unmounting the component, so a flush on unmount never runs.
@@ -167,7 +170,7 @@ The references are the Cochrane Handbook §12.5 and the CEBM NNT material, both 
 
 ## 3. Release
 
-The Chrome Web Store steps will be written for v0.3: submission, changelog, and review notes.
+The v0.1 steps below are for an internal pre-release. The store steps follow them.
 
 **v0.1 is an internal release**, a GitHub pre-release with no store listing:
 
@@ -178,6 +181,52 @@ The Chrome Web Store steps will be written for v0.3: submission, changelog, and 
    - Do not use the CI artifact for this. It arrives wrapped in a second zip, expires after 14 days, and is missing for a run that `cancel-in-progress` cancelled.
 4. Someone downloads the zip from the draft, runs `docs/QA.md` against it, and fills in the results table. Also run `pnpm test:e2e:live` once by hand; it is the only check against live PubMed (§4, row 3).
 5. Put the QA results into the notes and publish, which creates the tag. `gh` 2.4 has no `release edit`, so use the API: `gh api -X PATCH repos/<owner>/<repo>/releases/<id> -F draft=false -F body=@<notes>`.
+
+### Chrome Web Store (v0.3 onwards)
+
+Written before the first submission, so each step is a plan, not yet a record. Correct it after the first real one (#31). The dashboard changes; where a step below disagrees with it, the dashboard wins, and this section gets fixed.
+
+**Before the first submission, once:**
+
+1. The dedicated Google account exists (#30, §1), never the personal one. It has 2-Step Verification on, which publishing requires, and it has paid the developer registration fee.
+2. In the dashboard's account settings: the publisher name, a verified contact email (the project's address from #30), and the trader or non-trader declaration the EU requires.
+3. The repository has moved to the organization and is public (#30, §7), so every URL below is final.
+4. The landing page and the privacy policy are live over HTTPS (#29, #28). The domain is verified in Google Search Console under the publisher account, which is what lets the listing name it as the official URL.
+5. No placeholder is left. This prints nothing:
+
+   ```bash
+   grep -rnE 'TBD\(#[0-9]+\)|TODO\(#2[89]\)' CHROMEWEBSTORE.md docs site src
+   ```
+
+   The pattern needs digits after `#`, so it does not match the `TBD(#nn)` in the prose that describes it. It also catches the two TODOs for #28 around `PRIVACY_URL` in `src/ui/options/OptionsPage.tsx`.
+
+**Each release:**
+
+1. Set the version in `package.json`. The store rejects a package whose version is not higher than the one it already has.
+2. If the UI changed where the screenshots show it, or the icon changed, run `pnpm store:assets` and look at every image. Commit what changed. This comes before the zip, because it rewrites `src/public/icon/`.
+3. If the manifest changed, update `CHROMEWEBSTORE.md` in the same commit. Update `docs/PRIVACY.md` and the data-use answers in `CHROMEWEBSTORE.md` whenever what is **stored** or **sent** changes, for example an API key or a licence in settings. Publish the policy before the release goes live.
+4. `main` is green at the release commit. Build the zip there and put it on a draft pre-release, as in v0.1 step 3.
+5. Run `docs/QA.md` against that zip. Run `pnpm test:e2e:live` once as well. While §4 row 3 is open, it may never get past PubMed's check; if so, record that in the release notes and go on, because the QA pass covers the same scenarios by hand.
+6. In the Developer Dashboard: the first time, **Add new item** and upload the zip, which creates the item; after that, upload the zip as a new package on the existing item. Copy the listing from `docs/STORE-LISTING.md` and the privacy practices from `CHROMEWEBSTORE.md`. Paste the reviewer notes at the end of `CHROMEWEBSTORE.md` into the test instructions tab.
+7. Submit for review with deferred publishing on, so you choose when it goes live. An approved submission has to be published within 30 days, or it goes back to a draft. Record the submission date and the outcome in §6.
+8. Once it is live, publish the draft GitHub release from step 4 as a full release (not a pre-release), with the store version in its notes. The tag then marks the exact package the store has.
+
+A rejection names the policy it cites. Record it in §6 with what was changed, since the next reviewer may raise the same thing.
+
+### Landing site (#29)
+
+`site/` is the whole landing site: `index.html` and `style.css` by hand, and `privacy/index.html`, `sample/index.html` and `favicon.svg` generated from `docs/PRIVACY.md`, `site/sample/summary.md` and `store/icon.svg` by `pnpm site` (`scripts/build-site.mjs`). CI fails if the generated files are out of date, so the published policy is always the committed one. There is no framework, no external font, no script and no analytics. Lighthouse gave the home page and the privacy page 100 in every category, mobile and desktop, on a local server (2026-09-27). The example page has not been measured.
+
+- **Hosting:** GitHub Pages from the organization's repository, deployed by `.github/workflows/pages.yml`. It is chosen because it moves with the organization and costs nothing. The domain stays at the registrar, which transfers separately (§1). The workflow runs only by hand until #30, and it has never run.
+- **Going live, once #30 is done:**
+  1. Enable Pages with the source set to GitHub Actions.
+  2. Add the custom domain in the repository's Pages settings, and add the DNS records GitHub lists at the registrar. Enforce HTTPS.
+  3. Verify the domain in Google Search Console under the publisher account (§3).
+  4. Replace the `TBD(#nn)` placeholders in `site/index.html`: the store link and the contact.
+  5. Run the workflow, and add the push trigger its comment describes.
+- **Images:** `site/img/*.png` are the unframed panel images from `pnpm store:assets`, so they change together with the store screenshots.
+- **Demo video:** `site/video/demo.mp4` (about 33 s, H.264, no sound) and its poster come from `pnpm store:video` (`store/demo.spec.ts`), which needs `ffmpeg` with libx264. It records the panel over CDP while it enters the same appraisal as the store images (`store/scenario.ts`). Re-record it after a UI change it shows, and watch it through before committing.
+- **Example summary:** `site/sample/summary.md` is the file the Export tab's **Download .md** saves for the screenshot appraisal, also written by `pnpm store:assets` and linked from the page as the example output (spec §11). A note above it says which parts were typed in by hand. CI checks only that its page matches it, not that it matches the current summary format, so run `pnpm store:assets` again whenever `src/lib/summary-builder.ts` changes what the summary says.
 
 ## 4. Known issues
 
@@ -235,13 +284,13 @@ Closing a tab with the panel open logs nothing.
 
 ### Still unverified
 
-| #   | Not verified                                       | Why it matters                                                                                                                                                                                                                                                                                                                                                                                                            | Issue |
-| --- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| 1   | Storage quota exhaustion                           | The archive-before-overwrite guard is covered by a test that caps a memory store, not by a real `chrome.storage.local` at its 10 MB limit. Reaching that state by hand needs roughly 160 full-size appraisals or console access.                                                                                                                                                                                          | —     |
-| 2   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for.                                                                                                                                                                                                                                                                                                | —     |
-| 3   | **The live smoke run** (`pnpm test:e2e:live`)      | It is the only check that notices a PubMed markup change (§5), and it has never been taken through PubMed's browser check. Playwright's Chromium announces automation, so a human may not be let through at all; if not, the live half of §7's decision has to be rethought.                                                                                                                                              | #24   |
-| 4   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                                                                                                                                                                                                                                                                                                                     | #27   |
-| 5   | **The E-utilities fallback after a real grant**    | A headless browser never answers the permission prompt, so no automated run has seen the prompt, the fetch and the panel binding the record together. On a real abstract page, open the panel, then in DevTools rename the class of every `.abstract-content` element. Click **Read the page again** in the panel, then **Fetch from NCBI**, and grant. The header should show the record, marked "via NCBI E-utilities". | #23   |
+| #   | Not verified                                           | Why it matters                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Issue |
+| --- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| 1   | Storage quota exhaustion                               | The archive-before-overwrite guard is covered by a test that caps a memory store, not by a real `chrome.storage.local` at its 10 MB limit. Reaching that state by hand needs roughly 160 full-size appraisals or console access.                                                                                                                                                                                                                                                                                                                                                                                         | —     |
+| 2   | **Brave**, entirely                                    | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | —     |
+| 3   | **The live smoke run** (`pnpm test:e2e:live`)          | It is the only check that notices a PubMed markup change (§5), and it has never been taken through PubMed's browser check. Playwright's Chromium announces automation, so a human may not be let through at all; if not, the live half of §7's decision has to be rethought.                                                                                                                                                                                                                                                                                                                                             | #24   |
+| 4   | ~~The store-listing screenshots at their final sizes~~ | Done 2026-09-27: `pnpm store:assets` renders them at 1280×800 from the build (§3).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | #27   |
+| 5   | **The E-utilities fallback after a real grant**        | A headless browser never answers the permission prompt, so no automated run has seen the prompt, the fetch and the panel binding the record together. On a real abstract page, open the panel, then in DevTools rename the class of every `.abstract-content` element. Click **Read the page again** in the panel, then **Fetch from NCBI**, and grant. The header should show the record, marked "via NCBI E-utilities". Then remove the site access under **Details** in `chrome://extensions`, and check that the next **Fetch from NCBI** asks again. `docs/PRIVACY.md` tells readers they can withdraw it that way. | #23   |
 
 Clipboard copy and the `.md` download were both exercised on Edge and work. Reading the downloaded file end to end is what found the export defect in §7 — the file was correct in every structural respect and wrong in one sentence, which no golden-file test could have caught, because the golden encodes an empty appraisal correctly and cannot know the abstract it is describing.
 
@@ -250,15 +299,17 @@ Two design limitations that are deliberate, not defects:
 - **Design detection reads the whole abstract**, so "previous randomized trials" in a Background section yields `rct` at medium confidence. The header shows the phrase that caused it and the user can overrule it. Pinned by a test.
 - **PICO candidate recall is weak for Intervention and Comparison.** Real abstracts write "comparing supplemental oxygen with ambient air", which matches none of the cue phrases, so those fields often fall back to the title. Precision was chosen over recall because a wrong candidate costs the user more than a missing one, and arbitrary text can be selected by hand. If users complain, widening the I and C cues is where to spend, not filtering.
 
-One set of gaps is not deliberate, and is tracked in **#49**. The number extractor misses three common forms that turned up while writing the QA script:
+One set of gaps was not deliberate: **#49**, three common forms the number extractor missed, found while writing the QA script. Two are **fixed on `main` after v0.1.0 and still present in the v0.1.0 zip**. Run that zip against `docs/QA.md` as of 0fdb3af, which expects the gaps; the current file expects the fixes.
 
-- BMJ's bare `v` between two results (`24.2% v 29.8%`).
-- A fraction pair with prose between its arms. ISIS-2's primary result is written this way.
-- Thousands grouped with a thin space (`18 061`; U+2009 in the source, a plain space once `pubmed-dom.ts` normalises whitespace). This also makes one PICO candidate start mid-number.
+- BMJ's bare `v` between two results (`24.2% v 29.8%`). **Fixed.** Read in percent and slash pairs. A capital `V` is not read: standing alone it is a Roman numeral.
+- Thousands grouped with a thin space (`18 061`; U+2009 in the source, a plain space once `pubmed-dom.ts` normalises whitespace). **Fixed, narrowly.** Inside a fraction, a space-grouped count is read whole only when the arm's own percentage agrees with the grouped reading and not with the ungrouped one, as in `891/18 061 (4.9%)`. Without that, the arm is dropped rather than guessed. The text cannot tell `62/298 100 days` from `11/90 305 controls`, and reading either one wrong is worse than a miss. U+00A0, U+2009 and U+202F are accepted too. Comma thousands (`5,000`) are read whole. They used to be cut to `5`, which was a wrong pair. The PICO candidate that started mid-number, at `061 cases`, no longer does.
+- A fraction pair with prose between its arms. ISIS-2's primary result is written this way. **Still a gap, on purpose.** A first attempt read it when each arm carried a matching percentage, and review found false positives that passed every guard: subgroup splits, nested proportions, two outcomes in one arm, and a three-arm sentence that offered placebo versus overall and lost the real pair. It is left to manual entry, or to the AI extraction (#34).
 
-Manual entry in the Numbers tab covers all three, and `docs/QA.md` expects the gaps, so they do not block v0.1.
+Still not read after #49: a count with words between it and the slash, such as D's `42 exposed cases/18 061 cases`; a count right after a 1–3 digit number with no percentage to settle it, such as `In 3 120 of 300`; and a count with a number right behind it, such as `45/300 vs 62/298 100 days`. v0.1.0 read the last one, correctly there, as 62/298, but the same reading makes `11 of 90 305 controls` into 11/90. All three are misses, not wrong candidates.
 
-The e2e smoke tests (§5) drive the built extension in Chromium, side panel included: the panel is browser UI rather than a Playwright page, but its document is a CDP target, and `evaluateInPanel` in `tests/e2e/fixtures.ts` runs script inside it. The smoke run uses that for the design header, the Numbers tab, and restoring an edit made just before the panel closed. There is **no component test harness in the repo**. The one exception is `tests/ui/use-article.test.ts`, which renders the real `useArticle` hook with `preact/test-utils` (part of `preact`, so no new dependency) against fake `chrome.*` for the E-utilities flow. Other UI checks used throwaway Preact + happy-dom harnesses that were not committed, so those checks do not run in CI. Adding `@testing-library/preact` is the obvious next step if the UI starts changing often; it was left out because the spec's dependency budget (§5) is deliberately tight.
+One consequence of the fix to know about: fraction pairs are offered whatever the design. On a case-control abstract such as QA record D, they are the shares of cases and of controls exposed, and an NNH computed from them means nothing. The Numbers tab does not say so; `docs/QA.md` D3 does.
+
+The e2e smoke tests (§5) drive the built extension in Chromium, side panel included: the panel is browser UI rather than a Playwright page, but its document is a CDP target, and `evaluateInPanel` in `tests/e2e/fixtures.ts` runs script inside it. The smoke run uses that for the design header, the Numbers tab, and restoring an edit made just before the panel closed. There is **no component test harness in the repo**. The exceptions are in `tests/ui/`, and all render real code with `preact/test-utils` (part of `preact`, so no new dependency) against fake `chrome.*`: `use-article.test.ts` renders the `useArticle` hook for the E-utilities flow, `use-autosave.test.ts` renders `useAutosave` for a delete or import under an open panel, and `options-page.test.ts` renders the options page over an in-memory store. Other UI checks used throwaway Preact + happy-dom harnesses that were not committed, so those checks do not run in CI. Adding `@testing-library/preact` is the obvious next step if the UI starts changing often; it was left out because the spec's dependency budget (§5) is deliberately tight.
 
 ## 5. External dependencies
 
@@ -266,7 +317,7 @@ The e2e smoke tests (§5) drive the built extension in Chromium, side panel incl
 | ------------------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | PubMed abstract page DOM (`pubmed.ncbi.nlm.nih.gov/<PMID>/`) | Source of abstract text, publication types, MeSH, citation | Markup can change without notice; the site now blocks non-browser fetches      | Fixture tests in CI catch our regressions, not PubMed's changes; only the manual live run does (§7). E-utilities fallback on request (#23) |
 | NCBI E-utilities `efetch`                                    | Fallback when DOM parsing fails                            | Rate limit ≤ 3 req/s without key; wants `tool` and `email` as query parameters | Requested only after a click and a grant; 3-a-second limiter; `email` is empty until #30                                                   |
-| ExtensionPay (v0.2)                                          | Billing                                                    | Transferability on sale unknown                                                | `src/lib/license.ts` abstraction; Stripe Checkout + license key as fallback                                                                |
+| ExtensionPay (v0.2)                                          | Billing                                                    | Transferability on sale unknown                                                | Evaluate after demand validation; isolate license checks when implemented; no automatic custom-backend fallback                            |
 | Anthropic / OpenAI APIs (v0.2)                               | AI extraction with user's key                              | API changes, cost, model retirement                                            | Provider abstraction (`src/lib/ai/`); prompts in `src/prompts/*.md`; model ids and prices in `anthropic.ts`, checked 2026-09-26            |
 | Chrome Side Panel API                                        | Panel UI                                                   | `sidePanel.open()` needs Chrome 116+ and a user gesture                        | `minimum_chrome_version` is `"116"` and CI enforces it; verify on Edge / Brave                                                             |
 
@@ -351,7 +402,37 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
     - the content script had cached its first read, so "Read the page again" and the manual check in §4 could not work;
     - the docs claimed a field-for-field match that did not hold.
   - The recovery itself cannot be driven headless, because the prompt is never answered. It is covered by a hook-level test and listed in §4 as unverified in a browser.
-- 2026-09-27 (launch prep, #32): `docs/LAUNCH.md` holds the post drafts, the feedback routine and the gate reviews. A GitHub issue form (`feedback.yml`) and a `feedback` label exist. The day-90 export rate has no direct measure without telemetry (#33). The proxy is the panel-open and export counts that people paste into the feedback form from their own settings page, read as an upper bound.
+- 2026-09-27 (later): **Delete all did not delete everything, and an open panel could undo it.** A review found three defects in Settings → Delete all, just before the privacy policy was to promise that Delete removes every saved appraisal.
+  - It walked `listAppraisals`, which hides what this version cannot read, so records set aside under `appraisal-unreadable:` and version 1 records never reopened both survived. `deleteAllAppraisals` now removes every appraisal key in one call.
+  - The button was disabled with nothing listed, so a reader whose only records were unreadable could not delete them at all. The page now counts them, says so, and names them in the confirmation.
+  - A side panel open during the delete still held the appraisal in memory, and its next edit wrote the whole thing back. Import had the mirror problem. The options page now announces both, and the panel re-reads storage (§2).
+  - Smoke scenario 6 types in the panel, deletes in a real options tab, types again and reads storage. On a build without the panel's listener it fails with the deleted text back in storage. Its passing is also the evidence that the message reaches the panel with no relay through the background worker.
+  - Each fix was removed in turn and a test failed each time. An edit still inside the debounce when the message arrives is not something the smoke run can time reliably, so `tests/ui/use-autosave.test.ts` covers that with fake timers. 603 tests.
+- 2026-09-27 (later still): **Week 4 paperwork, written ahead of the accounts it waits on (#27, #28, #9).**
+  - `docs/PRIVACY.md` and `docs/STORE-LISTING.md` are drafts. Everything that needs the domain, the mailbox or the organization reads `TBD(#nn)`, and §3 says to grep for it before submitting.
+  - The icon is new artwork from `store/icon.svg`. The screenshots and the promo tile are rendered from the build by `pnpm store:assets`. Playwright cannot capture the side panel, so the script opens the panel's page in a tab and points its `chrome.tabs.query` at the PubMed tab. Nothing else in the panel is changed.
+  - The manifest's `description` is now the spec §6 summary word for word, because the store takes the listing's summary from it. `check:manifest` now also checks the summary's length and that the name does not lead with "PubMed".
+  - §3 has the store release steps. They are untested until the first submission (#31).
+- 2026-09-27 (last): **#49: BMJ's `v` and space-grouped thousands fixed after v0.1.0; prose-separated fraction pairs left as a gap.** §4 has the rules and what is still not read.
+  - The first version also read ISIS-2's prose-separated pairs. A fresh-context review found false positives that passed every guard, including a three-arm sentence that offered placebo versus overall and lost the real pair. The review also showed that the percentage tolerance accepted values that neither round nor truncate. That part was removed, not tuned.
+  - The same review found that grouping glued a following number onto a count (`62/298 100 days` read as 298100), and that the fix for inner-group starts had stopped `In 2019 120/300` from being read. Both came from reading too much into a space between digits. A space-grouped count is now kept only when the arm's percentage confirms it, and a count with a number right behind it is dropped, not truncated. Comma thousands were being truncated before #49 (`1 of 5,000` read as 1/5), and are fixed in the same place.
+  - PICO windows: the one that started at `061 cases` was the same space read as a word break. The review found one more way a window could start inside a number: figures longer than the 120-character window. The test written for it found a second, a fallback to the raw limit at the window's end, and a cue phrase cut at the comma in `2,345`. All three are fixed, and a shared assertion checks both ends of every candidate.
+  - Grouping made the fraction pattern quadratic on a long run of groups. Without a bar on starting a count on an inner group, the runs in the test take 70 to 100 ms. With it they take a few ms, for space, comma and no-break-space runs alike.
+  - `docs/QA.md` was re-derived by running records B, D and E through the code again. B gains three `% pair` candidates, D five `n / N` pairs and two O highlights, and E is as in v0.1.0. QA.md now opens with a link to its 0fdb3af version, the one to run against the v0.1.0 zip.
+  - Each fix was reverted in turn, and each reversion fails a named test, except NBSP in the PICO word-break check, which changes no behaviour because a no-break space is not a word break there. 605 tests.
+- 2026-09-27 (after #49): **#58: an NNH read off a case-control study's exposure proportions now says what it is not.** #49 made record D offer five more such pairs, and the tab computed from them without comment.
+  - The wording is in `src/lib/design-caveats.ts`. On a case-control design the note sits above the candidates and beside a Rates or Counts result, and the export carries it under that result in both formats. A Ratio result gets none, because the OR at a baseline the reader supplies is the route that holds. Nothing is removed or refused.
+  - Cross-sectional gets a milder, differently worded note, prevalence rather than risk, beside a Rates or Counts result and in the export only. `docs/METHODOLOGY.md` §6 has the reasoning. Diagnostic studies get no note: that is a limit of scope, not a decision.
+  - The note is worked out from the design in force whenever the result is shown or exported, not stored with the result, so overriding the design after calculating still reaches both.
+  - `docs/QA.md` record D was re-derived by running the `efetch` record through the classifier, the Numbers tab and the export in happy-dom. D3 now expects the note in three places and its absence on the OR result, and D4 expects it to go with the Cohort override.
+  - Smoke scenario 3 now overrides the RCT to case-control and checks both places in the built extension, then resets the design, because the profile outlives the test.
+  - Each placement was removed in turn and a test failed each time: the note above the candidates, the one beside the result (in the smoke run too, on a rebuilt extension), the export line, the Ratio exemption, and the case-control branch of the wording function. 671 tests.
+- 2026-09-27 (after #58): **The landing page gets its real output example and a short demo video (#62, #63).** The strategy revision's §11, still uncommitted when this was written, asks for both before recruiting anyone. Neither promises a paid feature.
+  - `/sample/` is the file the panel's Download .md saved for the store images' appraisal, unedited. A note above it says which parts a person typed or chose, that the absolute figures are recomputed from the ratio, and that the bottom line is not a clinical conclusion. The page is `noindex`.
+  - Writing that note showed the store images answered checklist item 1 Yes from the abstract, which names a PROSPERO record but not its date. The checklist says the question needs the registry, so it is now Unclear with a note on what to check, and the affected images were re-rendered.
+  - A fresh-context review of the builder found a loop that never ended on a line such as `#1 finding`, which predates this change, and DOI links cut at a parenthesis. Both are fixed and tested. Markdown the summary never produces is still refused or passed through as text, not supported.
+  - `pnpm store:video` records the panel over CDP and needs ffmpeg with libx264. It shares its input with the store images through `store/scenario.ts`, and after that move `pnpm store:assets` reproduced every image byte for byte. Only sampled frames have been looked at; a person should watch the video through before the site goes live, and Safari playback is untested. 677 tests.
+- 2026-09-27 (strategy revision, #65): **The strategy revision is committed, and the issues follow it.** Free release first, then a small cohort, then one paid export tested at $39 a year. §7 _Monetization_ has the summary and the issue changes. `docs/LAUNCH.md` was rewritten for it: recruiting through colleagues, an observation-session guide, a validation record kept outside the repository, and the §8.1 gates with their definitions. The weekly-user and export-rate gates are gone, as is the Reddit-first plan; the subreddit drafts stay, for use one at a time and after each subreddit's rules. The feedback form now also asks whether it was used for a presentation.
 
 ## 7. Decisions and why
 
@@ -436,7 +517,7 @@ The distinctions the checklists deliberately refuse to collapse — sequence gen
 
 An import must contain an `appraisals` array. A non-empty array must contain at least one readable, size-compliant appraisal before replacement may delete stored data. Missing or malformed arrays and non-empty lists with no usable appraisals are rejected before mutation. An empty list with readable v1 settings restores only usage counters: merge keeps the higher counts, while replace takes the file counts verbatim. Both modes preserve every appraisal and skip eviction for settings-only imports. Empty files without readable counters receive an empty-backup message, distinct from unreadable appraisal data.
 
-Loading an unreadable appraisal archives it under `appraisal-unreadable:<pmid>` before removing its original key. If preservation fails, the error is surfaced and the original remains. Saving performs the same check even when the caller has not loaded the record or the UI has released an empty form after a restore error. A smaller overwrite can fit the storage quota when an additional archive cannot, so a failed archive must block that overwrite. After space is available, a subsequent edit retries preservation and saving. Archives remain on-device and require manual recovery; they are not included in ordinary exports.
+Loading an unreadable appraisal archives it under `appraisal-unreadable:<pmid>` before removing its original key. If preservation fails, the error is surfaced and the original remains. Saving performs the same check even when the caller has not loaded the record or the UI has released an empty form after a restore error. A smaller overwrite can fit the storage quota when an additional archive cannot, so a failed archive must block that overwrite. After space is available, a subsequent edit retries preservation and saving. Archives remain on-device and require manual recovery; they are not included in ordinary exports. Settings → Delete all removes them with everything else (§2).
 
 ### The wording guard names its exceptions instead of quoting a headroom number
 
@@ -461,6 +542,8 @@ Spec §4.5 mandates the literal sentence "Absolute effect not reported in the ab
 The sentence is now reserved for the case it was written for — a relative effect was recorded and no absolute one, which is the failure mode journal clubs keep repeating. An appraisal with nothing entered says "Absolute effect not calculated in this appraisal." instead, which claims nothing about the study.
 
 This is a deliberate deviation from the literal spec wording, on the principle that a summary someone carries into a journal club must never put words in a paper's mouth. Found by exporting a real appraisal and reading it, not by a test.
+
+The same rule covers the numbers (#58). An NNH worked out from a case-control study's proportions exposed describes the sampling, not an effect, so a Rates or Counts result on that design is exported with the caveat from `src/lib/design-caveats.ts` under it. The caveat is about the design the reader appraised the study as, and says what the number is not. It asserts nothing about what the paper reported.
 
 ### Declared permissions track the code, not the roadmap
 
@@ -496,11 +579,24 @@ The default model is Claude Sonnet 5, at about a cent a run. Opus 5.5 is the oth
   - #35 should first check whether it is needed at all. The browser-access header exists so that Anthropic answers cross-origin requests, and an extension page can fetch a CORS-enabled origin without a host permission. If that works, declaring nothing is the better answer.
 - A test against the real API. The acceptance run with a real key is manual and has not been done.
 
-### Billing: ask before building (#37, #36)
+### Monetization: validate the workflow before billing (#37, #36)
 
-Spec §10 makes transferability a first-order requirement. So the first step is asking ExtensionPay whether an account transfers to a buyer, not writing code. If it does, use it and ship v0.2 quickly; if it does not, build on Stripe Checkout plus signed licence keys from the start and never migrate paying subscribers.
+The 2026-09-27 strategy revision in spec §4.8 and §7–§11 supersedes the earlier AI-only paid plan and the assumption of a sale within 12–18 months. Publish the free MVP and observe actual journal-club preparation first. Keep existing free features available. Test one editable presentation-export template as the paid value; BYOK AI is optional assistance, not the only reason to pay. Neither paid exports nor billing is implemented.
 
-`$4/month` and `$29/year` remain placeholders. No price appears in the code, the store listing or the landing page until #36 is picked up.
+The first price to test is `$39/year`, an unvalidated hypothesis replacing `$4/month` and `$29/year`. Use the spec's small-cohort completion, repeat-use and actual-purchase gates. Do not treat store installs or local counters as a measured conversion funnel. The extension still has no telemetry, and the current privacy policy continues to describe the shipped free version.
+
+ExtensionPay is a candidate, not a dependency selected for implementation. Check current fees, payment restoration, refunds and transfer options before billing goes live. A transferability question must not block free release or demand validation; do not build a custom Stripe licensing backend solely for a hypothetical sale. Billing will require updated network, privacy and permission disclosures.
+
+The issues were brought in line with the revised spec on 2026-09-27.
+
+- **#35:** AI is an optional free beta, not gated on a licence.
+- **#39:** the Pro candidate is one PPTX template, moved to v0.2 and mocked up by hand before any code.
+- **#36:** billing comes after #39.
+- **#37:** records the provider's terms instead of deciding a custom fallback.
+- **#38 and #40:** off the v1.0 milestone, as backlog.
+- **#32:** now the first cohort and the §8.1 gates, with `docs/LAUNCH.md` as its guide.
+
+The historical weekly log records the former decision to block the AI panel on billing; that is no longer the roadmap dependency.
 
 ### English only until after v1.0 (#41)
 

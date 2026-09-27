@@ -1,0 +1,43 @@
+name: Landing site
+
+# Publishes site/ to GitHub Pages (#29). Manual only until the repository is
+# public under the organization and the domain exists (#30): Pages is not
+# available on a private repository on the free plan, so a push trigger would
+# fail on every merge. Add `push: { branches: [main], paths: [site/**] }` then.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # The published policy must be the committed one.
+      - name: Landing site is up to date
+        run: node scripts/build-site.mjs --check
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -7,6 +7,8 @@ import {
   MAX_APPRAISAL_BYTES,
   UNREADABLE_PREFIX,
   appraisalKey,
+  countUnreadableAppraisals,
+  deleteAllAppraisals,
   deleteAppraisal,
   exportAll,
   importAll,
@@ -204,6 +206,60 @@ describe('deleteAppraisal / listAppraisals', () => {
     expect(list[0]?.citation.title).toBe('Trial 22222222');
     // Summary only: the heavy fields stay out of the list view.
     expect(list[0]).not.toHaveProperty('validity');
+  });
+});
+
+describe('deleteAllAppraisals / countUnreadableAppraisals', () => {
+  /** One of each kind of appraisal record, plus two keys that are not appraisals. */
+  async function seedEveryKind(): Promise<void> {
+    await saveAppraisal(makeAppraisal('11111111'));
+    await saveAppraisal(makeAppraisal('22222222'));
+    // Set aside by an earlier load, and a v1 record that was never reopened.
+    await store.set(`${UNREADABLE_PREFIX}33333333`, { schemaVersion: 1, pmid: '33333333' });
+    await store.set(appraisalKey('44444444'), { ...makeAppraisal('44444444'), schemaVersion: 1 });
+    await saveSettings({ schemaVersion: 1, counters: { panelOpens: 3, exports: 1, aiRuns: 0 } });
+    await store.set('another-feature', { kept: true });
+  }
+
+  it('counts the records the listing hides', async () => {
+    await seedEveryKind();
+    expect(await listAppraisals()).toHaveLength(2);
+    expect(await countUnreadableAppraisals()).toBe(2);
+  });
+
+  it('counts nothing when every record is readable', async () => {
+    await saveAppraisal(makeAppraisal('11111111'));
+    expect(await countUnreadableAppraisals()).toBe(0);
+  });
+
+  it('deletes every appraisal record, readable or not, and keeps the usage counts', async () => {
+    await seedEveryKind();
+
+    expect(await deleteAllAppraisals()).toEqual({ deleted: 2, unreadable: 2 });
+
+    const keys = Object.keys(await store.getAll()).sort();
+    expect(keys).toEqual(['another-feature', 'settings']);
+    expect((await loadSettings()).counters.panelOpens).toBe(3);
+    expect(await countUnreadableAppraisals()).toBe(0);
+  });
+
+  it('deletes set-aside records when they are all there is', async () => {
+    await store.set(`${UNREADABLE_PREFIX}33333333`, { schemaVersion: 1, pmid: '33333333' });
+    expect(await listAppraisals()).toHaveLength(0);
+
+    expect(await deleteAllAppraisals()).toEqual({ deleted: 0, unreadable: 1 });
+    expect(await store.getAll()).toEqual({});
+  });
+
+  it('removes everything in one call', async () => {
+    await seedEveryKind();
+    const remove = vi.spyOn(store, 'remove');
+    await deleteAllAppraisals();
+    expect(remove).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing on an empty store', async () => {
+    expect(await deleteAllAppraisals()).toEqual({ deleted: 0, unreadable: 0 });
   });
 });
 

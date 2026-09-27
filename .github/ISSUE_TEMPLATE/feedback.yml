@@ -33,6 +33,15 @@ body:
       label: PubMed ID (PMID), if it was about one article
       placeholder: '36577095'
   - type: dropdown
+    id: presentation
+    attributes:
+      label: Did you use it to prepare a presentation? (optional)
+      options:
+        - Yes, for one I have given
+        - Yes, for one coming up
+        - No, for study or my own reading
+        - Not yet
+  - type: dropdown
     id: role
     attributes:
       label: What best describes you? (optional)
