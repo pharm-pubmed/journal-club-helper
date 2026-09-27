@@ -960,7 +960,7 @@ describe('the design caveat on a result (#58)', () => {
       expect(rendering.indexOf(CASE_CONTROL_CAVEAT)).toBeLessThan(rendering.indexOf(nextSection));
       // One line: the caveat never wraps onto a second line of its own.
       const line = rendering.split('\n').find((l) => l.includes(CASE_CONTROL_CAVEAT)) ?? '';
-      expect(line.trimStart()).toMatch(/^(- )?A case-control study .* in Ratio mode\.$/);
+      expect(line.trimStart()).toMatch(/^(- )?A case-control study .* a baseline risk you choose\.$/);
     }
   });
 

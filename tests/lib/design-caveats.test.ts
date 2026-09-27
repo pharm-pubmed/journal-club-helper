@@ -10,8 +10,7 @@ import { STUDY_DESIGNS, type CalculatorMode, type StudyDesign } from '../../src/
 const CASE_CONTROL =
   'A case-control study samples on the outcome, so the proportions exposed among cases and ' +
   'among controls are not risks, and an ARR, NNT or NNH cannot be read from them. The route ' +
-  'that holds is the odds ratio the study reports, applied to a baseline risk you supply in ' +
-  'Ratio mode.';
+  'that holds is the odds ratio the study reports, applied to a baseline risk you choose.';
 
 const CROSS_SECTIONAL =
   'A cross-sectional study measures prevalence at one point in time, so these proportions are ' +
@@ -44,7 +43,8 @@ describe('resultCaveat', () => {
 
   it('points a case-control reader at the odds ratio, the one measure the sampling leaves intact', () => {
     expect(resultCaveat('case-control', 'counts')).toContain('odds ratio');
-    expect(resultCaveat('case-control', 'counts')).toContain('Ratio mode');
+    // Tool-neutral: the same sentence goes into the export, read by people who never saw the panel.
+    expect(resultCaveat('case-control', 'counts')).not.toContain('Ratio mode');
   });
 
   it('words the cross-sectional note differently, and more mildly, than the case-control one', () => {

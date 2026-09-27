@@ -27,7 +27,7 @@ Detected from abstract keywords. Evidence: case-control (abstract keyword).
 
 Notes on these numbers:
 
-- A case-control study samples on the outcome, so the proportions exposed among cases and among controls are not risks, and an ARR, NNT or NNH cannot be read from them. The route that holds is the odds ratio the study reports, applied to a baseline risk you supply in Ratio mode.
+- A case-control study samples on the outcome, so the proportions exposed among cases and among controls are not risks, and an ARR, NNT or NNH cannot be read from them. The route that holds is the odds ratio the study reports, applied to a baseline risk you choose.
 
 ## Critical appraisal
 

@@ -18,7 +18,7 @@ KEY RESULTS
   RRI (relative risk increase):  1640.2%
   NNH 22 (95% CI 21–24)
   Notes on these numbers:
-    A case-control study samples on the outcome, so the proportions exposed among cases and among controls are not risks, and an ARR, NNT or NNH cannot be read from them. The route that holds is the odds ratio the study reports, applied to a baseline risk you supply in Ratio mode.
+    A case-control study samples on the outcome, so the proportions exposed among cases and among controls are not risks, and an ARR, NNT or NNH cannot be read from them. The route that holds is the odds ratio the study reports, applied to a baseline risk you choose.
 
 CRITICAL APPRAISAL
   Appraised from: Abstract only.
