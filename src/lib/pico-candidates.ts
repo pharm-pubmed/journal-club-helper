@@ -130,11 +130,31 @@ function isDigit(character: string): boolean {
   return character >= '0' && character <= '9';
 }
 
+/**
+ * True when the space at `index` groups the thousands of one number, as in BMJ's
+ * "18 061" (#49): a digit before it and exactly three digits after. Treating it
+ * as a word break is what once started a candidate at "061 cases".
+ */
+function isGroupSeparator(text: string, index: number): boolean {
+  return (
+    text.charAt(index) === ' ' &&
+    isDigit(text.charAt(index - 1)) &&
+    isDigit(text.charAt(index + 1)) &&
+    isDigit(text.charAt(index + 2)) &&
+    isDigit(text.charAt(index + 3)) &&
+    !isDigit(text.charAt(index + 4))
+  );
+}
+
+function isWordBreak(text: string, index: number): boolean {
+  return isSpace(text.charAt(index)) && !isGroupSeparator(text, index);
+}
+
 /** Moves `end` back to the end of the previous whole word, never before `floor`. */
 function retreatToWordEnd(text: string, end: number, floor: number): number {
   let index = end;
-  if (index < text.length && !isSpace(text.charAt(index))) {
-    while (index > floor && !isSpace(text.charAt(index - 1))) index -= 1;
+  if (index < text.length && !isWordBreak(text, index)) {
+    while (index > floor && !isWordBreak(text, index - 1)) index -= 1;
   }
   while (index > floor && isSpace(text.charAt(index - 1))) index -= 1;
   return index;
@@ -143,8 +163,8 @@ function retreatToWordEnd(text: string, end: number, floor: number): number {
 /** Moves `start` forward to the beginning of the next whole word, never past `ceiling`. */
 function advanceToWordStart(text: string, start: number, ceiling: number): number {
   let index = start;
-  if (index > 0 && !isSpace(text.charAt(index - 1))) {
-    while (index < ceiling && !isSpace(text.charAt(index))) index += 1;
+  if (index > 0 && !isWordBreak(text, index - 1)) {
+    while (index < ceiling && !isWordBreak(text, index)) index += 1;
   }
   while (index < ceiling && isSpace(text.charAt(index))) index += 1;
   return index;

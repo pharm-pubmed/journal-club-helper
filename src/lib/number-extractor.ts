@@ -124,9 +124,13 @@ function sentenceIndexAt(spans: SentenceSpan[], offset: number): number {
  * matters twice over: "120% vs 45%" must never be read as "20% vs 45%" (the
  * rescan below starts one character into the previous match), and on a long run
  * of digits it stops the engine from retrying `\d+` at every offset.
+ *
+ * The bare "v" is BMJ house style ("24.2% v 29.8%", #49). The whitespace required
+ * on both sides keeps it a word of its own, so "vitamin", "IV" and "v." never
+ * qualify.
  */
 const PERCENT_PAIR_RE =
-  /(?<![\d.])(\d+(?:\.\d+)?)\s?%\s+(vs\.?|versus|and|compared\s+with)\s+(\d+(?:\.\d+)?)\s?%/gi;
+  /(?<![\d.])(\d+(?:\.\d+)?)\s?%\s+(vs\.?|versus|and|compared\s+with|v)\s+(\d+(?:\.\d+)?)\s?%/gi;
 
 /**
  * A bare "X% and Y%" is far more often two unrelated figures than a comparison
@@ -135,6 +139,16 @@ const PERCENT_PAIR_RE =
  */
 const OUTCOME_CUE_RE = /\b(?:rates?|incidence|occurred|mortality|response|events?)\b/i;
 
+/**
+ * The pair patterns are case-insensitive, which lets a capital "V" through. On
+ * its own between two numbers that is a Roman numeral (a stage, a class), not
+ * BMJ's connector, so it is turned away.
+ */
+function isRomanFive(connector: string): boolean {
+  return connector === 'V';
+}
+
+/** "vs", "vs." and BMJ's "v" all read as "vs". */
 function normalizeConnector(raw: string): PercentPairCandidate['connector'] {
   const normalized = raw.toLowerCase().replace(/\s+/g, ' ');
   if (normalized === 'versus') return 'versus';
@@ -158,6 +172,7 @@ function collectPercentPairs(text: string, spans: SentenceSpan[], out: NumberCan
     if (firstText === undefined || connectorText === undefined || secondText === undefined) {
       continue;
     }
+    if (isRomanFive(connectorText)) continue;
 
     const first = Number.parseFloat(firstText);
     const second = Number.parseFloat(secondText);
@@ -182,19 +197,74 @@ function collectPercentPairs(text: string, spans: SentenceSpan[], out: NumberCan
 /* --------------------------------------------------------- fraction pairs */
 
 /**
+ * A count inside a fraction. BMJ groups thousands with a thin space ("18 061",
+ * #49), which the page extractor turns into a plain space; U+2009 and U+202F are
+ * accepted too in case that normalisation ever changes. One separator between a
+ * 1–3 digit group and whole 3-digit groups, nothing looser, and only here: a
+ * space between two numbers anywhere else is just a space.
+ */
+const COUNT = String.raw`\d{1,3}(?:[ \u2009\u202F]\d{3})+(?!\d)|\d+`;
+const GROUP_SEPARATOR_RE = /[ \u2009\u202F]/g;
+
+/**
+ * Keeps a count from starting on a later group of a grouped number ("061" in
+ * "18 061"). Besides the misreading, starting there would let the engine retry
+ * every group of a long run, which is quadratic.
+ */
+const NOT_MID_GROUP = String.raw`(?!(?<=\d[ \u2009\u202F])\d{3}(?!\d))`;
+
+function parseCount(text: string): number {
+  return Number.parseInt(text.replace(GROUP_SEPARATOR_RE, ''), 10);
+}
+
+/**
  * "45/300 vs 62/298", optionally with the inline percentage that abstracts like
  * to add: "45/300 (15.0%) vs 62/298". The parenthetical is length-capped, and
  * the lookbehind keeps a match from starting inside a number, so the pattern
- * stays linear.
+ * stays linear. The connectors are the percent pair's, "compared with" aside.
  */
-const FRACTION_SLASH_RE =
-  /(?<![\d.])(\d+)\s*\/\s*(\d+)(?:\s*\([^)]{0,24}\))?\s+(vs\.?|versus|and)\s+(\d+)\s*\/\s*(\d+)/gi;
+const FRACTION_SLASH_RE = new RegExp(
+  String.raw`(?<![\d.])${NOT_MID_GROUP}(${COUNT})\s*\/\s*(${COUNT})(?:\s*\([^)]{0,24}\))?\s+(vs\.?|versus|and|v)\s+(${COUNT})\s*\/\s*(${COUNT})`,
+  'gi',
+);
 
 /** "12 of 300". Two of these in one sentence make a pair (see collectFractionOfPairs). */
-const FRACTION_OF_RE = /\b(\d+)\s+of\s+(\d+)\b/gi;
+const FRACTION_OF_RE = new RegExp(
+  String.raw`\b${NOT_MID_GROUP}(${COUNT})\s+of\s+(${COUNT})\b`,
+  'gi',
+);
 
 /** Widest gap allowed between "12 of 300" and "20 of 298" before they stop being a pair. */
 const MAX_OF_GAP = 80;
+
+/**
+ * One arm written as "n/N (x%)". Two of them with prose in between make a pair
+ * (see collectFractionProsePairs).
+ */
+const FRACTION_ARM_RE = new RegExp(
+  String.raw`(?<![\d./])${NOT_MID_GROUP}(${COUNT})\s*\/\s*(${COUNT})\s*\(\s*(\d+(?:\.\d+)?)\s?%\s*\)`,
+  'g',
+);
+
+/** Widest stretch of prose allowed between two "n/N (x%)" arms. */
+const MAX_PROSE_GAP = 80;
+
+/**
+ * The prose has to say "versus" outright. "and" is not enough here: between two
+ * arms with words around them it joins subgroups and outcomes far more often
+ * than it compares two groups.
+ */
+const PROSE_CONNECTOR_RE = /(?:^|\s)(?:vs\.?|versus|v|compared\s+with)(?=\s)/;
+
+/**
+ * A digit in the prose is another figure (a time point, a dose, a second
+ * outcome), and a semicolon or colon starts another clause. Either way the two
+ * arms stop being one comparison.
+ */
+const PROSE_BREAK_RE = /[\d;:]/;
+
+/** Nothing but the connector: FRACTION_SLASH_RE already reads that pair. */
+const BARE_CONNECTOR_RE = /^\s+(?:vs\.?|versus|and|v)\s+$/i;
 
 /**
  * Dates are the main source of bogus "fractions": "3/2019 and 5/2021" is an
@@ -241,11 +311,12 @@ function collectFractionSlashPairs(
 
     // A neighbouring slash means we cut into a longer date such as 3/15/2019.
     if (text[start - 1] === '/' || text[end] === '/') continue;
+    if (isRomanFive(connectorText)) continue;
 
-    const aEvents = Number.parseInt(aEventsText, 10);
-    const aTotal = Number.parseInt(aTotalText, 10);
-    const bEvents = Number.parseInt(bEventsText, 10);
-    const bTotal = Number.parseInt(bTotalText, 10);
+    const aEvents = parseCount(aEventsText);
+    const aTotal = parseCount(aTotalText);
+    const bEvents = parseCount(bEventsText);
+    const bTotal = parseCount(bTotalText);
     if (!isUsableFraction(aEvents, aTotal) || !isUsableFraction(bEvents, bTotal)) continue;
 
     const connector = connectorText.toLowerCase().replace(/\.$/, '');
@@ -292,11 +363,89 @@ function collectFractionOfPairs(text: string, spans: SentenceSpan[], out: Number
     const leftEnd = left.index + left[0].length;
     if (right.index - leftEnd > MAX_OF_GAP) continue;
 
-    const aEvents = Number.parseInt(left[1] ?? '', 10);
-    const aTotal = Number.parseInt(left[2] ?? '', 10);
-    const bEvents = Number.parseInt(right[1] ?? '', 10);
-    const bTotal = Number.parseInt(right[2] ?? '', 10);
+    const aEvents = parseCount(left[1] ?? '');
+    const aTotal = parseCount(left[2] ?? '');
+    const bEvents = parseCount(right[1] ?? '');
+    const bTotal = parseCount(right[2] ?? '');
     if (!isUsableFraction(aEvents, aTotal) || !isUsableFraction(bEvents, bTotal)) continue;
+
+    const start = left.index;
+    const end = right.index + right[0].length;
+    const sentenceIndex = sentenceIndexAt(spans, start);
+    if (sentenceIndex === -1 || sentenceIndex !== sentenceIndexAt(spans, end - 1)) continue;
+
+    out.push({
+      kind: 'fraction-pair',
+      raw: text.slice(start, end),
+      start,
+      end,
+      sentence: spans[sentenceIndex]?.text ?? '',
+      aEvents,
+      aTotal,
+      bEvents,
+      bTotal,
+    });
+  }
+}
+
+/**
+ * True when the percentage an arm prints is what its own counts give, to within
+ * one unit of the last digit printed (a little looser than rounding, for the
+ * abstracts that truncate).
+ */
+function matchesOwnPercent(events: number, total: number, percentText: string): boolean {
+  const percent = Number.parseFloat(percentText);
+  if (!Number.isFinite(percent)) return false;
+  const decimals = percentText.split('.')[1]?.length ?? 0;
+  return Math.abs((events / total) * 100 - percent) <= 10 ** -decimals + 1e-9;
+}
+
+/**
+ * Pairs two "n/N (x%)" arms that have prose between them, the way ISIS-2
+ * (PMID 2899772) reports its primary result: "791/8592 (9.2%) among patients
+ * allocated streptokinase infusion vs 1029/8595 (12.0%) among those allocated
+ * placebo infusion".
+ *
+ * Letting words in between is how dates and doses turn into bogus fractions, so
+ * every condition here has to hold: consecutive arms in one sentence, at most
+ * 80 characters apart, prose with no digit, semicolon or colon in it that says
+ * "vs", "versus", "v" or "compared with", and each arm's percentage matching its
+ * own counts. The last is what keeps a date or a dose out: nothing but a real
+ * proportion is followed by its own value as a percentage.
+ */
+function collectFractionProsePairs(
+  text: string,
+  spans: SentenceSpan[],
+  out: NumberCandidate[],
+): void {
+  const arms: RegExpExecArray[] = [];
+  FRACTION_ARM_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = FRACTION_ARM_RE.exec(text)) !== null) {
+    arms.push(match);
+  }
+
+  for (let i = 0; i + 1 < arms.length; i += 1) {
+    const left = arms[i];
+    const right = arms[i + 1];
+    if (left === undefined || right === undefined) continue;
+
+    const leftEnd = left.index + left[0].length;
+    const gap = text.slice(leftEnd, right.index);
+    if (gap.length > MAX_PROSE_GAP || PROSE_BREAK_RE.test(gap)) continue;
+    if (BARE_CONNECTOR_RE.test(gap) || !PROSE_CONNECTOR_RE.test(gap)) continue;
+
+    const aEvents = parseCount(left[1] ?? '');
+    const aTotal = parseCount(left[2] ?? '');
+    const bEvents = parseCount(right[1] ?? '');
+    const bTotal = parseCount(right[2] ?? '');
+    if (!isUsableFraction(aEvents, aTotal) || !isUsableFraction(bEvents, bTotal)) continue;
+    if (
+      !matchesOwnPercent(aEvents, aTotal, left[3] ?? '') ||
+      !matchesOwnPercent(bEvents, bTotal, right[3] ?? '')
+    ) {
+      continue;
+    }
 
     const start = left.index;
     const end = right.index + right[0].length;
@@ -459,6 +608,7 @@ export function extractNumberCandidates(text: string): NumberCandidate[] {
   collectPercentPairs(text, spans, found);
   collectFractionSlashPairs(text, spans, found);
   collectFractionOfPairs(text, spans, found);
+  collectFractionProsePairs(text, spans, found);
   collectRatios(text, spans, found);
 
   const kept = dedupeCandidates(found);

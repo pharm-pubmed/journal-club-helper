@@ -13,7 +13,8 @@ export interface AiExtraction {
   /**
    * `text` is a verbatim span of the abstract. The panel offers it to the
    * calculator when `extractNumberCandidates` can read it, and shows it for
-   * manual entry when it cannot (the arms are often separated by prose, #49).
+   * manual entry when it cannot (the arms are often separated by more prose
+   * than it accepts, #49).
    */
   numbers: { label: string; text: string }[];
   limitations: string[];

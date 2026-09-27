@@ -474,3 +474,37 @@ describe('population sections', () => {
     expect(population.every((candidate) => !candidate.reason.endsWith('section'))).toBe(true);
   });
 });
+
+describe('space-grouped numbers (#49)', () => {
+  // Verbatim from PMID 38537944 as the page extractor hands it over: BMJ groups
+  // thousands with a thin space, which is a plain space by then. The numeric
+  // result window used to start at "061 cases (0.2%)", halfway through 18 061.
+  const sections: AbstractSection[] = [
+    {
+      label: 'PARTICIPANTS',
+      text: 'Of 108 366 women overall, 18 061 women living in France who had intracranial surgery for meningioma between 1 January 2009 and 31 December 2018 (restricted inclusion periods for intrauterine systems) were deemed to be in the case group.',
+    },
+    {
+      label: 'RESULTS',
+      text: 'Mean age was 57.6 years (standard deviation 12.8). Analyses showed excess risk of meningioma with use of medrogestone (42 exposed cases/18 061 cases (0.2%) v 79 exposed controls/90 305 controls (0.1%), odds ratio 3.49 (95% confidence interval 2.38 to 5.10)), medroxyprogesterone acetate (injectable, 9/18 061 (0.05%) v 11/90 305 (0.01%), 5.55 (2.27 to 13.56)), and promegestone (83/18 061 (0.5%) v 225/90 305 (0.2 %), 2.39 (1.85 to 3.09)).',
+    },
+  ];
+  const abstract = sections.map((section) => section.text).join('\n\n');
+
+  /** True when `offset` falls between two groups of one number, as in "18 | 061". */
+  function splitsGroupedNumber(offset: number): boolean {
+    return /\d ?$/.test(abstract.slice(0, offset)) && /^ ?\d{3}(?!\d)/.test(abstract.slice(offset));
+  }
+
+  it('never starts or ends a candidate inside a space-grouped number', () => {
+    const candidates = findPicoCandidates(article(abstract, sections));
+    const fromAbstract = candidates.filter((candidate) => candidate.start >= 0);
+
+    expect(inField(fromAbstract, 'O').length).toBeGreaterThan(0);
+    for (const candidate of fromAbstract) {
+      expect(splitsGroupedNumber(candidate.start), candidate.text).toBe(false);
+      expect(splitsGroupedNumber(candidate.end), candidate.text).toBe(false);
+    }
+    expectExactOffsets(abstract, candidates);
+  });
+});

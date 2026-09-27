@@ -250,13 +250,13 @@ Two design limitations that are deliberate, not defects:
 - **Design detection reads the whole abstract**, so "previous randomized trials" in a Background section yields `rct` at medium confidence. The header shows the phrase that caused it and the user can overrule it. Pinned by a test.
 - **PICO candidate recall is weak for Intervention and Comparison.** Real abstracts write "comparing supplemental oxygen with ambient air", which matches none of the cue phrases, so those fields often fall back to the title. Precision was chosen over recall because a wrong candidate costs the user more than a missing one, and arbitrary text can be selected by hand. If users complain, widening the I and C cues is where to spend, not filtering.
 
-One set of gaps is not deliberate, and is tracked in **#49**. The number extractor misses three common forms that turned up while writing the QA script:
+One set of gaps was not deliberate: **#49**, three common forms the number extractor missed, found while writing the QA script. They are **fixed on `main` after v0.1.0 and still present in the v0.1.0 zip**. Run that zip against `docs/QA.md` as of 0fdb3af, which expects the gaps; the current file expects the fix.
 
-- BMJ's bare `v` between two results (`24.2% v 29.8%`).
-- A fraction pair with prose between its arms. ISIS-2's primary result is written this way.
-- Thousands grouped with a thin space (`18 061`; U+2009 in the source, a plain space once `pubmed-dom.ts` normalises whitespace). This also makes one PICO candidate start mid-number.
+- BMJ's bare `v` between two results (`24.2% v 29.8%`). Now read in percent and slash pairs. A capital `V` is not read: standing alone it is a Roman numeral.
+- A fraction pair with prose between its arms. ISIS-2's primary result is written this way. Now read only when each arm is `n/N (x%)` with a percentage that matches its own counts, and the prose between is at most 80 characters, has no digit, `;` or `:`, and says `vs`, `versus`, `v` or `compared with`. Anything looser is left to manual entry, or to the AI extraction (#34).
+- Thousands grouped with a thin space (`18 061`; U+2009 in the source, a plain space once `pubmed-dom.ts` normalises whitespace). Now read as one number inside a fraction, and nowhere else. The PICO candidate that started mid-number, at `061 cases`, no longer does.
 
-Manual entry in the Numbers tab covers all three, and `docs/QA.md` expects the gaps, so they do not block v0.1.
+Manual entry in the Numbers tab covered all three in v0.1.0. One consequence of the fix to know about: fraction pairs are offered whatever the design. On a case-control abstract such as QA record D they are the shares of cases and of controls exposed, and an NNH computed from them means nothing. The Numbers tab does not say so; `docs/QA.md` D3 does.
 
 The e2e smoke tests (§5) drive the built extension in Chromium, side panel included: the panel is browser UI rather than a Playwright page, but its document is a CDP target, and `evaluateInPanel` in `tests/e2e/fixtures.ts` runs script inside it. The smoke run uses that for the design header, the Numbers tab, and restoring an edit made just before the panel closed. There is **no component test harness in the repo**. The one exception is `tests/ui/use-article.test.ts`, which renders the real `useArticle` hook with `preact/test-utils` (part of `preact`, so no new dependency) against fake `chrome.*` for the E-utilities flow. Other UI checks used throwaway Preact + happy-dom harnesses that were not committed, so those checks do not run in CI. Adding `@testing-library/preact` is the obvious next step if the UI starts changing often; it was left out because the spec's dependency budget (§5) is deliberately tight.
 
@@ -351,6 +351,11 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
     - the content script had cached its first read, so "Read the page again" and the manual check in §4 could not work;
     - the docs claimed a field-for-field match that did not hold.
   - The recovery itself cannot be driven headless, because the prompt is never answered. It is covered by a hook-level test and listed in §4 as unverified in a browser.
+- 2026-09-27 (later): **#49, the three result forms the extractor missed, fixed after v0.1.0.** BMJ's bare `v`, fraction pairs with prose between the arms (ISIS-2), and thousands grouped by a space (`18 061`) are all read now; §4 has the rules. The PICO candidate that started at `061 cases` was the same space read as a word break, and is fixed in the same change.
+  - `docs/QA.md` was re-derived by running records B, D and E through the extractor and the PICO finder again, not edited by hand. B gains three `% pair` candidates, D five `n / N` and two more O highlights, E three `n / N` and one more O. The v0.1.0 zip predates this, so QA.md now opens with a link to its 0fdb3af version, which is the one to run against that zip.
+  - Accepting grouped thousands made the fraction pattern quadratic: a match could start on every inner group of a long run. A 12,000-character run took about 100 ms. A count may no longer start on an inner group, and the same run takes about 1 ms. A test pins it.
+  - Each fix was removed in turn, and every removal fails a test. That includes each guard on the prose pairs: the matching percentage, the 80-character cap, the ban on digits, `;` and `:`, and the required connector.
+  - Something the fix makes more visible: fraction pairs are offered whatever the design, so on a case-control abstract they are exposure shares, not event rates (§4). 601 tests.
 
 ## 7. Decisions and why
 

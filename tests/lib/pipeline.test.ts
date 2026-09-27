@@ -56,7 +56,8 @@ const FIXTURES: Expectation[] = [
     pmid: '36740866',
     design: 'sr-ma',
     subtype: 'meta-analysis',
-    numberKinds: ['ratio'],
+    // The percent pair is BMJ's "24.2% v 29.8%", missed until #49.
+    numberKinds: ['ratio', 'percent-pair'],
     picoFromAbstract: ['O'],
   },
   {
