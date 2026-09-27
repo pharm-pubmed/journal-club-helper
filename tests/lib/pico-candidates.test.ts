@@ -4,6 +4,7 @@ import {
   type PicoCandidate,
   type PicoField,
 } from '../../src/lib/pico-candidates';
+import { extractNumberCandidates } from '../../src/lib/number-extractor';
 import type { AbstractSection } from '../../src/lib/types';
 
 const MAX_PHRASE_LENGTH = 120;
@@ -38,6 +39,23 @@ function expectExactOffsets(abstract: string, candidates: PicoCandidate[]): void
     expect(candidate.start).toBeGreaterThanOrEqual(0);
     expect(candidate.end).toBeGreaterThan(candidate.start);
     expect(abstract.slice(candidate.start, candidate.end)).toBe(candidate.text);
+  }
+}
+
+/** True when `offset` falls inside a number: "12|.3", "0.|12", or "18 |061". */
+function splitsNumber(text: string, offset: number): boolean {
+  const before = text.slice(0, offset);
+  const after = text.slice(offset);
+  if (/\d[.,]?$/.test(before) && /^[.,]?\d/.test(after)) return true;
+  return (
+    /\d[ \u00A0\u2009\u202F]?$/.test(before) && /^[ \u00A0\u2009\u202F]?\d{3}(?!\d)/.test(after)
+  );
+}
+
+function expectNoSplitNumbers(text: string, candidates: PicoCandidate[]): void {
+  for (const candidate of candidates.filter((item) => item.start >= 0)) {
+    expect(splitsNumber(text, candidate.start), candidate.text).toBe(false);
+    expect(splitsNumber(text, candidate.end), candidate.text).toBe(false);
   }
 }
 
@@ -491,20 +509,27 @@ describe('space-grouped numbers (#49)', () => {
   ];
   const abstract = sections.map((section) => section.text).join('\n\n');
 
-  /** True when `offset` falls between two groups of one number, as in "18 | 061". */
-  function splitsGroupedNumber(offset: number): boolean {
-    return /\d ?$/.test(abstract.slice(0, offset)) && /^ ?\d{3}(?!\d)/.test(abstract.slice(offset));
-  }
-
   it('never starts or ends a candidate inside a space-grouped number', () => {
     const candidates = findPicoCandidates(article(abstract, sections));
-    const fromAbstract = candidates.filter((candidate) => candidate.start >= 0);
+    expect(inField(candidates, 'O').length).toBeGreaterThan(0);
+    expectNoSplitNumbers(abstract, candidates);
+  });
 
-    expect(inField(fromAbstract, 'O').length).toBeGreaterThan(0);
-    for (const candidate of fromAbstract) {
-      expect(splitsGroupedNumber(candidate.start), candidate.text).toBe(false);
-      expect(splitsGroupedNumber(candidate.end), candidate.text).toBe(false);
+  it('never starts or ends a window inside a number, however long the figures are', () => {
+    // 126 characters of figures, longer than any window: nothing to window.
+    const long =
+      'Relapse occurred in 1,234,567,890 of 9,876,543,210 patients who were allocated to the much longer programme, versus 2,345,678,901 of 8,765,432,109 given usual care at every site.';
+    expect(
+      extractNumberCandidates(long).some((candidate) => candidate.end - candidate.start > 120),
+    ).toBe(true);
+    // The window's natural end falls inside the number glued to the figures.
+    const glued =
+      'Across the eleven participating centres and the two follow-up visits that were scheduled after discharge, mortality was 12.3% vs 8.1%/0.1234567890123456789012345 at one year.';
+
+    for (const text of [long, glued]) {
+      const candidates = findPicoCandidates(article(text));
+      expectNoSplitNumbers(text, candidates);
+      expectExactOffsets(text, candidates);
     }
-    expectExactOffsets(abstract, candidates);
   });
 });

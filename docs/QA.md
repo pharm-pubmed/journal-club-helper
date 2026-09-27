@@ -1,6 +1,6 @@
 # Manual QA script
 
-> **QA of the v0.1.0 build:** use [this file as of commit 0fdb3af](https://github.com/piroshi1989/journal-club-helper/blob/0fdb3af/docs/QA.md). #49 changed the number extractor after that build, so records B, D and E below expect behaviour the v0.1.0 zip does not have.
+> **QA of the v0.1.0 build:** use [this file as of commit 0fdb3af](https://github.com/piroshi1989/journal-club-helper/blob/0fdb3af/docs/QA.md). #49 changed the number extractor after that build, so records B and D below expect behaviour the v0.1.0 zip does not have.
 
 A pass of about ten minutes over five real PubMed records, run by a person in a real browser before each tagged release. It covers what the automated suites cannot: the live PubMed page, the side panel as a reader sees it, the clipboard, the downloaded file, and persistence across a closed panel. The e2e smoke run (`pnpm test:e2e`) already checks button injection, URL gating, extraction, one NNT and one close-and-restore on saved pages, so this script spends its time elsewhere.
 
@@ -94,7 +94,7 @@ Click the P highlight. Its text is added to Population, and an `Also add to` cho
 
 **D3.** Seven candidates, in the abstract's order: `odds ratio 3.49 (95% confidence interval 2.38 to 5.10`, three `n / N` pairs starting `9/18 061`, `83/18 061` and `891/18 061`, `odds ratio 19.21 (95% confidence interval 16.61 to 22.22`, and two more `n / N` pairs starting `925/18 061` and `628/18 061`.
 
-- Press **Use** on `891/18 061 (4.9%) v 256/90 305`. Counts is filled with control `256` / `90305` and intervention `891` / `18061`: each grouped number is read whole (#49). This checks the reading only. In a case-control study these are the shares of cases and of controls exposed, not event rates, so the NNH shown means nothing.
+- Press **Use** on `891/18 061 (4.9%) v 256/90 305`. Counts is filled with control `256` / `90305` and intervention `891` / `18061`. Each grouped number is read whole because the arm's own percentage confirms it (#49). This checks the reading only. In a case-control study these are the shares of cases and of controls exposed, not event rates, so the NNH shown means nothing.
 - Press **Use** on `odds ratio 3.49 …`, enter ACR `1` and press **Calculate**. The result is **NNH 42 (95% CI 26–75)**, with an odds-ratio warning. The label is NNH because exposure raises the risk.
 
 **D4. Override.** In the header, set the `Design` select to `Cohort study`. The header shows `Set manually`, and Appraisal switches to the cohort list (`0 of 10 answered`). Press `Reset to detected`: it is back to `Case-control study` and `0 of 9 answered`.
@@ -103,13 +103,13 @@ Click the P highlight. Its text is added to Population, and an `Also add to` cho
 
 **E1.** The abstract is one paragraph with no section labels. The header reads `Randomized controlled trial`, subtype `Parallel-group design`, `Detected from publication type`. ISIS-2 is really a 2×2 factorial trial, but the classifier has no factorial subtype, and parallel is its default. That is expected, not a Fail.
 
-**E2.** In the PICO tab, the legend reads **P 0, I 0, C 4, O 4**. The C highlights are the four `placebo …` phrases, found by scanning the whole text because there is no Methods section to scope to. The O highlights include the streptokinase result (`791/8592 (9.2%) …`) and the combination result (`343/4292 (8.0%) …`). The aspirin result (`804/8587 …`) is not an O highlight: its span overlaps `placebo infusion (odds reduction: 25% SD 4`, and the C highlight wins.
+**E2.** In the PICO tab, the legend reads **P 0, I 0, C 4, O 3**. The C highlights are the four `placebo …` phrases, found by scanning the whole text because there is no Methods section to scope to.
 
-**E3.** The Numbers tab lists eleven candidates: three `n / N` pairs, then eight `% pair`, the last being `8.0% vs 13.2%`. The first is the headline result, `791/8592 (9.2%) among patients allocated streptokinase infusion vs 1029/8595 (12.0%)`. Prose separates its two arms, and it is read because each arm carries its own matching percentage (#49).
+**E3.** The Numbers tab lists eight `% pair` candidates, the last being `8.0% vs 13.2%`. Press **Use** on it: the result is **NNT 20**.
 
-- Press **Use** on it. Counts is filled with control `1029` / `8595` and intervention `791` / `8592`, and the result is **NNT 37 (95% CI 28–55)**. This is the only mode that produces a CI from an abstract with no reported interval.
-- Press **Use** on `8.0% vs 13.2%`: the result is **NNT 20**.
-- Check manual entry. Press **Clear**, switch to **Counts**, enter control `1016` / `8600` and intervention `804` / `8587` (the aspirin result), and press **Calculate**. The result is **NNT 41 (95% CI 30–66)**.
+- **Expected gap, kept on purpose:** the headline result, `791/8592 (9.2%) … vs 1029/8595 (12.0%)`, is **not** listed, because prose separates the two fractions. #49 left this form to manual entry: subgroup splits, nested proportions and three-arm sentences look the same to a pattern. The AI extraction (#34) may pick it up.
+
+Enter it by hand. Switch to **Counts**, then enter control `1029` / `8595` and intervention `791` / `8592`, and press **Calculate**. The result is **NNT 37 (95% CI 28–55)**. This is the only mode that produces a CI from an abstract with no reported interval.
 
 ## F. Settings and backup (1 min)
 
