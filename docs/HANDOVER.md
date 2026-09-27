@@ -225,6 +225,7 @@ A rejection names the policy it cites. Record it in §6 with what was changed, s
   4. Replace the `TBD(#nn)` placeholders in `site/index.html`: the store link and the contact.
   5. Run the workflow, and add the push trigger its comment describes.
 - **Images:** `site/img/*.png` are the unframed panel images from `pnpm store:assets`, so they change together with the store screenshots.
+- **Demo video:** `site/video/demo.mp4` (about 33 s, H.264, no sound) and its poster come from `pnpm store:video` (`store/demo.spec.ts`), which needs `ffmpeg` with libx264. It records the panel over CDP while it enters the same appraisal as the store images (`store/scenario.ts`). Re-record it after a UI change it shows, and watch it through before committing.
 - **Example summary:** `site/sample/summary.md` is the file the Export tab's **Download .md** saves for the screenshot appraisal, also written by `pnpm store:assets` and linked from the page as the example output (spec §11). A note above it says which parts were typed in by hand. CI checks only that its page matches it, not that it matches the current summary format, so run `pnpm store:assets` again whenever `src/lib/summary-builder.ts` changes what the summary says.
 
 ## 4. Known issues
