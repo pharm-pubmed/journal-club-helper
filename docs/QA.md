@@ -1,5 +1,7 @@
 # Manual QA script
 
+> **QA of the v0.1.0 build:** use [this file as of commit 0fdb3af](https://github.com/piroshi1989/journal-club-helper/blob/0fdb3af/docs/QA.md). #49 changed the number extractor after that build, so records B and D below expect behaviour the v0.1.0 zip does not have.
+
 A pass of about ten minutes over five real PubMed records, run by a person in a real browser before each tagged release. It covers what the automated suites cannot: the live PubMed page, the side panel as a reader sees it, the clipboard, the downloaded file, and persistence across a closed panel. The e2e smoke run (`pnpm test:e2e`) already checks button injection, URL gating, extraction, one NNT and one close-and-restore on saved pages, so this script spends its time elsewhere.
 
 Every expected value below was produced by the shipped code, not written from memory: the classifier, the number extractor, the PICO candidate finder and the effect-measure functions were run over each record's abstract. For 36577095, 36740866 and 34844936 that input was the saved page in `tests/fixtures/pubmed/`. For 38537944 and 2899772 it was the E-utilities `efetch` text, because live PubMed does not serve pages to an automated client (HANDOVER §5). If the live page disagrees with a value here, that is a finding: note it rather than passing the step.
@@ -67,9 +69,10 @@ Click the P highlight. Its text is added to Population, and an `Also add to` cho
 
 **B2.** In the PICO tab, the legend reads **P 0, I 0, C 0, O 5**. The title offer is there for P, I and C.
 
-**B3.** The Numbers tab lists four `ratio` candidates. The first is `relative risk 0.83, 95% confidence interval 0.73 to 0.94`; the other three are `relative risk 0.90`, `relative risk 1.04` and `relative risk 0.83`. Press **Use** on the first. Nothing is calculated yet, the Ratio form is filled with RR 0.83 (0.73–0.94), and focus lands on `Assumed control event rate (ACR)`. Enter `29.8` (the usual-care rate the abstract reports) and press **Calculate**. The result is **NNT 20 (95% CI 13–56)**, with the baseline-risk warning shown.
+**B3.** The Numbers tab lists seven candidates, in the abstract's order: `24.2% v 29.8%` (`% pair`), `relative risk 0.83, 95% confidence interval 0.73 to 0.94` (`ratio`), `15.6% v 17.2%`, `relative risk 0.90`, `21.4% v 23.0%`, `relative risk 1.04` and `relative risk 0.83`. The three `% pair` candidates are BMJ's bare `v` (#49).
 
-- **Expected gap, not a defect to fix here:** the abstract's own percent pair, `24.2% v 29.8%`, is **not** listed, because the extractor does not recognise BMJ's bare `v` (#49).
+- Press **Use** on `24.2% v 29.8%`. The result is **NNT 18**, with 29.8% as the control.
+- Press **Use** on `relative risk 0.83, 95% confidence interval 0.73 to 0.94`. Nothing is calculated yet, the Ratio form is filled with RR 0.83 (0.73–0.94), and focus lands on `Assumed control event rate (ACR)`. Enter `29.8` (the usual-care rate the abstract reports) and press **Calculate**. The result is **NNT 20 (95% CI 13–56)**, with the baseline-risk warning shown.
 
 **B4.** Appraisal reads `0 of 9 answered`.
 
@@ -87,11 +90,12 @@ Click the P highlight. Its text is added to Population, and an `Also add to` cho
 
 **D1.** PubMed assigns this record no design publication type, so detection falls back to wording. The header reads `Case-control study`, `Detected from abstract keywords`, `Evidence (1)`: `case-control · abstract keyword`.
 
-**D2.** In the PICO tab, the legend reads **P 2, I 0, C 0, O 2**. The P highlights are `Of 108 366 women overall` and a phrase starting `women living in France who had intracranial surgery`.
+**D2.** In the PICO tab, the legend reads **P 2, I 0, C 0, O 4**. The P highlights are `Of 108 366 women overall` and a phrase starting `women living in France who had intracranial surgery`. No highlight starts or ends between the two halves of a space-grouped number such as `18 061` (#49): the first O highlight starts `cases (0.2%) v 79 exposed controls`.
 
-- **Expected rough edge:** one O highlight starts mid-number, at `061 cases (0.2%)`, because `18 061` is written with a space as the thousands separator (#49). Note it if it looks different on the live page.
+**D3.** Seven candidates, in the abstract's order: `odds ratio 3.49 (95% confidence interval 2.38 to 5.10`, three `n / N` pairs starting `9/18 061`, `83/18 061` and `891/18 061`, `odds ratio 19.21 (95% confidence interval 16.61 to 22.22`, and two more `n / N` pairs starting `925/18 061` and `628/18 061`.
 
-**D3.** Two candidates: `odds ratio 3.49 (95% confidence interval 2.38 to 5.10` and `odds ratio 19.21 (95% confidence interval 16.61 to 22.22`. Press **Use** on the first, enter ACR `1` and press **Calculate**. The result is **NNH 42 (95% CI 26–75)**, with an odds-ratio warning. The label is NNH because exposure raises the risk.
+- Press **Use** on `891/18 061 (4.9%) v 256/90 305`. Counts is filled with control `256` / `90305` and intervention `891` / `18061`. Each grouped number is read whole because the arm's own percentage confirms it (#49). This checks the reading only. In a case-control study these are the shares of cases and of controls exposed, not event rates, so the NNH shown means nothing.
+- Press **Use** on `odds ratio 3.49 …`, enter ACR `1` and press **Calculate**. The result is **NNH 42 (95% CI 26–75)**, with an odds-ratio warning. The label is NNH because exposure raises the risk.
 
 **D4. Override.** In the header, set the `Design` select to `Cohort study`. The header shows `Set manually`, and Appraisal switches to the cohort list (`0 of 10 answered`). Press `Reset to detected`: it is back to `Case-control study` and `0 of 9 answered`.
 
@@ -103,7 +107,7 @@ Click the P highlight. Its text is added to Population, and an `Also add to` cho
 
 **E3.** The Numbers tab lists eight `% pair` candidates, the last being `8.0% vs 13.2%`. Press **Use** on it: the result is **NNT 20**.
 
-- **Expected gap:** the headline result, `791/8592 (9.2%) … vs 1029/8595 (12.0%)`, is **not** listed, because prose separates the two fractions (#49).
+- **Expected gap, kept on purpose:** the headline result, `791/8592 (9.2%) … vs 1029/8595 (12.0%)`, is **not** listed, because prose separates the two fractions. #49 left this form to manual entry: subgroup splits, nested proportions and three-arm sentences look the same to a pattern. The AI extraction (#34) may pick it up.
 
 Enter it by hand. Switch to **Counts**, then enter control `1029` / `8595` and intervention `791` / `8592`, and press **Calculate**. The result is **NNT 37 (95% CI 28–55)**. This is the only mode that produces a CI from an abstract with no reported interval.
 

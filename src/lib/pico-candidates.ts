@@ -130,11 +130,34 @@ function isDigit(character: string): boolean {
   return character >= '0' && character <= '9';
 }
 
+/** The separators the number extractor accepts between thousands groups (#49). */
+const GROUP_SEPARATORS = new Set([' ', '\u00A0', '\u2009', '\u202F']);
+
+/**
+ * True when the space at `index` groups the thousands of one number, as in BMJ's
+ * "18 061" (#49): a digit before it and exactly three digits after. Treating it
+ * as a word break is what once started a candidate at "061 cases".
+ */
+function isGroupSeparator(text: string, index: number): boolean {
+  return (
+    GROUP_SEPARATORS.has(text.charAt(index)) &&
+    isDigit(text.charAt(index - 1)) &&
+    isDigit(text.charAt(index + 1)) &&
+    isDigit(text.charAt(index + 2)) &&
+    isDigit(text.charAt(index + 3)) &&
+    !isDigit(text.charAt(index + 4))
+  );
+}
+
+function isWordBreak(text: string, index: number): boolean {
+  return isSpace(text.charAt(index)) && !isGroupSeparator(text, index);
+}
+
 /** Moves `end` back to the end of the previous whole word, never before `floor`. */
 function retreatToWordEnd(text: string, end: number, floor: number): number {
   let index = end;
-  if (index < text.length && !isSpace(text.charAt(index))) {
-    while (index > floor && !isSpace(text.charAt(index - 1))) index -= 1;
+  if (index < text.length && !isWordBreak(text, index)) {
+    while (index > floor && !isWordBreak(text, index - 1)) index -= 1;
   }
   while (index > floor && isSpace(text.charAt(index - 1))) index -= 1;
   return index;
@@ -143,8 +166,8 @@ function retreatToWordEnd(text: string, end: number, floor: number): number {
 /** Moves `start` forward to the beginning of the next whole word, never past `ceiling`. */
 function advanceToWordStart(text: string, start: number, ceiling: number): number {
   let index = start;
-  if (index > 0 && !isSpace(text.charAt(index - 1))) {
-    while (index < ceiling && !isSpace(text.charAt(index))) index += 1;
+  if (index > 0 && !isWordBreak(text, index - 1)) {
+    while (index < ceiling && !isWordBreak(text, index)) index += 1;
   }
   while (index < ceiling && isSpace(text.charAt(index))) index += 1;
   return index;
@@ -155,8 +178,9 @@ function advanceToWordStart(text: string, start: number, ceiling: number): numbe
  * capped at 120 characters.
  *
  * A semicolon and a line break end a phrase too — in abstracts both separate
- * clauses as firmly as a comma does. A period between two digits does not: cutting
- * "2.5 mg" down to "2" would be worse than no candidate at all.
+ * clauses as firmly as a comma does. A period or a comma between two digits does
+ * not: cutting "2.5 mg" down to "2", or "2,345" down to "2", would be worse than
+ * no candidate at all.
  */
 function captureEnd(text: string, start: number, scopeEnd: number): number {
   const hardLimit = Math.min(scopeEnd, start + MAX_PHRASE_LENGTH);
@@ -165,11 +189,16 @@ function captureEnd(text: string, start: number, scopeEnd: number): number {
 
   while (end < hardLimit) {
     const character = text.charAt(end);
-    if (character === ',' || character === ';' || character === '\n' || character === '\r') {
+    const insideNumber = isDigit(text.charAt(end - 1)) && isDigit(text.charAt(end + 1));
+    if (character === ',' && !insideNumber) {
       stoppedAtBoundary = true;
       break;
     }
-    if (character === '.' && !(isDigit(text.charAt(end - 1)) && isDigit(text.charAt(end + 1)))) {
+    if (character === ';' || character === '\n' || character === '\r') {
+      stoppedAtBoundary = true;
+      break;
+    }
+    if (character === '.' && !insideNumber) {
       stoppedAtBoundary = true;
       break;
     }
@@ -277,7 +306,10 @@ function locateSentence(abstract: string, candidate: NumberCandidate): SentenceS
  * A window of at most 120 characters over `sentence` that still contains the number.
  *
  * Results sentences are long, and a window that clipped the figures off the end
- * would defeat the point of proposing the sentence at all.
+ * would defeat the point of proposing the sentence at all. Each end falls on a
+ * word boundary or on the figures' own ends, so a window never starts or ends
+ * inside a number. That needs the figures to fit in the window: see
+ * collectNumericResults.
  */
 function windowAroundNumber(
   abstract: string,
@@ -298,7 +330,8 @@ function windowAroundNumber(
   const start = advanceToWordStart(abstract, desired, numberStart);
   const limit = Math.min(sentence.end, start + MAX_PHRASE_LENGTH);
   const retreated = retreatToWordEnd(abstract, limit, start);
-  return { start, end: retreated >= numberEnd ? retreated : limit };
+  // Never the raw limit: it can fall inside whatever number follows the figures.
+  return { start, end: Math.max(retreated, numberEnd) };
 }
 
 function collectNumericResults(
@@ -307,6 +340,9 @@ function collectNumericResults(
   out: PicoCandidate[],
 ): void {
   for (const number of extractNumberCandidates(abstract)) {
+    // Figures longer than a window cannot be shown whole, and half a result is
+    // worse than none. The Numbers tab still lists them.
+    if (number.end - number.start > MAX_PHRASE_LENGTH) continue;
     const scope = scopes.find((item) => number.start >= item.start && number.end <= item.end);
     if (scope === undefined) continue;
 

@@ -158,6 +158,45 @@ describe('extractNumberCandidates — percent pairs', () => {
     expectExactOffsets(text, candidates);
   });
 
+  // BMJ house style (#49). Verbatim from PMID 36740866 (tests/fixtures/pubmed).
+  it('reads BMJ\'s bare "v" as the connector', () => {
+    const text =
+      'Awake prone positioning reduced the risk of endotracheal intubation compared with usual care (crude average 24.2% v 29.8%, relative risk 0.83, 95% confidence interval 0.73 to 0.94; high certainty).';
+    const candidates = extractNumberCandidates(text);
+
+    expect(candidates.map((candidate) => candidate.kind)).toEqual(['percent-pair', 'ratio']);
+    const pair = percentPairAt(candidates, 0);
+    expect(pair.first).toBe(24.2);
+    expect(pair.second).toBe(29.8);
+    expect(pair.connector).toBe('vs');
+    expect(pair.raw).toBe('24.2% v 29.8%');
+    expectExactOffsets(text, candidates);
+  });
+
+  it('does not read "v" inside a word, "v." or a capital V as a connector', () => {
+    for (const text of [
+      'Deficiency was corrected in 12% vitamin 15% of the placebo arm.',
+      'Response rates were 30% IV 20% oral across the study arms.',
+      'Response rates were 30%v 20% across the study arms.',
+      'Response rates were 30% v. 20% across the study arms.',
+      'Response rates were 30% V 20% across the tumour stages.',
+      'Relapse occurred in 3/10 IV 4/12 of the enrolled patients.',
+      'Relapse occurred in 45/300 (15.0%) V 62/298 of the enrolled patients.',
+    ]) {
+      expect(extractNumberCandidates(text), text).toEqual([]);
+    }
+  });
+
+  it('does not let a rejected capital V swallow the pair after it', () => {
+    const text = 'Relapse occurred in 3/10 V 4/12 vs 5/12 of the enrolled patients.';
+    const candidates = extractNumberCandidates(text);
+
+    expect(candidates).toHaveLength(1);
+    const pair = fractionPairAt(candidates, 0);
+    expect(pair.raw).toBe('4/12 vs 5/12');
+    expectExactOffsets(text, candidates);
+  });
+
   it('extracts two independent percent pairs from one sentence', () => {
     const text =
       'Mortality was 10.0% vs 15.0%, and the incidence of stroke was 2.0% vs 3.0% at 90 days.';
@@ -189,10 +228,152 @@ describe('extractNumberCandidates — fraction pairs', () => {
     const text = 'Recurrence was observed in 45/300 (15.0%) vs 62/298 (20.8%) participants.';
     const candidates = extractNumberCandidates(text);
 
+    expect(candidates).toHaveLength(1);
     const pair = fractionPairAt(candidates, 0);
     expect(pair.aEvents).toBe(45);
     expect(pair.bTotal).toBe(298);
+    // Read by the slash pattern, not as two arms with prose between them.
+    expect(pair.raw).toBe('45/300 (15.0%) vs 62/298');
     expectExactOffsets(text, candidates);
+  });
+
+  // #49, verbatim from PMID 38537944 as the page extractor hands it over: the
+  // thin spaces that group the thousands are plain spaces by then.
+  it('reads space-grouped thousands and BMJ\'s "v" in a slash pair', () => {
+    const text =
+      'A highly increased risk of meningioma was observed for cyproterone acetate (891/18 061 (4.9%) v 256/90 305 (0.3%), odds ratio 19.21 (95% confidence interval 16.61 to 22.22)), nomegestrol acetate (925/18 061 (5.1%) v 1121/90 305 (1.2%), 4.93 (4.50 to 5.41)), and chlormadinone acetate (628/18 061 (3.5%) v 946/90 305 (1.0%), 3.87 (3.48 to 4.30)), which were used as positive controls for use.';
+    const candidates = extractNumberCandidates(text);
+
+    expect(candidates.map((candidate) => candidate.kind)).toEqual([
+      'fraction-pair',
+      'ratio',
+      'fraction-pair',
+      'fraction-pair',
+    ]);
+    const pair = fractionPairAt(candidates, 0);
+    expect(pair.aEvents).toBe(891);
+    expect(pair.aTotal).toBe(18061);
+    expect(pair.bEvents).toBe(256);
+    expect(pair.bTotal).toBe(90305);
+    expect(pair.raw).toBe('891/18 061 (4.9%) v 256/90 305');
+    expect(fractionPairAt(candidates, 2).bEvents).toBe(1121);
+    expect(fractionPairAt(candidates, 3).aEvents).toBe(628);
+    expectExactOffsets(text, candidates);
+  });
+
+  it('reads thousands grouped by a thin, narrow or ordinary no-break space, keeping the raw text', () => {
+    for (const separator of ['\u2009', '\u202F', '\u00A0']) {
+      const text = `Cases were exposed more often (891/18${separator}061 (4.9%) v 256/90${separator}305 (0.3%)).`;
+      const candidates = extractNumberCandidates(text);
+
+      expect(candidates).toHaveLength(1);
+      const pair = fractionPairAt(candidates, 0);
+      expect(pair.aTotal).toBe(18061);
+      expect(pair.bTotal).toBe(90305);
+      expect(pair.raw).toBe(`891/18${separator}061 (4.9%) v 256/90${separator}305`);
+      expectExactOffsets(text, candidates);
+    }
+  });
+
+  it('reads space-grouped thousands in the "n of N" form when a percentage confirms them', () => {
+    const text =
+      'Exposure was found in 9 of 18 061 (0.05%) cases and 11 of 90 305 (0.01%) controls.';
+    const candidates = extractNumberCandidates(text);
+
+    expect(candidates).toHaveLength(1);
+    const pair = fractionPairAt(candidates, 0);
+    expect(pair.aEvents).toBe(9);
+    expect(pair.aTotal).toBe(18061);
+    expect(pair.bEvents).toBe(11);
+    expect(pair.bTotal).toBe(90305);
+    expectExactOffsets(text, candidates);
+  });
+
+  // A space between two numbers is as often just a space. Unless the arm's own
+  // percentage settles it, the arm is dropped: reading "90 305" as 90 would be
+  // as wrong as reading "298 100" as 298100.
+  it('neither glues a following number onto a count nor truncates a grouped one', () => {
+    for (const text of [
+      'Death occurred in 45/300 vs 62/298 100 days after surgery.',
+      'Death occurred in 12 of 300 and 20 of 298 100 days after surgery.',
+      'Breakage affected 3 of 20 500 mg vials and 4 of 25 250 mg vials.',
+      'Exposure was found in 9 of 18 061 cases and 11 of 90 305 controls.',
+      'Exposure was found in 9/18 061 v 11/90 305 of those screened.',
+      // A percentage that fits neither reading settles nothing.
+      'Exposure was found in 891/18 061 (9.9%) v 256/90 305 (0.3%) of those screened.',
+      // 891/18061 is 4.93%: 5.0 neither rounds nor truncates it, however close.
+      'Exposure was found in 891/18 061 (5.0%) v 256/90 305 (0.3%) of those screened.',
+      // No events fits 0/18 as well as 0/18061, so the percentage settles nothing.
+      'Exposure was found in 0/18 061 (0%) v 0/90 305 (0%) of those screened.',
+    ]) {
+      expect(extractNumberCandidates(text), text).toEqual([]);
+    }
+  });
+
+  it('groups only whole 3-digit groups after a single separator', () => {
+    for (const text of [
+      'Exposure was found in 9/18 0612 v 11/90 305 of those screened.',
+      'Exposure was found in 9/18 06 v 11/90 305 of those screened.',
+      'Exposure was found in 9/18  061 v 11/90 305 of those screened.',
+      'Exposure was found in 9 of 18 0612 and 11 of 90 305 (0.01%) of those screened.',
+    ]) {
+      expect(extractNumberCandidates(text), text).toEqual([]);
+    }
+  });
+
+  it('still reads a count after a year: a 4-digit run cannot lead a group', () => {
+    const slash = 'In 2019 120/300 (40.0%) vs 150/298 (50.3%) patients died.';
+    const slashPair = fractionPairAt(extractNumberCandidates(slash), 0);
+    expect(slashPair.aEvents).toBe(120);
+    expect(slashPair.aTotal).toBe(300);
+    expect(slashPair.bEvents).toBe(150);
+
+    const of = 'In 2019 100 of 300 patients died compared with 150 of 298 in 2020.';
+    const ofPair = fractionPairAt(extractNumberCandidates(of), 0);
+    expect(ofPair.aEvents).toBe(100);
+    expect(ofPair.aTotal).toBe(300);
+    expect(ofPair.bEvents).toBe(150);
+    expect(ofPair.bTotal).toBe(298);
+  });
+
+  // "3 120" is 3120 or a stray 3 before 120. The text does not say which, so
+  // nothing is proposed, unless the arm's percentage confirms the grouped reading.
+  it('proposes nothing when a 1–3 digit number before a count makes it ambiguous', () => {
+    for (const text of [
+      'In 3 120 of 300 patients the drug failed, compared with 150 of 298 given placebo.',
+      'In 3 120/300 vs 150/298 patients the drug failed.',
+    ]) {
+      expect(extractNumberCandidates(text), text).toEqual([]);
+    }
+
+    const confirmed = 'The drug failed in 3 120/9 000 (34.7%) vs 3 500/9 000 (38.9%) patients.';
+    const pair = fractionPairAt(extractNumberCandidates(confirmed), 0);
+    expect(pair.aEvents).toBe(3120);
+    expect(pair.bEvents).toBe(3500);
+  });
+
+  it('reads comma thousands whole and never truncates them', () => {
+    const text = 'Events occurred in 1 of 5,000 and 1 of 8,000 patients.';
+    const candidates = extractNumberCandidates(text);
+
+    expect(candidates).toHaveLength(1);
+    const pair = fractionPairAt(candidates, 0);
+    expect(pair.aTotal).toBe(5000);
+    expect(pair.bTotal).toBe(8000);
+    expectExactOffsets(text, candidates);
+
+    expect(extractNumberCandidates('Events occurred in 1 of 5,00 and 1 of 8,00 patients.')).toEqual(
+      [],
+    );
+  });
+
+  // ISIS-2, PMID 2899772 (tests/fixtures/eutils), verbatim. Prose between the
+  // arms is a known gap (#49): subgroups, nested proportions and three-arm
+  // sentences look the same, so this is left to manual entry or to #34.
+  it('leaves a fraction pair with prose between its arms to manual entry', () => {
+    const text =
+      'Streptokinase alone and aspirin alone each produced a highly significant reduction in 5-week vascular mortality: 791/8592 (9.2%) among patients allocated streptokinase infusion vs 1029/8595 (12.0%) among those allocated placebo infusion (odds reduction: 25% SD 4; 2p less than 0.00001).';
+    expect(extractNumberCandidates(text).filter((c) => c.kind === 'fraction-pair')).toEqual([]);
   });
 
   it('extracts the "12 of 300 ... 20 of 298" form across a clause', () => {
@@ -471,5 +652,15 @@ describe('extractNumberCandidates — document level behaviour', () => {
     const started = performance.now();
     extractNumberCandidates(text);
     expect(performance.now() - started).toBeLessThan(50);
+  });
+
+  it('stays linear on a long run of grouped digits', () => {
+    for (const separator of [' ', ',', '\u00A0']) {
+      const run = `1${`${separator}000`.repeat(1000)}`;
+      const text = `${run} of ${run}/${run} (1%) vs ${run}/${run} and ${run} of ${run}`;
+      const started = performance.now();
+      extractNumberCandidates(text);
+      expect(performance.now() - started, JSON.stringify(separator)).toBeLessThan(50);
+    }
   });
 });
