@@ -88,7 +88,7 @@ Checked against the store's policies and the spec's positioning (§1, §9):
 | ------------------------ | --------------------------------------------------------------------------------- | -------------------------------------------------- |
 | `store/screenshot-1.png` | The design header with its evidence, and a PICO the reader wrote                  | See the study design, and why it was detected      |
 | `store/screenshot-2.png` | Numbers: the abstract's relative risk applied to a baseline risk, NNT with 95% CI | Get the absolute effect, not just the relative one |
-| `store/screenshot-3.png` | The appraisal checklist, two questions answered from the abstract                 | Work through risk of bias, one question at a time  |
+| `store/screenshot-3.png` | The appraisal checklist, two questions the abstract leaves open, with notes       | Work through risk of bias, one question at a time  |
 | `store/screenshot-4.png` | Export, with the reader's bottom line                                             | Take a one-page summary to journal club            |
 | `store/screenshot-5.png` | Settings                                                                          | Your appraisals stay on your device                |
 

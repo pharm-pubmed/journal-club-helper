@@ -27,7 +27,9 @@ function safeHref(href) {
 export function inline(text) {
   const out = [];
   // Code spans first, so nothing inside them is read as Markdown.
-  const pattern = /`([^`]+)`|<(https:\/\/[^>\s]+)>|\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
+  // A link target may hold one level of parentheses, as some DOIs do.
+  const pattern =
+    /`([^`]+)`|<(https:\/\/[^>\s]+)>|\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)|\*\*([^*]+)\*\*/g;
   let last = 0;
   for (const match of text.matchAll(pattern)) {
     out.push(escapeHtml(text.slice(last, match.index)));
@@ -50,10 +52,17 @@ const cells = (row) =>
     .split(/(?<!\\)\|/)
     .map((cell) => cell.trim().replace(/\\\|/g, '|'));
 
-const ORDERED = /^\d+\.(?: |$)/;
+const ORDERED = /^(\d+)\.(?: |$)/;
+const HEADING = /^(#{1,3}) (.+)$/;
+/** Lines that end a paragraph. As in CommonMark, only a list starting at 1 can. */
+const INTERRUPTS = /^(#{1,3} |\||- |1\.(?: |$))/;
 
-/** Converts the Markdown subset above to HTML. Returns `{ title, html }`. */
-export function markdownToHtml(markdown) {
+/**
+ * Converts the Markdown subset above to HTML. Returns `{ title, html }`.
+ * `headingOffset` moves every heading down that many levels, for a page that
+ * has its own `<h1>` above the converted text.
+ */
+export function markdownToHtml(markdown, { headingOffset = 0 } = {}) {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
   const html = [];
   let title = null;
@@ -64,13 +73,13 @@ export function markdownToHtml(markdown) {
       i++;
       continue;
     }
-    const heading = /^(#{1,3}) (.+)$/.exec(line);
+    const heading = HEADING.exec(line);
     if (heading) {
-      const level = heading[1].length;
-      if (level === 1) {
+      if (heading[1].length === 1) {
         if (title !== null) throw new Error('More than one top-level heading.');
         title = heading[2];
       }
+      const level = heading[1].length + headingOffset;
       html.push(`<h${level}>${inline(heading[2])}</h${level}>`);
       i++;
       continue;
@@ -107,23 +116,21 @@ export function markdownToHtml(markdown) {
     if (ORDERED.test(line)) {
       // The summary leaves its discussion questions as empty numbered items
       // for the reader to fill in, so an item may have no text.
+      const start = Number(ORDERED.exec(line)[1]);
       const items = [];
       while (i < lines.length && ORDERED.test(lines[i])) {
         items.push(`<li>${inline(lines[i++].replace(ORDERED, ''))}</li>`);
       }
-      html.push(`<ol>${items.join('')}</ol>`);
+      html.push(`<ol${start === 1 ? '' : ` start="${start}"`}>${items.join('')}</ol>`);
       continue;
     }
     if (/^([*+] |>|```|<)/.test(line.trim()) || /^ {2,}/.test(line)) {
       throw new Error(`Unsupported Markdown, extend scripts/build-site.mjs: ${line}`);
     }
-    const paragraph = [];
-    while (
-      i < lines.length &&
-      lines[i].trim() !== '' &&
-      !/^(#|\||- )/.test(lines[i]) &&
-      !ORDERED.test(lines[i])
-    ) {
+    // The first line always belongs to the paragraph, so a line such as
+    // `#1 finding`, which is not a heading, cannot stop the reader in place.
+    const paragraph = [lines[i++].trim()];
+    while (i < lines.length && lines[i].trim() !== '' && !INTERRUPTS.test(lines[i])) {
       paragraph.push(lines[i++].trim());
     }
     html.push(`<p>${inline(paragraph.join(' '))}</p>`);
@@ -133,15 +140,17 @@ export function markdownToHtml(markdown) {
 }
 
 /** The page around generated content. `source` names the file to edit instead. */
-function layout({ source, title, description, main }) {
+function layout({ source, title, description, main, index = true }) {
   return `<!doctype html>
 <!-- Generated from ${source} by scripts/build-site.mjs. Edit that file, not this one. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${title} · Journal Club Helper</title>
-    <meta name="description" content="${description}" />
+    <title>${escapeHtml(title)} · Journal Club Helper</title>
+    <meta name="description" content="${escapeHtml(description)}" />${
+      index ? '' : '\n    <meta name="robots" content="noindex" />'
+    }
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/style.css" />
   </head>
@@ -153,7 +162,7 @@ function layout({ source, title, description, main }) {
 ${main}
     </main>
     <footer class="foot">
-      <p>Educational use only. Not affiliated with NLM, NIH or HHS.</p>
+      <p>Educational use only, not clinical decision support. Not affiliated with NLM, NIH or HHS.</p>
     </footer>
   </body>
 </html>
@@ -176,15 +185,21 @@ export function privacyPage(markdown) {
  * never mistaken for something the extension concluded on its own.
  */
 export function samplePage(markdown) {
-  const { html } = markdownToHtml(markdown);
+  const { html } = markdownToHtml(markdown, { headingOffset: 1 });
   return layout({
     source: 'site/sample/summary.md',
     title: 'Example one-page summary',
     description: 'An unedited one-page summary exported from Journal Club Helper.',
-    main: `<aside class="note">
-<p><strong>Example.</strong> This is a one-page summary exported from Journal Club Helper and not edited since, for a published meta-analysis in The BMJ. For this example, the PICO, the baseline risk in the Numbers tab, two checklist answers with a note, and the bottom line were typed in by hand, as a reader would. The rest is what the extension filled in, or left for the reader.</p>
-<p>The bottom line only shows what a reader might write. It is not a clinical conclusion and not advice. The Markdown file itself is <a href="/sample/summary.md">here</a>.</p>
-</aside>
+    // A reader's bottom line on a real paper should not turn up in searches
+    // for that paper's title.
+    index: false,
+    // What the note says a person did is what store/capture.spec.ts does.
+    main: `<h1>Example one-page summary</h1>
+<div class="note">
+<p>This is a one-page summary exported from Journal Club Helper, unedited, for a published meta-analysis in The BMJ. For this example a person did what a reader would: typed the PICO, chose which of the abstract's ratios to use and entered the baseline risk to apply it to, marked two checklist questions Unclear with a note on each, and wrote the bottom line. The rest is what the extension filled in or calculated, or left blank for the reader.</p>
+<p>The absolute figures are calculated from the relative risk and that baseline risk, so they differ a little from the crude rates the abstract reports. The bottom line only shows what a reader might write. It is not a clinical conclusion and not advice.</p>
+<p><a href="/sample/summary.md">The exported Markdown file</a> is available as well.</p>
+</div>
 ${html}`,
   });
 }

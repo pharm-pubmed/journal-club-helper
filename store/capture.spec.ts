@@ -42,6 +42,8 @@ const PICO = {
 const RATIO_RAW = 'relative risk 0.83, 95% confidence interval 0.73 to 0.94';
 const BASELINE_RISK = '29.8';
 const EXPECTED_NNT = 'NNT 20 (95% CI 13–56)';
+const REGISTRATION_NOTE =
+  'PROSPERO CRD42022314856 is named. Check that it was registered before the last search, 4 March 2022.';
 const SEARCH_NOTE =
   'Three databases are named. Trial registries and unpublished data are not mentioned: check the methods.';
 const BOTTOM_LINE =
@@ -200,13 +202,19 @@ test('store listing images', async ({ context, page, extensionId }) => {
     'Apply a ratio from the abstract to a baseline risk and see the ARR and the NNT, with the 95% CI carried over.',
   );
 
-  // 3. The appraisal checklist, answered from what the abstract says.
+  // 3. The appraisal checklist, as far as the abstract goes. It names a
+  // registration but not its date, and three databases but nothing beyond
+  // them, so both questions stay Unclear, each with what to check.
   await tab(panel, 'Appraisal');
-  await item(panel, 'Prespecified question').locator('.validity-choice--yes').click();
-  const search = item(panel, 'Search comprehensiveness');
-  await search.locator('.validity-choice--unclear').click();
-  await search.getByText('Add a note').click();
-  await search.locator('.validity-note').fill(SEARCH_NOTE);
+  for (const [concept, note] of [
+    ['Prespecified question', REGISTRATION_NOTE],
+    ['Search comprehensiveness', SEARCH_NOTE],
+  ] as const) {
+    const question = item(panel, concept);
+    await question.locator('.validity-choice--unclear').click();
+    await question.getByText('Add a note').click();
+    await question.locator('.validity-note').fill(note);
+  }
   await blur(panel);
   await panel
     .locator('.validity-section__title')
@@ -240,13 +248,19 @@ test('store listing images', async ({ context, page, extensionId }) => {
 
   // The landing site's example output is this appraisal's summary, saved
   // through the panel's own Download button so it is the file a reader gets.
+  // The note above it (samplePage in scripts/build-site.mjs) lists what was
+  // entered by hand here: change both together.
   const [download] = await Promise.all([
     panel.waitForEvent('download'),
     panel.getByRole('button', { name: 'Download .md' }).click(),
   ]);
   mkdirSync('site/sample', { recursive: true });
   await download.saveAs('site/sample/summary.md');
-  expect(readFileSync('site/sample/summary.md', 'utf8')).toContain(BOTTOM_LINE);
+  const summary = readFileSync('site/sample/summary.md', 'utf8');
+  for (const text of [...Object.values(PICO), EXPECTED_NNT, REGISTRATION_NOTE, SEARCH_NOTE]) {
+    expect(summary).toContain(text);
+  }
+  expect(summary).toContain(BOTTOM_LINE);
 
   // 5. Settings, where the saved appraisal and the local counters are.
   const options = await context.newPage();

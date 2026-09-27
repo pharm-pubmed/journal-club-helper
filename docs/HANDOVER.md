@@ -215,7 +215,7 @@ A rejection names the policy it cites. Record it in §6 with what was changed, s
 
 ### Landing site (#29)
 
-`site/` is the whole landing site: `index.html` and `style.css` by hand, and `privacy/index.html`, `sample/index.html` and `favicon.svg` generated from `docs/PRIVACY.md`, `site/sample/summary.md` and `store/icon.svg` by `pnpm site` (`scripts/build-site.mjs`). CI fails if the generated files are out of date, so the published policy is always the committed one. There is no framework, no external font, no script and no analytics. Lighthouse gave 100 in every category, mobile and desktop, on a local server (2026-09-27).
+`site/` is the whole landing site: `index.html` and `style.css` by hand, and `privacy/index.html`, `sample/index.html` and `favicon.svg` generated from `docs/PRIVACY.md`, `site/sample/summary.md` and `store/icon.svg` by `pnpm site` (`scripts/build-site.mjs`). CI fails if the generated files are out of date, so the published policy is always the committed one. There is no framework, no external font, no script and no analytics. Lighthouse gave the home page and the privacy page 100 in every category, mobile and desktop, on a local server (2026-09-27). The example page has not been measured.
 
 - **Hosting:** GitHub Pages from the organization's repository, deployed by `.github/workflows/pages.yml`. It is chosen because it moves with the organization and costs nothing. The domain stays at the registrar, which transfers separately (§1). The workflow runs only by hand until #30, and it has never run.
 - **Going live, once #30 is done:**

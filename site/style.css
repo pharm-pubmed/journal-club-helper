@@ -201,7 +201,8 @@ img {
 }
 
 /* A long URL written out as its own link text must not widen a phone screen. */
-.doc a {
+.doc p > a,
+.doc li > a {
   overflow-wrap: anywhere;
 }
 
@@ -211,7 +212,8 @@ img {
 }
 
 .doc h2,
-.doc h3 {
+.doc h3,
+.doc h4 {
   line-height: 1.3;
   margin-top: 1.6em;
 }

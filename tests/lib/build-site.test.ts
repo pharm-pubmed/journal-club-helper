@@ -80,6 +80,34 @@ describe('the landing site builder', () => {
     );
   });
 
+  it('keeps a number that only continues a paragraph, and numbers a list from where it starts', () => {
+    expect(markdownToHtml('# T\nPublished in\n2022. It was large.').html).toBe(
+      '<h1>T</h1>\n<p>Published in 2022. It was large.</p>',
+    );
+    expect(markdownToHtml('# T\nQuestions:\n1. First').html).toBe(
+      '<h1>T</h1>\n<p>Questions:</p>\n<ol><li>First</li></ol>',
+    );
+    expect(markdownToHtml('# T\n\n2022. PMID 1.').html).toBe(
+      '<h1>T</h1>\n<ol start="2022"><li>PMID 1.</li></ol>',
+    );
+  });
+
+  it('reads a line that starts with # but is not a heading as text, instead of stopping', () => {
+    expect(markdownToHtml('# T\n\n#1 finding\nmore').html).toBe(
+      '<h1>T</h1>\n<p>#1 finding more</p>',
+    );
+  });
+
+  it('keeps parentheses inside a link target, as in some DOIs', () => {
+    expect(inline('[doi](https://doi.org/10.1016/S0140-6736(20)30183-5).')).toBe(
+      '<a href="https://doi.org/10.1016/S0140-6736(20)30183-5">doi</a>.',
+    );
+  });
+
+  it('moves headings down when the page has its own h1', () => {
+    expect(markdownToHtml('# T\n\n## S', { headingOffset: 1 }).html).toBe('<h2>T</h2>\n<h3>S</h3>');
+  });
+
   it('fails on Markdown it does not understand instead of publishing it half-converted', () => {
     expect(() => markdownToHtml('# T\n\n* starred')).toThrow(/Unsupported Markdown/);
     expect(() => markdownToHtml('# T\n\n```\ncode\n```')).toThrow(/Unsupported Markdown/);
@@ -97,8 +125,10 @@ describe('the landing site builder', () => {
   it('publishes the example summary with the note on what a person typed', () => {
     const markdown = readFileSync('site/sample/summary.md', 'utf8');
     const page: string = samplePage(markdown);
-    expect(page).toContain('typed in by hand');
+    expect(page).toContain('<h1>Example one-page summary</h1>');
+    expect(page).toContain('a person did what a reader would');
     expect(page).toContain('not a clinical conclusion');
+    expect(page).toContain('<meta name="robots" content="noindex" />');
     for (const [, text] of markdown.matchAll(/^#{1,3} (.+)$/gm)) {
       expect(page).toContain(`>${inline(text)}</h`);
     }

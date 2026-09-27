@@ -42,7 +42,7 @@ An Unclear verdict means the source above does not settle that question: it reco
 
 | # | Item | Verdict |
 | --- | --- | --- |
-| 1 | Were the question and the eligibility rules set down before the search began, in a protocol or registration that can be checked? | Yes |
+| 1 | Were the question and the eligibility rules set down before the search began, in a protocol or registration that can be checked? | Unclear |
 | 2 | Was the search wide enough to find the evidence, covering more than one database and reaching beyond what is easy to retrieve? | Unclear |
 | 3 | Did two or more people screen the records and extract the data independently, with a stated way of settling disagreements? | — |
 | 4 | Was each included study appraised for how it was conducted, and does that appraisal feed into what the review concludes? | — |
@@ -76,6 +76,7 @@ Items answered No — judgements the reader made, about the study or about its f
 
 Items answered Unclear — the source used does not settle these, which is not a finding against the study:
 
+- Item 1: PROSPERO CRD42022314856 is named. Check that it was registered before the last search, 4 March 2022. Usually needs the protocol, the statistical analysis plan or the trial registry.
 - Item 2: Three databases are named. Trial registries and unpublished data are not mentioned: check the methods. Usually needs the full text — an abstract rarely has this detail.
 
 ## Bottom line
