@@ -35,6 +35,10 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # The published privacy policy is generated from docs/PRIVACY.md (#29).
+      - name: Landing site is up to date
+        run: node scripts/build-site.mjs --check
+
       - name: Unit tests
         run: pnpm test -- --coverage
 

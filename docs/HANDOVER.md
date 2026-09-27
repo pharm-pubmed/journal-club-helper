@@ -8,7 +8,7 @@ Everything a new owner needs to build, release, and operate this extension. Star
 | ------------------------------------------- | --------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
 | GitHub repository                           | `piroshi1989/journal-club-helper` | personal account | Spec §10 requires a dedicated GitHub Org. Transfer the repo once the org exists (tracked in issues). |
 | Google account (Chrome Web Store developer) | —                                 | not created      | Must be a dedicated account, never the personal one. Needed before v0.3 submission.                  |
-| Domain (landing page, privacy policy)       | —                                 | not registered   | Use a registrar that makes transfer easy.                                                            |
+| Domain (landing page, privacy policy)       | —                                 | not registered   | Use a registrar that makes transfer easy. Hosting is GitHub Pages; see §3, _Landing site_.           |
 | ExtensionPay / Stripe                       | —                                 | not created      | v0.2. Check transferability before committing (spec §10).                                            |
 | Anthropic / OpenAI                          | none                              | n/a              | Users bring their own API keys. The project holds no provider account.                               |
 | Bank account for revenue / costs            | —                                 | not created      | Keep separate from personal finances.                                                                |
@@ -209,6 +209,19 @@ Written before the first submission, so each step is a plan, not yet a record. C
 8. Once it is live, publish the draft GitHub release from step 4 as a full release (not a pre-release), with the store version in its notes. The tag then marks the exact package the store has.
 
 A rejection names the policy it cites. Record it in §6 with what was changed, since the next reviewer may raise the same thing.
+
+### Landing site (#29)
+
+`site/` is the whole landing site: `index.html` and `style.css` by hand, and `privacy/index.html` and `favicon.svg` generated from `docs/PRIVACY.md` and `store/icon.svg` by `pnpm site` (`scripts/build-site.mjs`). CI fails if the generated files are out of date, so the published policy is always the committed one. There is no framework, no external font, no script and no analytics. Lighthouse gave 100 in every category, mobile and desktop, on a local server (2026-09-27).
+
+- **Hosting:** GitHub Pages from the organization's repository, deployed by `.github/workflows/pages.yml`. It is chosen because it moves with the organization and costs nothing. The domain stays at the registrar, which transfers separately (§1). The workflow runs only by hand until #30, and it has never run.
+- **Going live, once #30 is done:**
+  1. Enable Pages with the source set to GitHub Actions.
+  2. Add the custom domain in the repository's Pages settings, and add the DNS records GitHub lists at the registrar. Enforce HTTPS.
+  3. Verify the domain in Google Search Console under the publisher account (§3).
+  4. Replace the `TBD(#nn)` placeholders in `site/index.html`: the store link and the contact.
+  5. Run the workflow, and add the push trigger its comment describes.
+- **Images:** `site/img/*.png` are the unframed panel images from `pnpm store:assets`, so they change together with the store screenshots.
 
 ## 4. Known issues
 

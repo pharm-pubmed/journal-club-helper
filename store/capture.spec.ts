@@ -5,7 +5,8 @@
  * Every panel image is the real build on the saved page of a real public
  * abstract: the BMJ meta-analysis in tests/e2e/pmids.ts. The reader's input is
  * entered through the panel's own controls. The captions and the frame around
- * each image are added afterwards.
+ * each image are added afterwards. Three panel images are also kept unframed
+ * for the landing page, in site/img.
  *
  * Playwright cannot screenshot the side panel, which is browser UI, so the
  * panel's page is opened in an ordinary tab instead. One thing is changed to
@@ -17,7 +18,7 @@
  * listing. The fonts are whatever `system-ui` is on the machine that renders
  * the images, so a re-run elsewhere changes every PNG slightly.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import type { BrowserContext, Locator, Page } from '@playwright/test';
 import { LIVE, expect, openPubMed, test } from '../tests/e2e/fixtures';
 import { META_ANALYSIS, articleUrl } from '../tests/e2e/pmids';
@@ -25,6 +26,8 @@ import { META_ANALYSIS, articleUrl } from '../tests/e2e/pmids';
 const RECORD = META_ANALYSIS;
 const PANEL = { width: 400, height: 720 };
 const OPTIONS = { width: 720, height: 720 };
+/** The landing page (#29) shows three of the panel images unframed. */
+const SITE_IMAGES = 'site/img';
 const ICON = `data:image/svg+xml;base64,${readFileSync('store/icon.svg').toString('base64')}`;
 
 /** What the reader enters. All of it is from the abstract of PMID 36740866. */
@@ -47,6 +50,13 @@ const BOTTOM_LINE =
 /** Fills a field. `fill` fires the input event Preact listens for. */
 async function type(page: Page, selector: string, text: string): Promise<void> {
   await page.locator(selector).fill(text);
+}
+
+/** Screenshots the panel, keeping an unframed copy for the landing page when `site` is named. */
+async function shoot(page: Page, site?: string): Promise<Buffer> {
+  const shot = await page.screenshot();
+  if (site) writeFileSync(`${SITE_IMAGES}/${site}.png`, shot);
+  return shot;
 }
 
 /** Drops the focus ring the last field typed in would otherwise show. */
@@ -151,6 +161,7 @@ test('store listing images', async ({ context, page, extensionId }) => {
   await openPubMed(page, articleUrl(RECORD), 'article');
   await expect(page.locator('#jch-open')).toBeVisible();
   const panel = await openPanelInTab(context, extensionId);
+  mkdirSync(SITE_IMAGES, { recursive: true });
 
   // 1. The design header with its evidence, and a PICO the reader has written.
   await panel.locator('.design__evidence-summary').click();
@@ -182,7 +193,7 @@ test('store listing images', async ({ context, page, extensionId }) => {
   await frame(
     context,
     'store/screenshot-2.png',
-    await panel.screenshot(),
+    await shoot(panel, 'numbers'),
     PANEL,
     'Get the absolute effect, not just the relative one',
     'Apply a ratio from the abstract to a baseline risk and see the ARR and the NNT, with the 95% CI carried over.',
@@ -206,7 +217,7 @@ test('store listing images', async ({ context, page, extensionId }) => {
   await frame(
     context,
     'store/screenshot-3.png',
-    await panel.screenshot(),
+    await shoot(panel, 'appraisal'),
     PANEL,
     'Work through risk of bias, one question at a time',
     'Checklists written for each study design. Each question says what to look for, and whether the abstract can settle it.',
@@ -220,7 +231,7 @@ test('store listing images', async ({ context, page, extensionId }) => {
   await frame(
     context,
     'store/screenshot-4.png',
-    await panel.screenshot(),
+    await shoot(panel, 'export'),
     PANEL,
     'Take a one-page summary to journal club',
     'Citation, question, design, absolute effect, validity and your own bottom line. Copy it as Markdown or text, or download it.',
