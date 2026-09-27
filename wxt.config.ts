@@ -38,7 +38,8 @@ export default defineConfig({
     // below. Removed after the Chrome manual QA in #25; see HANDOVER §7.
     permissions: ['storage', 'sidePanel'],
     host_permissions: ['https://pubmed.ncbi.nlm.nih.gov/*'],
-    // Only the host the E-utilities fallback (#23) will ask for. The AI provider
+    // Only the host the E-utilities fallback (#23) asks for, when the reader
+    // clicks "Fetch from NCBI" on a page that could not be read. The AI provider
     // hosts were declared here before any code could request them, which leaves
     // a store reviewer asking what the extension does with api.anthropic.com and
     // the shipped code having no answer. They come back with #34/#35 in v0.2.

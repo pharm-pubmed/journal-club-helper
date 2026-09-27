@@ -33,11 +33,11 @@ Worth stating in the review notes, because it is unusual and it is verifiable fr
 
 ### Optional host permissions
 
-Requested at runtime through `chrome.permissions.request`, only when the user turns the matching feature on, never at install.
+Requested at runtime through `chrome.permissions.request`, only when the user asks for the feature that needs it, never at install.
 
-| Host                                | Feature                                                         | Status                                     |
-| ----------------------------------- | --------------------------------------------------------------- | ------------------------------------------ |
-| `https://eutils.ncbi.nlm.nih.gov/*` | NCBI E-utilities fallback when the page markup cannot be parsed | Not implemented yet (#23, planned for 0.3) |
+| Host                                | Feature                                                         | Status                                                                                                                                                   |
+| ----------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `https://eutils.ncbi.nlm.nih.gov/*` | NCBI E-utilities fallback when the page markup cannot be parsed | Requested when the user clicks "Fetch from NCBI" on a page the extension could not read (#23). Sends the PMID and the tool name, nothing the user wrote. |
 
 The AI provider hosts (`api.anthropic.com`, `api.openai.com`) were declared here and have been **removed** until the feature that uses them ships in 0.2 (#34, #35). Declaring a host no code path can reach leaves a reviewer's question — "what does this extension do with `api.anthropic.com`?" — with no answer in the binary. Same reasoning that removed `activeTab`. Restoring them at 0.2 is a manifest change at a version bump, not a re-review of the item.
 
@@ -48,10 +48,12 @@ For the store's data-use disclosure form:
 - **Personally identifiable information:** none collected.
 - **Health information:** none collected. The extension reads published abstracts, not patient data, and the user's own notes never leave the device.
 - **Financial, authentication, personal communications, location, web history, user activity:** none collected.
-- **Website content:** read locally from the PubMed page the user is viewing, to populate the appraisal form. Not transmitted.
+- **Website content:** read locally from the PubMed page the user is viewing, to populate the appraisal form. Not transmitted, with one exception from the next release: when the page cannot be read and the user asks, its PMID is sent to NCBI E-utilities to fetch the same record.
 - **Sold to third parties:** no. **Used or transferred for purposes unrelated to the single purpose:** no. **Used or transferred to determine creditworthiness:** no.
 
-In 0.1.0 the extension makes **no network request of any kind**. The options page states this to the user and invites them to confirm it in the Network tab. When the AI features land in 0.2 this section has to be rewritten: the abstract text, title and publication types would be sent to the provider the user chose, with the user's own API key, and the user's own notes would still never be sent.
+In 0.1.0 the extension makes **no network request of any kind**. The options page states this to the user and invites them to confirm it in the Network tab.
+
+From the next release there is one exception. When a PubMed page cannot be read, the panel offers to fetch the same record from NCBI E-utilities. Nothing is sent until the user clicks that offer, and the first time also grants the optional host permission. The request carries the PMID of the page and the tool name `journal-club-helper`, plus what any HTTPS request carries (IP address, user agent). The contact address NCBI asks for is added once the project mailbox exists (#30). None of the user's own notes or answers are in it. When the AI features land in 0.2 this section has to be rewritten: the abstract text, title and publication types would be sent to the provider the user chose, with the user's own API key, and the user's own notes would still never be sent.
 
 ## Remote code
 
@@ -66,4 +68,4 @@ None. No `eval`, no remotely hosted scripts, no CDN. Everything executed is in t
 
 ## Reviewer notes (paste into the submission form)
 
-> The extension runs only on `https://pubmed.ncbi.nlm.nih.gov/<PMID>/`. On such a page it adds one button next to the Abstract heading; clicking it opens a side panel containing an appraisal form the user fills in. It holds two permissions, `storage` and `sidePanel`, plus one host permission for PubMed. It makes no network requests and collects no data. Source: https://github.com/piroshi1989/journal-club-helper
+> The extension runs only on `https://pubmed.ncbi.nlm.nih.gov/<PMID>/`. On such a page it adds one button next to the Abstract heading; clicking it opens a side panel containing an appraisal form the user fills in. It holds two permissions, `storage` and `sidePanel`, plus one host permission for PubMed. It collects no data. Its only network request, to NCBI E-utilities, is made when a page cannot be read and the user asks for it and grants the optional permission; it sends the PMID. Source: https://github.com/piroshi1989/journal-club-helper

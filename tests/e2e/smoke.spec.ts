@@ -10,7 +10,15 @@
 import type { Page, Worker } from '@playwright/test';
 import type { PubMedArticle } from '../../src/lib/types';
 import { DESIGN_LABELS } from '../../src/ui/labels';
-import { LIVE, evaluateInPanel, expect, getArticle, openPubMed, test } from './fixtures';
+import {
+  LIVE,
+  evaluateInPanel,
+  expect,
+  getArticle,
+  openPubMed,
+  test,
+  unreadablePage,
+} from './fixtures';
 import { RCT, RCT_PERCENT_PAIR, RECORDS, SEARCH_URL, articleUrl, type SmokeRecord } from './pmids';
 
 const BUTTON_MISSING =
@@ -202,3 +210,76 @@ for (const closer of CLOSERS) {
       .toBe(`field: ${bottomLine}`);
   });
 }
+
+test('5. a page that cannot be read offers NCBI, asks inside the click, and sends nothing without the grant', async ({
+  page,
+  extensionId,
+}) => {
+  test.skip(LIVE, 'needs a page whose markup is broken on purpose, which only the fixtures have');
+  const url = articleUrl(RCT);
+  await page.route(url, (route) =>
+    route.fulfill({ contentType: 'text/html; charset=utf-8', body: unreadablePage() }),
+  );
+  await openPubMed(page, url, 'article');
+  await expect(page.locator('#jch-open'), BUTTON_MISSING).toBeVisible();
+  await page.locator('#jch-open').click();
+  await expect
+    .poll(() =>
+      evaluateInPanel<string>(page, extensionId, 'document.body.innerText').catch(
+        (error: Error) => error.message,
+      ),
+    )
+    .toContain(`Only the PMID (${RCT.pmid})`);
+
+  // The route above does not see requests from the panel, and neither does
+  // Resource Timing there, so the panel's own fetch and permission request are
+  // wrapped and read back. The extension makes requests with fetch and nothing
+  // else. Whether the request ran inside the click is read from the page's
+  // user activation at the moment it was made.
+  const spy = `(() => {
+    window.__jch = { fetches: [], requests: [] };
+    const fetch = window.fetch.bind(window);
+    window.fetch = (...args) => {
+      window.__jch.fetches.push(String(args[0] instanceof Request ? args[0].url : args[0]));
+      return fetch(...args);
+    };
+    const request = chrome.permissions.request.bind(chrome.permissions);
+    chrome.permissions.request = (options) => {
+      window.__jch.requests.push({ options, activated: navigator.userActivation.isActive });
+      return request(options);
+    };
+    return 'spying';
+  })()`;
+  expect(await evaluateInPanel<string>(page, extensionId, spy)).toBe('spying');
+
+  // A headless browser never answers the permission prompt, so this is the
+  // state of a reader who has not granted it (yet).
+  const click = `(() => {
+    const button = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Fetch from NCBI');
+    if (!button) return 'no button';
+    button.click();
+    return 'clicked';
+  })()`;
+  expect(await evaluateInPanel<string>(page, extensionId, click, { userGesture: true })).toBe(
+    'clicked',
+  );
+  await page.waitForTimeout(1500);
+  const seen = JSON.parse(
+    await evaluateInPanel<string>(page, extensionId, 'JSON.stringify(window.__jch)'),
+  ) as { fetches: string[]; requests: { options: unknown; activated: boolean }[] };
+  expect(seen.requests).toEqual([
+    { options: { origins: ['https://eutils.ncbi.nlm.nih.gov/*'] }, activated: true },
+  ]);
+  expect(seen.fetches).toEqual([]);
+  const panelText = await evaluateInPanel<string>(page, extensionId, 'document.body.innerText');
+  expect(panelText).toContain(`Fetching PMID ${RCT.pmid} from NCBI`);
+  expect(panelText).not.toContain('Study design:');
+
+  // The control: the fetch spy does record a fetch, so the empty list above
+  // means something. There is no such control for `activated`: activation
+  // stays live for a few seconds after a click, so it shows only that the
+  // request followed one. That the request is the first thing the click does
+  // is pinned by tests/ui/use-article.test.ts.
+  const control = `fetch('data:text/plain,x').then(() => JSON.stringify(window.__jch.fetches))`;
+  expect(await evaluateInPanel<string>(page, extensionId, control)).toBe('["data:text/plain,x"]');
+});

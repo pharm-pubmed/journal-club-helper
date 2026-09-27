@@ -121,10 +121,13 @@ export default defineContentScript({
     // but this runs on a page nobody here controls and one unexpected shape must
     // not take the button down with it: the panel can say it could not read the
     // page, whereas a reader with no button has no way in at all.
-    const article: PubMedArticle | null = readArticle();
-
+    //
+    // Read on every request rather than once at load, so the panel's "Read the
+    // page again" means what it says (#23). A page is a few kilobytes of DOM;
+    // reading it costs less than a millisecond.
     chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
       if (!hasType(message, 'GET_ARTICLE')) return false;
+      const article: PubMedArticle | null = readArticle();
       const response: GetArticleResponse = { article };
       sendResponse(response);
       return false;
