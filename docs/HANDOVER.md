@@ -9,7 +9,7 @@ Everything a new owner needs to build, release, and operate this extension. Star
 | GitHub repository                           | `piroshi1989/journal-club-helper` | personal account | Spec §10 requires a dedicated GitHub Org. Transfer the repo once the org exists (tracked in issues). |
 | Google account (Chrome Web Store developer) | —                                 | not created      | Must be a dedicated account, never the personal one. Needed before v0.3 submission.                  |
 | Domain (landing page, privacy policy)       | —                                 | not registered   | Use a registrar that makes transfer easy. Hosting is GitHub Pages; see §3, _Landing site_.           |
-| ExtensionPay / Stripe                       | —                                 | not created      | v0.2. Check transferability before committing (spec §10).                                            |
+| ExtensionPay / Stripe                       | —                                 | not created      | After demand validation. Check costs and operating/transfer terms before billing (spec §4.8).        |
 | Anthropic / OpenAI                          | none                              | n/a              | Users bring their own API keys. The project holds no provider account.                               |
 | Bank account for revenue / costs            | —                                 | not created      | Keep separate from personal finances.                                                                |
 
@@ -317,7 +317,7 @@ The e2e smoke tests (§5) drive the built extension in Chromium, side panel incl
 | ------------------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | PubMed abstract page DOM (`pubmed.ncbi.nlm.nih.gov/<PMID>/`) | Source of abstract text, publication types, MeSH, citation | Markup can change without notice; the site now blocks non-browser fetches      | Fixture tests in CI catch our regressions, not PubMed's changes; only the manual live run does (§7). E-utilities fallback on request (#23) |
 | NCBI E-utilities `efetch`                                    | Fallback when DOM parsing fails                            | Rate limit ≤ 3 req/s without key; wants `tool` and `email` as query parameters | Requested only after a click and a grant; 3-a-second limiter; `email` is empty until #30                                                   |
-| ExtensionPay (v0.2)                                          | Billing                                                    | Transferability on sale unknown                                                | `src/lib/license.ts` abstraction; Stripe Checkout + license key as fallback                                                                |
+| ExtensionPay (v0.2)                                          | Billing                                                    | Transferability on sale unknown                                                | Evaluate after demand validation; isolate license checks when implemented; no automatic custom-backend fallback                            |
 | Anthropic / OpenAI APIs (v0.2)                               | AI extraction with user's key                              | API changes, cost, model retirement                                            | Provider abstraction (`src/lib/ai/`); prompts in `src/prompts/*.md`; model ids and prices in `anthropic.ts`, checked 2026-09-26            |
 | Chrome Side Panel API                                        | Panel UI                                                   | `sidePanel.open()` needs Chrome 116+ and a user gesture                        | `minimum_chrome_version` is `"116"` and CI enforces it; verify on Edge / Brave                                                             |
 
@@ -578,11 +578,15 @@ The default model is Claude Sonnet 5, at about a cent a run. Opus 5.5 is the oth
   - #35 should first check whether it is needed at all. The browser-access header exists so that Anthropic answers cross-origin requests, and an extension page can fetch a CORS-enabled origin without a host permission. If that works, declaring nothing is the better answer.
 - A test against the real API. The acceptance run with a real key is manual and has not been done.
 
-### Billing: ask before building (#37, #36)
+### Monetization: validate the workflow before billing (#37, #36)
 
-Spec §10 makes transferability a first-order requirement. So the first step is asking ExtensionPay whether an account transfers to a buyer, not writing code. If it does, use it and ship v0.2 quickly; if it does not, build on Stripe Checkout plus signed licence keys from the start and never migrate paying subscribers.
+The 2026-09-27 strategy revision in spec §4.8 and §7–§11 supersedes the earlier AI-only paid plan and the assumption of a sale within 12–18 months. Publish the free MVP and observe actual journal-club preparation first. Keep existing free features available. Test one editable presentation-export template as the paid value; BYOK AI is optional assistance, not the only reason to pay. Neither paid exports nor billing is implemented.
 
-`$4/month` and `$29/year` remain placeholders. No price appears in the code, the store listing or the landing page until #36 is picked up.
+The first price to test is `$39/year`, an unvalidated hypothesis replacing `$4/month` and `$29/year`. Use the spec's small-cohort completion, repeat-use and actual-purchase gates. Do not treat store installs or local counters as a measured conversion funnel. The extension still has no telemetry, and the current privacy policy continues to describe the shipped free version.
+
+ExtensionPay is a candidate, not a dependency selected for implementation. Check current fees, payment restoration, refunds and transfer options before billing goes live. A transferability question must not block free release or demand validation; do not build a custom Stripe licensing backend solely for a hypothetical sale. Billing will require updated network, privacy and permission disclosures.
+
+Existing issues #35–#37 and milestone labels have not been updated by this documentation change. Reconcile their acceptance criteria with the revised spec before implementation. The historical weekly log records the former decision to block the AI panel on billing; that is no longer the roadmap dependency.
 
 ### English only until after v1.0 (#41)
 

@@ -6,7 +6,9 @@ It does **not** summarize papers. It provides the appraisal template and fills i
 
 ## Status
 
-Pre-alpha. Work is tracked in GitHub issues and milestones (v0.1 MVP → v0.2 Paid features → v0.3 Public release → v1.0).
+Pre-alpha. Publish and validate the free MVP before investing in paid features. Existing GitHub milestone labels are v0.1 MVP, v0.2 Paid features, v0.3 Public release and v1.0; the planned execution order is MVP → free public release → paid validation. Issue and milestone updates are still pending.
+
+The monetization plan in [the product spec](docs/SPEC.ja.md) tests presentation-ready exports as the paid value, with optional AI assistance. The initial $39/year price is an unvalidated hypothesis. Paid exports and billing are not implemented.
 
 ## Positioning
 
