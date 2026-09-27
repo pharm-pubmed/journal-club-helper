@@ -215,7 +215,7 @@ A rejection names the policy it cites. Record it in §6 with what was changed, s
 
 ### Landing site (#29)
 
-`site/` is the whole landing site: `index.html` and `style.css` by hand, and `privacy/index.html` and `favicon.svg` generated from `docs/PRIVACY.md` and `store/icon.svg` by `pnpm site` (`scripts/build-site.mjs`). CI fails if the generated files are out of date, so the published policy is always the committed one. There is no framework, no external font, no script and no analytics. Lighthouse gave 100 in every category, mobile and desktop, on a local server (2026-09-27).
+`site/` is the whole landing site: `index.html` and `style.css` by hand, and `privacy/index.html`, `sample/index.html` and `favicon.svg` generated from `docs/PRIVACY.md`, `site/sample/summary.md` and `store/icon.svg` by `pnpm site` (`scripts/build-site.mjs`). CI fails if the generated files are out of date, so the published policy is always the committed one. There is no framework, no external font, no script and no analytics. Lighthouse gave 100 in every category, mobile and desktop, on a local server (2026-09-27).
 
 - **Hosting:** GitHub Pages from the organization's repository, deployed by `.github/workflows/pages.yml`. It is chosen because it moves with the organization and costs nothing. The domain stays at the registrar, which transfers separately (§1). The workflow runs only by hand until #30, and it has never run.
 - **Going live, once #30 is done:**
@@ -225,6 +225,7 @@ A rejection names the policy it cites. Record it in §6 with what was changed, s
   4. Replace the `TBD(#nn)` placeholders in `site/index.html`: the store link and the contact.
   5. Run the workflow, and add the push trigger its comment describes.
 - **Images:** `site/img/*.png` are the unframed panel images from `pnpm store:assets`, so they change together with the store screenshots.
+- **Example summary:** `site/sample/summary.md` is the file the Export tab's **Download .md** saves for the screenshot appraisal, also written by `pnpm store:assets` and linked from the page as the example output (spec §11). A note above it says which parts were typed in by hand. CI checks only that its page matches it, not that it matches the current summary format, so run `pnpm store:assets` again whenever `src/lib/summary-builder.ts` changes what the summary says.
 
 ## 4. Known issues
 

@@ -1,12 +1,13 @@
 /**
- * The Markdown reader that publishes docs/PRIVACY.md on the landing site (#29).
- * It only has to cover what the policy uses, but it must never pass markup
- * through unescaped or publish a link that is not https.
+ * The Markdown reader that publishes docs/PRIVACY.md and the example summary
+ * on the landing site (#29). It only has to cover what those two files use,
+ * but it must never pass markup through unescaped or publish a link that is
+ * not https.
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error -- a plain .mjs script with no type declarations.
-import { inline, markdownToHtml, privacyPage } from '../../scripts/build-site.mjs';
+import { inline, markdownToHtml, privacyPage, samplePage } from '../../scripts/build-site.mjs';
 
 describe('the landing site builder', () => {
   it('escapes HTML in text and in code spans', () => {
@@ -56,8 +57,31 @@ describe('the landing site builder', () => {
     );
   });
 
+  it('reads numbered lists, empty items included, and escaped pipes in a table cell', () => {
+    const { html } = markdownToHtml(
+      [
+        '# T',
+        'Questions:',
+        '1. First',
+        '2.',
+        '',
+        '| Element | Detail |',
+        '| --- | --- |',
+        '| Outcome | death \\| stroke |',
+      ].join('\n'),
+    );
+    expect(html).toBe(
+      [
+        '<h1>T</h1>',
+        '<p>Questions:</p>',
+        '<ol><li>First</li><li></li></ol>',
+        '<table><thead><tr><th>Element</th><th>Detail</th></tr></thead><tbody><tr><td>Outcome</td><td>death | stroke</td></tr></tbody></table>',
+      ].join('\n'),
+    );
+  });
+
   it('fails on Markdown it does not understand instead of publishing it half-converted', () => {
-    expect(() => markdownToHtml('# T\n\n1. numbered')).toThrow(/Unsupported Markdown/);
+    expect(() => markdownToHtml('# T\n\n* starred')).toThrow(/Unsupported Markdown/);
     expect(() => markdownToHtml('# T\n\n```\ncode\n```')).toThrow(/Unsupported Markdown/);
     expect(() => markdownToHtml('no heading')).toThrow(/No top-level heading/);
   });
@@ -65,6 +89,16 @@ describe('the landing site builder', () => {
   it('publishes every heading of the committed policy', () => {
     const markdown = readFileSync('docs/PRIVACY.md', 'utf8');
     const page: string = privacyPage(markdown);
+    for (const [, text] of markdown.matchAll(/^#{1,3} (.+)$/gm)) {
+      expect(page).toContain(`>${inline(text)}</h`);
+    }
+  });
+
+  it('publishes the example summary with the note on what a person typed', () => {
+    const markdown = readFileSync('site/sample/summary.md', 'utf8');
+    const page: string = samplePage(markdown);
+    expect(page).toContain('typed in by hand');
+    expect(page).toContain('not a clinical conclusion');
     for (const [, text] of markdown.matchAll(/^#{1,3} (.+)$/gm)) {
       expect(page).toContain(`>${inline(text)}</h`);
     }

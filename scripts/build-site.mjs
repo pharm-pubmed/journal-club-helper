@@ -1,13 +1,16 @@
 // Builds the generated parts of the landing site (#29) from their sources:
 //
 //   site/privacy/index.html  from docs/PRIVACY.md (#28)
+//   site/sample/index.html   from site/sample/summary.md, a real export that
+//                            `pnpm store:assets` downloads from the extension
 //   site/favicon.svg         from store/icon.svg (#27)
 //
-// `node scripts/build-site.mjs` writes them; `--check` fails if either is out
-// of date, which CI runs, so the published policy cannot drift from the
-// committed one. The Markdown reader covers only what PRIVACY.md uses:
-// headings, paragraphs, lists, tables, bold, inline code and links. Anything
-// else is an error rather than being passed through half-converted.
+// `node scripts/build-site.mjs` writes them; `--check` fails if any is out of
+// date, which CI runs, so the published policy cannot drift from the
+// committed one. The Markdown reader covers only what those two files use:
+// headings, paragraphs, bulleted and numbered lists, tables (with `\|` inside
+// a cell), bold, inline code and links. Anything else is an error rather than
+// being passed through half-converted.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,12 +42,15 @@ export function inline(text) {
   return out.join('');
 }
 
+/** A row's cells. The summary writes a `|` inside a cell as `\|`. */
 const cells = (row) =>
   row
     .trim()
-    .replace(/^\||\|$/g, '')
-    .split('|')
-    .map((cell) => cell.trim());
+    .replace(/^\||(?<!\\)\|$/g, '')
+    .split(/(?<!\\)\|/)
+    .map((cell) => cell.trim().replace(/\\\|/g, '|'));
+
+const ORDERED = /^\d+\.(?: |$)/;
 
 /** Converts the Markdown subset above to HTML. Returns `{ title, html }`. */
 export function markdownToHtml(markdown) {
@@ -98,11 +104,26 @@ export function markdownToHtml(markdown) {
       html.push(`<ul>${items.join('')}</ul>`);
       continue;
     }
-    if (/^(\d+\. |[*+] |>|```|<)/.test(line.trim()) || /^ {2,}/.test(line)) {
+    if (ORDERED.test(line)) {
+      // The summary leaves its discussion questions as empty numbered items
+      // for the reader to fill in, so an item may have no text.
+      const items = [];
+      while (i < lines.length && ORDERED.test(lines[i])) {
+        items.push(`<li>${inline(lines[i++].replace(ORDERED, ''))}</li>`);
+      }
+      html.push(`<ol>${items.join('')}</ol>`);
+      continue;
+    }
+    if (/^([*+] |>|```|<)/.test(line.trim()) || /^ {2,}/.test(line)) {
       throw new Error(`Unsupported Markdown, extend scripts/build-site.mjs: ${line}`);
     }
     const paragraph = [];
-    while (i < lines.length && lines[i].trim() !== '' && !/^(#|\||- )/.test(lines[i])) {
+    while (
+      i < lines.length &&
+      lines[i].trim() !== '' &&
+      !/^(#|\||- )/.test(lines[i]) &&
+      !ORDERED.test(lines[i])
+    ) {
       paragraph.push(lines[i++].trim());
     }
     html.push(`<p>${inline(paragraph.join(' '))}</p>`);
@@ -111,16 +132,16 @@ export function markdownToHtml(markdown) {
   return { title, html: html.join('\n') };
 }
 
-export function privacyPage(markdown) {
-  const { html } = markdownToHtml(markdown);
+/** The page around generated content. `source` names the file to edit instead. */
+function layout({ source, title, description, main }) {
   return `<!doctype html>
-<!-- Generated from docs/PRIVACY.md by scripts/build-site.mjs. Edit that file, not this one. -->
+<!-- Generated from ${source} by scripts/build-site.mjs. Edit that file, not this one. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Privacy policy · Journal Club Helper</title>
-    <meta name="description" content="What Journal Club Helper stores, where, and the one request it makes only when you ask." />
+    <title>${title} · Journal Club Helper</title>
+    <meta name="description" content="${description}" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/style.css" />
   </head>
@@ -129,7 +150,7 @@ export function privacyPage(markdown) {
       <a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28" />Journal Club Helper</a>
     </header>
     <main class="doc">
-${html}
+${main}
     </main>
     <footer class="foot">
       <p>Educational use only. Not affiliated with NLM, NIH or HHS.</p>
@@ -139,10 +160,43 @@ ${html}
 `;
 }
 
+export function privacyPage(markdown) {
+  return layout({
+    source: 'docs/PRIVACY.md',
+    title: 'Privacy policy',
+    description:
+      'What Journal Club Helper stores, where, and the one request it makes only when you ask.',
+    main: markdownToHtml(markdown).html,
+  });
+}
+
+/**
+ * A real export, shown as the landing page's example of the output (spec
+ * §11). The note above it says which parts a person typed, so the example is
+ * never mistaken for something the extension concluded on its own.
+ */
+export function samplePage(markdown) {
+  const { html } = markdownToHtml(markdown);
+  return layout({
+    source: 'site/sample/summary.md',
+    title: 'Example one-page summary',
+    description: 'An unedited one-page summary exported from Journal Club Helper.',
+    main: `<aside class="note">
+<p><strong>Example.</strong> This is a one-page summary exported from Journal Club Helper and not edited since, for a published meta-analysis in The BMJ. For this example, the PICO, the baseline risk in the Numbers tab, two checklist answers with a note, and the bottom line were typed in by hand, as a reader would. The rest is what the extension filled in, or left for the reader.</p>
+<p>The bottom line only shows what a reader might write. It is not a clinical conclusion and not advice. The Markdown file itself is <a href="/sample/summary.md">here</a>.</p>
+</aside>
+${html}`,
+  });
+}
+
 const OUTPUTS = [
   {
     path: 'site/privacy/index.html',
     build: () => privacyPage(readFileSync('docs/PRIVACY.md', 'utf8')),
+  },
+  {
+    path: 'site/sample/index.html',
+    build: () => samplePage(readFileSync('site/sample/summary.md', 'utf8')),
   },
   { path: 'site/favicon.svg', build: () => readFileSync('store/icon.svg', 'utf8') },
 ];

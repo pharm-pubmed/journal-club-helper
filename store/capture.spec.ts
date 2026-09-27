@@ -6,7 +6,8 @@
  * abstract: the BMJ meta-analysis in tests/e2e/pmids.ts. The reader's input is
  * entered through the panel's own controls. The captions and the frame around
  * each image are added afterwards. Three panel images are also kept unframed
- * for the landing page, in site/img.
+ * for the landing page, in site/img, and the summary the Export tab downloads
+ * is saved as the site's example output, in site/sample.
  *
  * Playwright cannot screenshot the side panel, which is browser UI, so the
  * panel's page is opened in an ordinary tab instead. One thing is changed to
@@ -236,6 +237,16 @@ test('store listing images', async ({ context, page, extensionId }) => {
     'Take a one-page summary to journal club',
     'Citation, question, design, absolute effect, validity and your own bottom line. Copy it as Markdown or text, or download it.',
   );
+
+  // The landing site's example output is this appraisal's summary, saved
+  // through the panel's own Download button so it is the file a reader gets.
+  const [download] = await Promise.all([
+    panel.waitForEvent('download'),
+    panel.getByRole('button', { name: 'Download .md' }).click(),
+  ]);
+  mkdirSync('site/sample', { recursive: true });
+  await download.saveAs('site/sample/summary.md');
+  expect(readFileSync('site/sample/summary.md', 'utf8')).toContain(BOTTOM_LINE);
 
   // 5. Settings, where the saved appraisal and the local counters are.
   const options = await context.newPage();
