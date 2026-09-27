@@ -166,6 +166,40 @@ img {
   }
 }
 
+.demo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: center;
+}
+
+.demo p {
+  color: var(--muted);
+  max-width: 32em;
+}
+
+.demo p.demo__note {
+  font-size: 0.95rem;
+}
+
+.demo video {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.12);
+  justify-self: center;
+  background: #ffffff;
+}
+
+@media (min-width: 760px) {
+  .demo {
+    grid-template-columns: 1fr 400px;
+    gap: 48px;
+  }
+}
+
 .panel {
   background: var(--surface);
   border-radius: 12px;
