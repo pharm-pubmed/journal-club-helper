@@ -7,7 +7,7 @@ The permission arrays below are enforced, not described: `scripts/check-manifest
 - **Item:** Journal Club Helper: Critical Appraisal for PubMed
 - **Version:** 0.1.0 (not yet submitted)
 - **Minimum Chrome version:** 116 — `chrome.sidePanel.open()` is not available before it
-- **Listing assets:** #27 · **Privacy policy:** #28 · **Submission:** #31
+- **Listing text and assets:** [docs/STORE-LISTING.md](docs/STORE-LISTING.md), `store/` (#27) · **Privacy policy:** [docs/PRIVACY.md](docs/PRIVACY.md) (#28) · **Submission:** #31
 
 ## Single purpose
 
