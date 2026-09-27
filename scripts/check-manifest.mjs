@@ -69,9 +69,24 @@ if (manifest.minimum_chrome_version !== '116') {
   );
 }
 
+// The store takes the listing's name and summary from here (#27). Chrome caps
+// the summary at 132 characters and the name at 75. PubMed is the NLM's
+// trademark, so the name may describe the site but must not lead with it.
+if (typeof manifest.description !== 'string' || manifest.description.length > 132) {
+  problems.push(
+    `description must be at most 132 characters (store summary), got ${manifest.description?.length}`,
+  );
+}
+if (typeof manifest.name !== 'string' || manifest.name.length > 75) {
+  problems.push(`name must be at most 75 characters, got ${manifest.name?.length}`);
+}
+if (/^\s*pubmed/i.test(manifest.name ?? '')) {
+  problems.push(`name must not start with "PubMed" (spec §6), got "${manifest.name}"`);
+}
+
 if (problems.length > 0) {
   console.error('Manifest guard failed (SPEC.ja.md §5):\n\n' + problems.join('\n\n'));
   process.exit(1);
 }
 
-console.log('Manifest guard passed: permissions match the spec exactly.');
+console.log('Manifest guard passed: permissions, name and summary match the spec.');

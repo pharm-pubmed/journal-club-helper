@@ -170,7 +170,7 @@ The references are the Cochrane Handbook §12.5 and the CEBM NNT material, both 
 
 ## 3. Release
 
-The Chrome Web Store steps will be written for v0.3: submission, changelog, and review notes.
+The v0.1 steps below are for an internal pre-release. The store steps follow them.
 
 **v0.1 is an internal release**, a GitHub pre-release with no store listing:
 
@@ -181,6 +181,37 @@ The Chrome Web Store steps will be written for v0.3: submission, changelog, and 
    - Do not use the CI artifact for this. It arrives wrapped in a second zip, expires after 14 days, and is missing for a run that `cancel-in-progress` cancelled.
 4. Someone downloads the zip from the draft, runs `docs/QA.md` against it, and fills in the results table. Also run `pnpm test:e2e:live` once by hand; it is the only check against live PubMed (§4, row 3).
 5. Put the QA results into the notes and publish, which creates the tag. `gh` 2.4 has no `release edit`, so use the API: `gh api -X PATCH repos/<owner>/<repo>/releases/<id> -F draft=false -F body=@<notes>`.
+
+### Chrome Web Store (v0.3 onwards)
+
+Written before the first submission, so each step is a plan, not yet a record. Correct it after the first real one (#31). The dashboard changes; where a step below disagrees with it, the dashboard wins, and this section gets fixed.
+
+**Before the first submission, once:**
+
+1. The dedicated Google account exists (#30, §1), never the personal one. It has 2-Step Verification on, which publishing requires, and it has paid the developer registration fee.
+2. In the dashboard's account settings: the publisher name, a verified contact email (the project's address from #30), and the trader or non-trader declaration the EU requires.
+3. The repository has moved to the organization and is public (#30, §7), so every URL below is final.
+4. The landing page and the privacy policy are live over HTTPS (#29, #28). The domain is verified in Google Search Console under the publisher account, which is what lets the listing name it as the official URL.
+5. No placeholder is left. This prints nothing:
+
+   ```bash
+   grep -rnE 'TBD\(#[0-9]+\)|TODO\(#2[89]\)' CHROMEWEBSTORE.md docs site src
+   ```
+
+   The pattern needs digits after `#`, so it does not match the `TBD(#nn)` in the prose that describes it. It also catches the two TODOs for #28 around `PRIVACY_URL` in `src/ui/options/OptionsPage.tsx`.
+
+**Each release:**
+
+1. Set the version in `package.json`. The store rejects a package whose version is not higher than the one it already has.
+2. If the UI changed where the screenshots show it, or the icon changed, run `pnpm store:assets` and look at every image. Commit what changed. This comes before the zip, because it rewrites `src/public/icon/`.
+3. If the manifest changed, update `CHROMEWEBSTORE.md` in the same commit. Update `docs/PRIVACY.md` and the data-use answers in `CHROMEWEBSTORE.md` whenever what is **stored** or **sent** changes, for example an API key or a licence in settings. Publish the policy before the release goes live.
+4. `main` is green at the release commit. Build the zip there and put it on a draft pre-release, as in v0.1 step 3.
+5. Run `docs/QA.md` against that zip. Run `pnpm test:e2e:live` once as well. While §4 row 3 is open, it may never get past PubMed's check; if so, record that in the release notes and go on, because the QA pass covers the same scenarios by hand.
+6. In the Developer Dashboard: the first time, **Add new item** and upload the zip, which creates the item; after that, upload the zip as a new package on the existing item. Copy the listing from `docs/STORE-LISTING.md` and the privacy practices from `CHROMEWEBSTORE.md`. Paste the reviewer notes at the end of `CHROMEWEBSTORE.md` into the test instructions tab.
+7. Submit for review with deferred publishing on, so you choose when it goes live. An approved submission has to be published within 30 days, or it goes back to a draft. Record the submission date and the outcome in §6.
+8. Once it is live, publish the draft GitHub release from step 4 as a full release (not a pre-release), with the store version in its notes. The tag then marks the exact package the store has.
+
+A rejection names the policy it cites. Record it in §6 with what was changed, since the next reviewer may raise the same thing.
 
 ## 4. Known issues
 
@@ -238,13 +269,13 @@ Closing a tab with the panel open logs nothing.
 
 ### Still unverified
 
-| #   | Not verified                                       | Why it matters                                                                                                                                                                                                                                                                                                                                                                                                            | Issue |
-| --- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| 1   | Storage quota exhaustion                           | The archive-before-overwrite guard is covered by a test that caps a memory store, not by a real `chrome.storage.local` at its 10 MB limit. Reaching that state by hand needs roughly 160 full-size appraisals or console access.                                                                                                                                                                                          | —     |
-| 2   | **Brave**, entirely                                | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for.                                                                                                                                                                                                                                                                                                | —     |
-| 3   | **The live smoke run** (`pnpm test:e2e:live`)      | It is the only check that notices a PubMed markup change (§5), and it has never been taken through PubMed's browser check. Playwright's Chromium announces automation, so a human may not be let through at all; if not, the live half of §7's decision has to be rethought.                                                                                                                                              | #24   |
-| 4   | The store-listing screenshots at their final sizes | Not a functional risk; listed so #27 does not assume the panel has been photographed.                                                                                                                                                                                                                                                                                                                                     | #27   |
-| 5   | **The E-utilities fallback after a real grant**    | A headless browser never answers the permission prompt, so no automated run has seen the prompt, the fetch and the panel binding the record together. On a real abstract page, open the panel, then in DevTools rename the class of every `.abstract-content` element. Click **Read the page again** in the panel, then **Fetch from NCBI**, and grant. The header should show the record, marked "via NCBI E-utilities". | #23   |
+| #   | Not verified                                           | Why it matters                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Issue |
+| --- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| 1   | Storage quota exhaustion                               | The archive-before-overwrite guard is covered by a test that caps a memory store, not by a real `chrome.storage.local` at its 10 MB limit. Reaching that state by hand needs roughly 160 full-size appraisals or console access.                                                                                                                                                                                                                                                                                                                                                                                         | —     |
+| 2   | **Brave**, entirely                                    | Out of scope by decision — see §7. Chrome and Edge between them cover the Chromium differences that were worth paying for.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | —     |
+| 3   | **The live smoke run** (`pnpm test:e2e:live`)          | It is the only check that notices a PubMed markup change (§5), and it has never been taken through PubMed's browser check. Playwright's Chromium announces automation, so a human may not be let through at all; if not, the live half of §7's decision has to be rethought.                                                                                                                                                                                                                                                                                                                                             | #24   |
+| 4   | ~~The store-listing screenshots at their final sizes~~ | Done 2026-09-27: `pnpm store:assets` renders them at 1280×800 from the build (§3).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | #27   |
+| 5   | **The E-utilities fallback after a real grant**        | A headless browser never answers the permission prompt, so no automated run has seen the prompt, the fetch and the panel binding the record together. On a real abstract page, open the panel, then in DevTools rename the class of every `.abstract-content` element. Click **Read the page again** in the panel, then **Fetch from NCBI**, and grant. The header should show the record, marked "via NCBI E-utilities". Then remove the site access under **Details** in `chrome://extensions`, and check that the next **Fetch from NCBI** asks again. `docs/PRIVACY.md` tells readers they can withdraw it that way. | #23   |
 
 Clipboard copy and the `.md` download were both exercised on Edge and work. Reading the downloaded file end to end is what found the export defect in §7 — the file was correct in every structural respect and wrong in one sentence, which no golden-file test could have caught, because the golden encodes an empty appraisal correctly and cannot know the abstract it is describing.
 
@@ -360,6 +391,11 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   - A side panel open during the delete still held the appraisal in memory, and its next edit wrote the whole thing back. Import had the mirror problem. The options page now announces both, and the panel re-reads storage (§2).
   - Smoke scenario 6 types in the panel, deletes in a real options tab, types again and reads storage. On a build without the panel's listener it fails with the deleted text back in storage. Its passing is also the evidence that the message reaches the panel with no relay through the background worker.
   - Each fix was removed in turn and a test failed each time. An edit still inside the debounce when the message arrives is not something the smoke run can time reliably, so `tests/ui/use-autosave.test.ts` covers that with fake timers. 603 tests.
+- 2026-09-27 (later still): **Week 4 paperwork, written ahead of the accounts it waits on (#27, #28, #9).**
+  - `docs/PRIVACY.md` and `docs/STORE-LISTING.md` are drafts. Everything that needs the domain, the mailbox or the organization reads `TBD(#nn)`, and §3 says to grep for it before submitting.
+  - The icon is new artwork from `store/icon.svg`. The screenshots and the promo tile are rendered from the build by `pnpm store:assets`. Playwright cannot capture the side panel, so the script opens the panel's page in a tab and points its `chrome.tabs.query` at the PubMed tab. Nothing else in the panel is changed.
+  - The manifest's `description` is now the spec §6 summary word for word, because the store takes the listing's summary from it. `check:manifest` now also checks the summary's length and that the name does not lead with "PubMed".
+  - §3 has the store release steps. They are untested until the first submission (#31).
 
 ## 7. Decisions and why
 

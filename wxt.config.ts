@@ -30,8 +30,9 @@ export default defineConfig({
   manifest: {
     name: 'Journal Club Helper: Critical Appraisal for PubMed',
     short_name: 'Journal Club Helper',
+    // The store listing's summary, word for word from spec §6 (#27, docs/STORE-LISTING.md).
     description:
-      'Turn a PubMed abstract into a structured critical appraisal: study design, PICO, absolute effect with NNT, and a validity checklist.',
+      'Structured critical appraisal on PubMed: PICO, study design, NNT/ARR, validity checklist, one-page journal club summary.',
     minimum_chrome_version: '116',
     // activeTab was in spec §5 but is provably unused: chrome.tabs.query needs no
     // permission at all, and tabs.sendMessage is covered by the host permission

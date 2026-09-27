@@ -17,6 +17,9 @@ test-results/
 .env.*
 !.env.example
 
+# agent worktrees (Claude Code)
+.claude/worktrees/
+
 # editor / os
 .DS_Store
 .idea/
