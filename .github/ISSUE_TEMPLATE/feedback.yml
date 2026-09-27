@@ -1,0 +1,67 @@
+name: Feedback
+description: Tell us what worked, what did not, or what you wish the extension did.
+title: '[Feedback] '
+labels: ['feedback']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for trying Journal Club Helper. Everything you write here is public.
+
+        **Please do not include any information about patients.** PubMed IDs, article titles and your own appraisal notes are fine.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of feedback is this?
+      options:
+        - Something did not work
+        - Something was confusing
+        - A suggestion
+        - It worked well
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you were trying to do, and what you saw. For a problem, what you expected instead.
+    validations:
+      required: true
+  - type: input
+    id: pmid
+    attributes:
+      label: PubMed ID (PMID), if it was about one article
+      placeholder: '36577095'
+  - type: dropdown
+    id: role
+    attributes:
+      label: What best describes you? (optional)
+      options:
+        - Medical resident
+        - Pharmacy resident or pharmacist
+        - Medical student
+        - Nurse practitioner or nursing student
+        - Other health professional or student
+        - Other
+  - type: textarea
+    id: counts
+    attributes:
+      label: Your usage counts (optional)
+      description: |
+        Settings → Usage shows how often you opened the panel and exported a summary. These numbers never leave your browser unless you paste them here. They tell us whether people get as far as a summary, which we cannot otherwise know, because the extension has no analytics.
+      placeholder: |
+        Side panel opened: 12
+        Summaries exported: 4
+  - type: input
+    id: version
+    attributes:
+      label: Extension version and browser
+      description: The version is at the bottom of the Settings page.
+      placeholder: 0.3.0, Chrome 150
+  - type: checkboxes
+    id: no-patient-data
+    attributes:
+      label: Before you submit
+      options:
+        - label: This contains no information about any patient.
+          required: true

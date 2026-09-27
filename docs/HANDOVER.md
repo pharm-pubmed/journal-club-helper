@@ -351,6 +351,7 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
     - the content script had cached its first read, so "Read the page again" and the manual check in §4 could not work;
     - the docs claimed a field-for-field match that did not hold.
   - The recovery itself cannot be driven headless, because the prompt is never answered. It is covered by a hook-level test and listed in §4 as unverified in a browser.
+- 2026-09-27 (launch prep, #32): `docs/LAUNCH.md` holds the post drafts, the feedback routine and the gate reviews. A GitHub issue form (`feedback.yml`) and a `feedback` label exist. The day-90 export rate has no direct measure without telemetry (#33). The proxy is the panel-open and export counts that people paste into the feedback form from their own settings page, read as an upper bound.
 
 ## 7. Decisions and why
 

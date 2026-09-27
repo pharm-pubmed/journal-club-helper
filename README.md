@@ -21,6 +21,7 @@ Pre-alpha. Work is tracked in GitHub issues and milestones (v0.1 MVP → v0.2 Pa
 - [docs/HANDOVER.md](docs/HANDOVER.md) — accounts, build and release procedures, known issues, external dependencies. Updated at the end of every milestone week.
 - [docs/QA.md](docs/QA.md) — the manual pass, about ten minutes, run before each tagged release, with expected values.
 - `docs/PRIVACY.md`, `docs/STORE-LISTING.md` — added for v0.3.
+- [docs/LAUNCH.md](docs/LAUNCH.md) — the launch posts, feedback triage and how the day-30 and day-90 gates are judged.
 
 ## Development
 
