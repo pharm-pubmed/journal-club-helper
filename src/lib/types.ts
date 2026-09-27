@@ -331,7 +331,15 @@ export interface OpenSidePanelMessage {
   type: 'OPEN_SIDE_PANEL';
 }
 
-export type ExtensionMessage = GetArticleMessage | OpenSidePanelMessage;
+/**
+ * Sent by the options page after Delete all or an import, so an open side
+ * panel drops the appraisal it holds in memory and reads storage again.
+ */
+export interface AppraisalsReplacedMessage {
+  type: 'APPRAISALS_REPLACED';
+}
+
+export type ExtensionMessage = GetArticleMessage | OpenSidePanelMessage | AppraisalsReplacedMessage;
 
 /** Reply to GET_ARTICLE. `article` is null when the page has no readable abstract. */
 export interface GetArticleResponse {
