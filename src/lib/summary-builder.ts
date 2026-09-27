@@ -32,13 +32,17 @@
  * them as a lighter checklist; funding is recorded as fact with no verdict
  * column, because industry money is not itself a flaw; an Unclear is attributed
  * to the source the reader had rather than to the study; and a non-inferiority
- * result is fenced to the endpoint that was actually tested.
+ * result is fenced to the endpoint that was actually tested. The numbers get
+ * the same treatment: an NNT read off the proportions of a case-control or
+ * cross-sectional study carries the caveat from design-caveats.ts, so it
+ * cannot leave the room looking like a risk difference.
  *
  * Pure module: no chrome.*, no DOM. `src/ui/labels.ts` is imported for the
  * user-facing names, which is data only — keeping one copy of "Randomized
  * controlled trial" for the panel and the export.
  */
 import { getChecklist, itemsInSection, needsMoreThan } from './checklist-schema';
+import { resultCaveat } from './design-caveats';
 import { formatNnt } from './effect-measures';
 import type {
   Appraisal,
@@ -441,8 +445,19 @@ function keyResultRows(numbers: NumbersState | null): Row[] {
   return rows;
 }
 
-function numberNotes(numbers: NumbersState | null): string[] {
-  return (numbers?.warnings ?? [])
+/**
+ * The design caveat leads the notes, and only when there is a result for it to
+ * qualify. It is read from the design in force at export time rather than
+ * stored with the result, so overriding the design afterwards still reaches
+ * the export.
+ */
+function numberNotes(a: Appraisal): string[] {
+  const numbers = a.numbers;
+  const caveat =
+    numbers === null || numbers.result === null
+      ? null
+      : resultCaveat(effectiveDesign(a), numbers.mode);
+  return [...(caveat === null ? [] : [caveat]), ...(numbers?.warnings ?? [])]
     .map(oneLine)
     .filter((warning) => warning !== '')
     .map(endWithPeriod);
@@ -653,7 +668,7 @@ export function buildSummaryMarkdown(a: Appraisal, opts: SummaryOptions): string
     markdownRows(keyResultRows(a.numbers)),
   ];
 
-  const notes = numberNotes(a.numbers);
+  const notes = numberNotes(a);
   if (notes.length > 0) {
     blocks.push([NUMBER_NOTES_HEADING]);
     blocks.push(markdownBullets(notes));
@@ -764,7 +779,7 @@ export function buildSummaryText(a: Appraisal, opts: SummaryOptions): string {
   lines.push('');
 
   const keyResults = alignedRows(keyResultRows(a.numbers));
-  const notes = numberNotes(a.numbers);
+  const notes = numberNotes(a);
   if (notes.length > 0) keyResults.push(NUMBER_NOTES_HEADING, ...indent(notes));
   lines.push(...textSection('KEY RESULTS', keyResults));
   lines.push('');

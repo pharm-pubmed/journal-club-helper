@@ -1,6 +1,6 @@
 # Manual QA script
 
-> **QA of the v0.1.0 build:** use [this file as of commit 0fdb3af](https://github.com/piroshi1989/journal-club-helper/blob/0fdb3af/docs/QA.md). #49 changed the number extractor after that build, so records B and D below expect behaviour the v0.1.0 zip does not have.
+> **QA of the v0.1.0 build:** use [this file as of commit 0fdb3af](https://github.com/piroshi1989/journal-club-helper/blob/0fdb3af/docs/QA.md). #49 changed the number extractor and #58 added the case-control note after that build, so records B and D below expect behaviour the v0.1.0 zip does not have.
 
 A pass of about ten minutes over five real PubMed records, run by a person in a real browser before each tagged release. It covers what the automated suites cannot: the live PubMed page, the side panel as a reader sees it, the clipboard, the downloaded file, and persistence across a closed panel. The e2e smoke run (`pnpm test:e2e`) already checks button injection, URL gating, extraction, one NNT and one close-and-restore on saved pages, so this script spends its time elsewhere.
 
@@ -27,7 +27,7 @@ Throughout:
 | A   | 36577095 | RCT, non-inferiority subtype, percent pair → NNT, restore  |
 | B   | 36740866 | Systematic review / meta-analysis, RR with a baseline risk |
 | C   | 34844936 | Cohort, HR, a PARTICIPANTS section feeding Population      |
-| D   | 38537944 | Case-control from wording alone, OR, design override       |
+| D   | 38537944 | Case-control from wording alone, its caveat, OR, override  |
 | E   | 2899772  | Unstructured abstract (ISIS-2, 1988), manual Counts entry  |
 
 Open each as `https://pubmed.ncbi.nlm.nih.gov/<PMID>/`.
@@ -92,12 +92,13 @@ Click the P highlight. Its text is added to Population, and an `Also add to` cho
 
 **D2.** In the PICO tab, the legend reads **P 2, I 0, C 0, O 4**. The P highlights are `Of 108 366 women overall` and a phrase starting `women living in France who had intracranial surgery`. No highlight starts or ends between the two halves of a space-grouped number such as `18 061` (#49): the first O highlight starts `cases (0.2%) v 79 exposed controls`.
 
-**D3.** Seven candidates, in the abstract's order: `odds ratio 3.49 (95% confidence interval 2.38 to 5.10`, three `n / N` pairs starting `9/18 061`, `83/18 061` and `891/18 061`, `odds ratio 19.21 (95% confidence interval 16.61 to 22.22`, and two more `n / N` pairs starting `925/18 061` and `628/18 061`.
+**D3.** Above the candidates, a note reads `A case-control study samples on the outcome, so the proportions exposed among cases and among controls are not risks, and an ARR, NNT or NNH cannot be read from them.`, followed by a sentence pointing to the odds ratio applied to a baseline risk (#58). Seven candidates are still listed, in the abstract's order: `odds ratio 3.49 (95% confidence interval 2.38 to 5.10`, three `n / N` pairs starting `9/18 061`, `83/18 061` and `891/18 061`, `odds ratio 19.21 (95% confidence interval 16.61 to 22.22`, and two more `n / N` pairs starting `925/18 061` and `628/18 061`.
 
-- Press **Use** on `891/18 061 (4.9%) v 256/90 305`. Counts is filled with control `256` / `90305` and intervention `891` / `18061`. Each grouped number is read whole because the arm's own percentage confirms it (#49). This checks the reading only. In a case-control study these are the shares of cases and of controls exposed, not event rates, so the NNH shown means nothing.
-- Press **Use** on `odds ratio 3.49 …`, enter ACR `1` and press **Calculate**. The result is **NNH 42 (95% CI 26–75)**, with an odds-ratio warning. The label is NNH because exposure raises the risk.
+- Press **Use** on `891/18 061 (4.9%) v 256/90 305`. Counts is filled with control `256` / `90305` and intervention `891` / `18061`. Each grouped number is read whole because the arm's own percentage confirms it (#49). The result is **NNH 22 (95% CI 21–24)**, and the same note appears again directly under the sentence beneath it. These are the shares of cases and of controls exposed, not event rates, so the NNH checks the reading only; the note is there to say so.
+- Open the Export tab. In the preview, `Key results` shows `NNH 22 (95% CI 21–24)` followed by `Notes on these numbers:` and the same note. Return to the Numbers tab.
+- Press **Use** on `odds ratio 3.49 …`, enter ACR `1` and press **Calculate**. The result is **NNH 42 (95% CI 26–75)**, with the baseline-risk and odds-ratio warnings and no case-control note beside it. The label is NNH because exposure raises the risk. The note above the candidates stays.
 
-**D4. Override.** In the header, set the `Design` select to `Cohort study`. The header shows `Set manually`, and Appraisal switches to the cohort list (`0 of 10 answered`). Press `Reset to detected`: it is back to `Case-control study` and `0 of 9 answered`.
+**D4. Override.** In the header, set the `Design` select to `Cohort study`. The header shows `Set manually`, the note above the candidates goes away, and Appraisal switches to the cohort list (`0 of 10 answered`). Press `Reset to detected`: it is back to `Case-control study`, the note is back, and Appraisal reads `0 of 9 answered`.
 
 ## E. 2899772 — Unstructured abstract (1.5 min)
 

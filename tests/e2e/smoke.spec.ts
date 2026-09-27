@@ -25,6 +25,9 @@ const BUTTON_MISSING =
   'The Journal Club button did not appear. Either the content script did not run, or it ' +
   'found no Abstract heading to attach to (findAnchor in src/entrypoints/content.ts).';
 
+/** The opening words of the case-control caveat (src/lib/design-caveats.ts, #58). */
+const CASE_CONTROL_CAVEAT = 'A case-control study samples on the outcome';
+
 const EXTRACTION_FAILED = LIVE
   ? 'The page loaded and the button was added, but extraction returned nothing: PubMed ' +
     'markup has probably changed. See src/lib/pubmed-dom.ts and HANDOVER §5.'
@@ -110,7 +113,7 @@ for (const record of RECORDS) {
   });
 }
 
-test('3. the panel turns the percent pair in the abstract into an NNT', async ({
+test('3. the panel turns the percent pair in the abstract into an NNT, caveated on a case-control design', async ({
   page,
   serviceWorker,
   extensionId,
@@ -140,6 +143,48 @@ test('3. the panel turns the percent pair in the abstract into an NNT', async ({
       message: `the Numbers tab did not produce an NNT from ${RCT_PERCENT_PAIR.raw}`,
     })
     .toBe(RCT_PERCENT_PAIR.nnt);
+
+  // #58: the same pair read as a case-control study is not a risk difference.
+  // A trial shows no caveat; overriding the design from the header puts it above
+  // the candidates and beside the result that is already on screen, and the
+  // result itself stays. No saved page is a case-control study, so the override
+  // stands in for one, which is also the path a reader takes when detection
+  // misses the design.
+  const caveatPlaces = `(() => {
+    const has = (selector) =>
+      document.querySelector(selector)?.textContent.includes(${JSON.stringify(CASE_CONTROL_CAVEAT)}) ?? false;
+    return {
+      candidates: has('[aria-labelledby="jch-numbers-candidates"]'),
+      result: has('.numbers__result'),
+      nnt: document.querySelector('.numbers__nnt')?.textContent ?? null,
+    };
+  })()`;
+  const noCaveat = { candidates: false, result: false, nnt: RCT_PERCENT_PAIR.nnt };
+  expect(await evaluateInPanel(page, extensionId, caveatPlaces)).toEqual(noCaveat);
+
+  const chooseCaseControl = `(() => {
+    const select = document.getElementById('jch-design-override');
+    select.value = 'case-control';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return select.value;
+  })()`;
+  expect(await evaluateInPanel<string>(page, extensionId, chooseCaseControl)).toBe('case-control');
+  await expect
+    .poll(() => evaluateInPanel(page, extensionId, caveatPlaces), {
+      message: 'overriding the design to case-control did not bring up the caveat',
+    })
+    .toEqual({ candidates: true, result: true, nnt: RCT_PERCENT_PAIR.nnt });
+
+  // Put the detection back: the profile outlives this test, and a live run
+  // keeps it between runs.
+  const resetDesign = `(() => {
+    const button = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Reset to detected');
+    if (!button) return 'no reset button';
+    button.click();
+    return 'reset';
+  })()`;
+  expect(await evaluateInPanel<string>(page, extensionId, resetDesign)).toBe('reset');
+  await expect.poll(() => evaluateInPanel(page, extensionId, caveatPlaces)).toEqual(noCaveat);
 });
 
 /** Two ways a panel closes, which fire different events in the panel (useAutosave.ts). */

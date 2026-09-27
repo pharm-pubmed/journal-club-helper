@@ -21,10 +21,13 @@
  *
  * All arithmetic lives in src/lib/effect-measures.ts; this file only collects
  * input, catches the RangeErrors that module throws (its messages are written
- * for readers) and renders the output.
+ * for readers) and renders the output. What the design in force does to the
+ * meaning of that output is src/lib/design-caveats.ts: this file only places
+ * its notes, and blocks nothing on account of them.
  */
 import type { Ref } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { candidatesCaveat, resultCaveat } from '../../lib/design-caveats';
 import { formatNnt, fromCounts, fromRates, fromRatio } from '../../lib/effect-measures';
 import { extractNumberCandidates } from '../../lib/number-extractor';
 import type {
@@ -41,7 +44,7 @@ import type {
   RatioInputs,
   RatioMeasure,
 } from '../../lib/types';
-import { actions, emptyNumbers, store, useStore } from '../store';
+import { actions, effectiveDesign, emptyNumbers, store, useStore } from '../store';
 import './numbers.css';
 
 /* ------------------------------------------------------------------ constants */
@@ -589,9 +592,11 @@ interface ResultPanelProps {
   mode: CalculatorMode;
   result: EffectMeasures;
   warnings: string[];
+  /** From design-caveats.ts; null when the design takes nothing away from the result. */
+  caveat: string | null;
 }
 
-function ResultPanel({ mode, result, warnings }: ResultPanelProps) {
+function ResultPanel({ mode, result, warnings, caveat }: ResultPanelProps) {
   const ci = result.ci;
   const harm = result.direction === 'harm';
   return (
@@ -602,6 +607,9 @@ function ResultPanel({ mode, result, warnings }: ResultPanelProps) {
 
       <p class={harm ? 'numbers__nnt numbers__nnt--harm' : 'numbers__nnt'}>{formatNnt(result)}</p>
       <p class="numbers__direction">{directionSentence(result)}</p>
+
+      {/* Straight after the sentence it qualifies, so the two are read together. */}
+      {caveat === null ? null : <p class="numbers__callout">{caveat}</p>}
 
       {ci?.crossesInfinity ? (
         <div class="numbers__callout numbers__callout--flip">
@@ -664,6 +672,7 @@ function ResultPanel({ mode, result, warnings }: ResultPanelProps) {
 export function NumbersTab() {
   const article = useStore((s) => s.article);
   const numbers = useStore((s) => s.numbers);
+  const design = useStore(effectiveDesign);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [acrFocusToken, setAcrFocusToken] = useState(0);
   const acrRef = useRef<HTMLInputElement>(null);
@@ -843,6 +852,7 @@ export function NumbersTab() {
       ? sourceCandidate
       : null;
   const controlSide = pairCandidate === null ? null : controlSideOf(pairCandidate, inputs);
+  const candidatesNote = candidatesCaveat(design);
 
   return (
     <section class="numbers" aria-labelledby="jch-numbers-title">
@@ -858,6 +868,8 @@ export function NumbersTab() {
         <h3 class="numbers__heading" id="jch-numbers-candidates">
           Detected in this abstract
         </h3>
+        {/* Shown with or without candidates: typing the same pair by hand is the same mistake. */}
+        {candidatesNote === null ? null : <p class="numbers__callout">{candidatesNote}</p>}
         {candidates.length === 0 ? (
           <>
             <p class="numbers__empty">No numeric results detected in this abstract</p>
@@ -1125,7 +1137,12 @@ export function NumbersTab() {
             No result yet. Fill the fields and press Calculate, or press Use on a detected result.
           </p>
         ) : (
-          <ResultPanel mode={mode} result={result} warnings={warnings} />
+          <ResultPanel
+            mode={mode}
+            result={result}
+            warnings={warnings}
+            caveat={resultCaveat(design, mode)}
+          />
         )}
       </div>
 

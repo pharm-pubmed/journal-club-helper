@@ -375,6 +375,63 @@ function harmAppraisal(): Appraisal {
   };
 }
 
+/**
+ * QA record D (PMID 38537944, docs/QA.md), with the pair the Numbers tab offers
+ * loaded the way D3 loads it: 256/90 305 exposed controls as the "control arm"
+ * and 891/18 061 exposed cases as the "intervention". The arithmetic runs, and
+ * what it produces is not a risk difference (#58).
+ */
+function caseControlCountsAppraisal(): Appraisal {
+  return {
+    ...emptyAppraisal(),
+    pmid: '38537944',
+    citation: {
+      title:
+        'Use of progestogens and the risk of intracranial meningioma: national case-control study.',
+      authors: ['Roland N', 'Neumann A', 'Hoisnard L', 'Duranteau L', 'Froelich S'],
+      journal: 'BMJ',
+      year: '2024',
+      doi: '10.1136/bmj-2023-078078',
+    },
+    designDetected: {
+      design: 'case-control',
+      subtype: null,
+      confidence: 'medium',
+      evidence: [{ kind: 'keyword', value: 'case-control' }],
+    },
+    numbers: numbersState({
+      mode: 'counts',
+      inputs: {
+        ...emptyInputs(),
+        counts: {
+          controlEvents: '256',
+          controlTotal: '90305',
+          interventionEvents: '891',
+          interventionTotal: '18061',
+        },
+      },
+      result: fromCounts(256, 90305, 891, 18061),
+    }),
+  };
+}
+
+/** The same record taken the legitimate way: its odds ratio at a supplied baseline. */
+function caseControlRatioAppraisal(): Appraisal {
+  const { warnings, ...result } = fromRatio('OR', 3.49, 0.01, { low: 2.38, high: 5.1 });
+  return {
+    ...caseControlCountsAppraisal(),
+    numbers: numbersState({
+      mode: 'ratio',
+      inputs: {
+        ...emptyInputs(),
+        ratio: { measure: 'OR', estimate: '3.49', ciLow: '2.38', ciHigh: '5.10', acrPercent: '1' },
+      },
+      result,
+      warnings,
+    }),
+  };
+}
+
 const PIPED_OUTCOME = 'Composite of death | rehospitalisation | stroke at 12 months';
 const PIPED_NOTE =
   'Reported as p < 0.05 | no effect size | no interval, so nothing can be recomputed.';
@@ -808,6 +865,7 @@ describe('buildSummaryText', () => {
       ratioOnlyAppraisal(),
       ratioWithAcrAppraisal(),
       harmAppraisal(),
+      caseControlCountsAppraisal(),
     ]) {
       const text = buildSummaryText(appraisal, OPTS);
       for (const [name, pattern] of markdownSyntax) {
@@ -870,6 +928,86 @@ describe('buildSummaryText', () => {
         ]),
       ),
     ).toBe(true);
+  });
+});
+
+/* ------------------------------------------------------- the design caveat */
+
+/** In the caller's words: the sentence that makes the NNH above it unreadable as one. */
+const CASE_CONTROL_CAVEAT = 'A case-control study samples on the outcome';
+const CROSS_SECTIONAL_CAVEAT = 'A cross-sectional study measures prevalence at one point in time';
+
+describe('the design caveat on a result (#58)', () => {
+  it('matches the golden files for a case-control Counts result', () => {
+    expectGolden(
+      'case-control-counts.md',
+      buildSummaryMarkdown(caseControlCountsAppraisal(), OPTS),
+    );
+    expectGolden('case-control-counts.txt', buildSummaryText(caseControlCountsAppraisal(), OPTS));
+  });
+
+  it('carries the case-control caveat once, under the result it qualifies, in both formats', () => {
+    const md = buildSummaryMarkdown(caseControlCountsAppraisal(), OPTS);
+    const text = buildSummaryText(caseControlCountsAppraisal(), OPTS);
+
+    expect(md).toContain(`- ${CASE_CONTROL_CAVEAT}`);
+    for (const [rendering, nextSection] of [
+      [md, '## Critical appraisal'],
+      [text, 'CRITICAL APPRAISAL'],
+    ] as const) {
+      expect(rendering.split(CASE_CONTROL_CAVEAT)).toHaveLength(2);
+      expect(rendering.indexOf('NNH ')).toBeLessThan(rendering.indexOf(CASE_CONTROL_CAVEAT));
+      expect(rendering.indexOf(CASE_CONTROL_CAVEAT)).toBeLessThan(rendering.indexOf(nextSection));
+      // One line: the caveat never wraps onto a second line of its own.
+      const line = rendering.split('\n').find((l) => l.includes(CASE_CONTROL_CAVEAT)) ?? '';
+      expect(line.trimStart()).toMatch(
+        /^(- )?A case-control study .* a baseline risk you choose\.$/,
+      );
+    }
+  });
+
+  it('leaves a Ratio-mode result on the same case-control record without it', () => {
+    for (const rendering of [
+      buildSummaryMarkdown(caseControlRatioAppraisal(), OPTS),
+      buildSummaryText(caseControlRatioAppraisal(), OPTS),
+    ]) {
+      expect(rendering).toContain('NNH 42 (95% CI 26–75)');
+      expect(rendering).not.toContain(CASE_CONTROL_CAVEAT);
+      // The ratio's own warnings are still there: only the caveat is absent.
+      expect(rendering).toContain('Odds ratios overstate risk changes');
+    }
+  });
+
+  it('says nothing when there is no result to qualify', () => {
+    const a: Appraisal = {
+      ...caseControlCountsAppraisal(),
+      numbers: numbersState({ mode: 'counts' }),
+    };
+
+    expect(buildSummaryMarkdown(a, OPTS)).not.toContain(CASE_CONTROL_CAVEAT);
+    expect(buildSummaryMarkdown(a, OPTS)).not.toContain('Notes on these numbers');
+  });
+
+  it('follows the design in force, not the one detected when the result was calculated', () => {
+    const asCohort: Appraisal = { ...caseControlCountsAppraisal(), designOverride: 'cohort' };
+    const asCrossSectional: Appraisal = {
+      ...caseControlCountsAppraisal(),
+      designOverride: 'cross-sectional',
+    };
+    const trialAsCaseControl: Appraisal = { ...fullAppraisal(), designOverride: 'case-control' };
+
+    expect(buildSummaryMarkdown(asCohort, OPTS)).not.toContain(CASE_CONTROL_CAVEAT);
+    expect(buildSummaryMarkdown(asCrossSectional, OPTS)).toContain(CROSS_SECTIONAL_CAVEAT);
+    expect(buildSummaryMarkdown(asCrossSectional, OPTS)).not.toContain(CASE_CONTROL_CAVEAT);
+    expect(buildSummaryText(trialAsCaseControl, OPTS)).toContain(CASE_CONTROL_CAVEAT);
+  });
+
+  it('adds nothing to a trial result', () => {
+    for (const appraisal of [fullAppraisal(), harmAppraisal()]) {
+      const md = buildSummaryMarkdown(appraisal, OPTS);
+      expect(md).not.toContain(CASE_CONTROL_CAVEAT);
+      expect(md).not.toContain(CROSS_SECTIONAL_CAVEAT);
+    }
   });
 });
 

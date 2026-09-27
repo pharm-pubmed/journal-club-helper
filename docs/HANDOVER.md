@@ -418,6 +418,13 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   - Grouping made the fraction pattern quadratic on a long run of groups. Without a bar on starting a count on an inner group, the runs in the test take 70 to 100 ms. With it they take a few ms, for space, comma and no-break-space runs alike.
   - `docs/QA.md` was re-derived by running records B, D and E through the code again. B gains three `% pair` candidates, D five `n / N` pairs and two O highlights, and E is as in v0.1.0. QA.md now opens with a link to its 0fdb3af version, the one to run against the v0.1.0 zip.
   - Each fix was reverted in turn, and each reversion fails a named test, except NBSP in the PICO word-break check, which changes no behaviour because a no-break space is not a word break there. 605 tests.
+- 2026-09-27 (after #49): **#58: an NNH read off a case-control study's exposure proportions now says what it is not.** #49 made record D offer five more such pairs, and the tab computed from them without comment.
+  - The wording is in `src/lib/design-caveats.ts`. On a case-control design the note sits above the candidates and beside a Rates or Counts result, and the export carries it under that result in both formats. A Ratio result gets none, because the OR at a baseline the reader supplies is the route that holds. Nothing is removed or refused.
+  - Cross-sectional gets a milder, differently worded note, prevalence rather than risk, beside a Rates or Counts result and in the export only. `docs/METHODOLOGY.md` §6 has the reasoning. Diagnostic studies get no note: that is a limit of scope, not a decision.
+  - The note is worked out from the design in force whenever the result is shown or exported, not stored with the result, so overriding the design after calculating still reaches both.
+  - `docs/QA.md` record D was re-derived by running the `efetch` record through the classifier, the Numbers tab and the export in happy-dom. D3 now expects the note in three places and its absence on the OR result, and D4 expects it to go with the Cohort override.
+  - Smoke scenario 3 now overrides the RCT to case-control and checks both places in the built extension, then resets the design, because the profile outlives the test.
+  - Each placement was removed in turn and a test failed each time: the note above the candidates, the one beside the result (in the smoke run too, on a rebuilt extension), the export line, the Ratio exemption, and the case-control branch of the wording function. 671 tests.
 
 ## 7. Decisions and why
 
@@ -527,6 +534,8 @@ Spec §4.5 mandates the literal sentence "Absolute effect not reported in the ab
 The sentence is now reserved for the case it was written for — a relative effect was recorded and no absolute one, which is the failure mode journal clubs keep repeating. An appraisal with nothing entered says "Absolute effect not calculated in this appraisal." instead, which claims nothing about the study.
 
 This is a deliberate deviation from the literal spec wording, on the principle that a summary someone carries into a journal club must never put words in a paper's mouth. Found by exporting a real appraisal and reading it, not by a test.
+
+The same rule covers the numbers (#58). An NNH worked out from a case-control study's proportions exposed describes the sampling, not an effect, so a Rates or Counts result on that design is exported with the caveat from `src/lib/design-caveats.ts` under it. The caveat is about the design the reader appraised the study as, and says what the number is not. It asserts nothing about what the paper reported.
 
 ### Declared permissions track the code, not the roadmap
 
