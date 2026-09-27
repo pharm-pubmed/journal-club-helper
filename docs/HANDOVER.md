@@ -181,24 +181,32 @@ The v0.1 steps below are for an internal pre-release. The store steps follow the
 
 ### Chrome Web Store (v0.3 onwards)
 
-Written before the first submission, so each step is a plan, not yet a record. Correct it after the first real one (#31).
+Written before the first submission, so each step is a plan, not yet a record. Correct it after the first real one (#31). The dashboard changes; where a step below disagrees with it, the dashboard wins, and this section gets fixed.
 
 **Before the first submission, once:**
 
-1. The dedicated Google account exists and has paid the developer registration fee (#30, §1). Never the personal account.
-2. The repository has moved to the organization (#30, §7), so every URL below is final.
-3. The landing page and the privacy policy are live over HTTPS (#29, #28).
-4. Every `TBD(#nn)` placeholder is filled in: `grep -rn 'TBD(#' docs CHROMEWEBSTORE.md site src` prints nothing. `PRIVACY_URL` in `src/ui/options/OptionsPage.tsx` points at the published policy.
+1. The dedicated Google account exists (#30, §1), never the personal one. It has 2-Step Verification on, which publishing requires, and it has paid the developer registration fee.
+2. In the dashboard's account settings: the publisher name, a verified contact email (the project's address from #30), and the trader or non-trader declaration the EU requires.
+3. The repository has moved to the organization and is public (#30, §7), so every URL below is final.
+4. The landing page and the privacy policy are live over HTTPS (#29, #28). The domain is verified in Google Search Console under the publisher account, which is what lets the listing name it as the official URL.
+5. No placeholder is left. This prints nothing:
+
+   ```bash
+   grep -rnE 'TBD\(#[0-9]+\)|TODO\(#2[89]\)' CHROMEWEBSTORE.md docs site src
+   ```
+
+   The pattern needs digits after `#`, so it does not match the `TBD(#nn)` in the prose that describes it. It also catches the two TODOs for #28 around `PRIVACY_URL` in `src/ui/options/OptionsPage.tsx`.
 
 **Each release:**
 
-1. Do the first three v0.1 steps above: the version, a green `main`, and a zip built at that commit.
-2. Run `docs/QA.md` against that zip. Then run `pnpm test:e2e:live` once.
-3. If the UI changed where the screenshots show it, run `pnpm store:assets` and look at every image before committing it.
-4. If the manifest changed, update `CHROMEWEBSTORE.md` in the same commit. The permission justifications and the data-use answers must describe the version being uploaded. If what is sent over the network changed, update `docs/PRIVACY.md` too, and publish it **before** the release goes live.
-5. In the Developer Dashboard, upload the zip as a new package. Copy the listing from `docs/STORE-LISTING.md` and the privacy practices from `CHROMEWEBSTORE.md`, and paste the reviewer notes from its last section.
-6. Submit for review, with deferred publishing on so that you choose when it goes live. Record the submission date and the review outcome in §6.
-7. After it is published, tag the release commit and attach the same zip to a GitHub release, so the store package and the tag can be matched later.
+1. Set the version in `package.json`. The store rejects a package whose version is not higher than the one it already has.
+2. If the UI changed where the screenshots show it, or the icon changed, run `pnpm store:assets` and look at every image. Commit what changed. This comes before the zip, because it rewrites `src/public/icon/`.
+3. If the manifest changed, update `CHROMEWEBSTORE.md` in the same commit. Update `docs/PRIVACY.md` and the data-use answers in `CHROMEWEBSTORE.md` whenever what is **stored** or **sent** changes, for example an API key or a licence in settings. Publish the policy before the release goes live.
+4. `main` is green at the release commit. Build the zip there and put it on a draft pre-release, as in v0.1 step 3.
+5. Run `docs/QA.md` against that zip. Run `pnpm test:e2e:live` once as well. While §4 row 3 is open, it may never get past PubMed's check; if so, record that in the release notes and go on, because the QA pass covers the same scenarios by hand.
+6. In the Developer Dashboard: the first time, **Add new item** and upload the zip, which creates the item; after that, upload the zip as a new package on the existing item. Copy the listing from `docs/STORE-LISTING.md` and the privacy practices from `CHROMEWEBSTORE.md`. Paste the reviewer notes at the end of `CHROMEWEBSTORE.md` into the test instructions tab.
+7. Submit for review with deferred publishing on, so you choose when it goes live. An approved submission has to be published within 30 days, or it goes back to a draft. Record the submission date and the outcome in §6.
+8. Once it is live, publish the draft GitHub release from step 4 as a full release (not a pre-release), with the store version in its notes. The tag then marks the exact package the store has.
 
 A rejection names the policy it cites. Record it in §6 with what was changed, since the next reviewer may raise the same thing.
 
@@ -376,7 +384,7 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   - The recovery itself cannot be driven headless, because the prompt is never answered. It is covered by a hook-level test and listed in §4 as unverified in a browser.
 - 2026-09-27 (later): **Week 4 paperwork, written ahead of the accounts it waits on (#27, #28, #9).**
   - `docs/PRIVACY.md` and `docs/STORE-LISTING.md` are drafts. Everything that needs the domain, the mailbox or the organization reads `TBD(#nn)`, and §3 says to grep for it before submitting.
-  - The icon is new artwork from `store/icon.svg`. The screenshots and the promo tile are rendered from the build by `pnpm store:assets`. The side panel cannot be screenshotted, so the script opens the panel's page in a tab and points its `chrome.tabs.query` at the PubMed tab. Nothing else in the panel is changed.
+  - The icon is new artwork from `store/icon.svg`. The screenshots and the promo tile are rendered from the build by `pnpm store:assets`. Playwright cannot capture the side panel, so the script opens the panel's page in a tab and points its `chrome.tabs.query` at the PubMed tab. Nothing else in the panel is changed.
   - The manifest's `description` is now the spec §6 summary word for word, because the store takes the listing's summary from it. `check:manifest` now also checks the summary's length and that the name does not lead with "PubMed".
   - §3 has the store release steps. They are untested until the first submission (#31).
 

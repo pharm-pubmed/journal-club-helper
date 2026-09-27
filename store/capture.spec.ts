@@ -2,45 +2,51 @@
  * Renders the store listing images (#27) from the built extension:
  * `pnpm store:assets`. Not part of the test run and not in CI.
  *
- * Every panel image is the real build, on the saved page of a real public
- * abstract (the RCT in tests/e2e/pmids.ts), with the reader's input typed in
- * through the panel's own controls. Nothing is mocked up.
+ * Every panel image is the real build on the saved page of a real public
+ * abstract: the BMJ meta-analysis in tests/e2e/pmids.ts. The reader's input is
+ * entered through the panel's own controls. The captions and the frame around
+ * each image are added afterwards.
  *
- * The side panel is browser UI and cannot be screenshotted (HANDOVER §4), so
- * the panel's page is opened in an ordinary tab instead. One thing is changed
- * to make that work: the panel asks for the active tab, which would be itself,
- * so its `chrome.tabs.query` is pointed at the PubMed tab. The content script
+ * Playwright cannot screenshot the side panel, which is browser UI, so the
+ * panel's page is opened in an ordinary tab instead. One thing is changed to
+ * make that work: the panel asks for the active tab, which would be itself, so
+ * its `chrome.tabs.query` is pointed at the PubMed tab. The content script
  * there answers exactly as it does for the real panel.
  *
- * Each image is then framed at 1280×800 with a caption. The PubMed page itself
- * is left out, so no NLM branding appears in the listing.
+ * The PubMed page itself is left out, so no NLM or HHS branding appears in the
+ * listing. The fonts are whatever `system-ui` is on the machine that renders
+ * the images, so a re-run elsewhere changes every PNG slightly.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import type { BrowserContext, Page } from '@playwright/test';
-import { expect, openPubMed, test } from '../tests/e2e/fixtures';
-import { RCT, RCT_PERCENT_PAIR, articleUrl } from '../tests/e2e/pmids';
+import type { BrowserContext, Locator, Page } from '@playwright/test';
+import { LIVE, expect, openPubMed, test } from '../tests/e2e/fixtures';
+import { META_ANALYSIS, articleUrl } from '../tests/e2e/pmids';
 
+const RECORD = META_ANALYSIS;
 const PANEL = { width: 400, height: 720 };
 const OPTIONS = { width: 720, height: 720 };
 const ICON = `data:image/svg+xml;base64,${readFileSync('store/icon.svg').toString('base64')}`;
 
-/** What the reader types. Taken from the abstract of PMID 36577095. */
+/** What the reader enters. All of it is from the abstract of PMID 36740866. */
 const PICO = {
-  P: 'Symptomatic adults with mild-to-moderate Covid-19 at high risk of progression',
-  I: 'VV116, a 5-day oral course',
-  C: 'Nirmatrelvir–ritonavir, a 5-day oral course',
-  O: 'Time to sustained clinical recovery through day 28',
+  p: 'Non-intubated adults with hypoxemic respiratory failure due to covid-19',
+  i: 'Awake prone positioning',
+  c: 'Usual care',
+  o: 'Endotracheal intubation',
 };
-const CONCEALMENT_NOTE = 'Not reported in the abstract. Check the methods in the full text.';
+/** The ratio the extractor offers first, and the usual-care rate it is applied to. */
+const RATIO_RAW = 'relative risk 0.83, 95% confidence interval 0.73 to 0.94';
+const BASELINE_RISK = '29.8';
+const EXPECTED_NNT = 'NNT 20 (95% CI 13–56)';
+const SEARCH_NOTE =
+  'Three databases are named. Trial registries and unpublished data are not mentioned: check the methods.';
 const BOTTOM_LINE =
-  'Non-inferior on time to recovery, in a population with no deaths or progression. ' +
-  'Allocation concealment and the handling of the 51 randomized but untreated participants need the full text.';
+  'Pooled trials show fewer intubations with awake prone positioning, and no clear effect on mortality. ' +
+  'How the trials differed in setting and adherence needs the full text.';
 
-/** Types into a field the way a reader does, so Preact sees the input events. */
+/** Fills a field. `fill` fires the input event Preact listens for. */
 async function type(page: Page, selector: string, text: string): Promise<void> {
-  const field = page.locator(selector);
-  await field.click();
-  await field.fill(text);
+  await page.locator(selector).fill(text);
 }
 
 /** Drops the focus ring the last field typed in would otherwise show. */
@@ -60,14 +66,21 @@ async function openPanelInTab(context: BrowserContext, extensionId: string): Pro
       query({
         url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/*`,
       })) as unknown as typeof chrome.tabs.query;
-  }, RCT.pmid);
+  }, RECORD.pmid);
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
-  await expect(panel.locator('body')).toContainText(`PMID ${RCT.pmid}`);
+  await expect(panel.locator('body')).toContainText(`PMID ${RECORD.pmid}`);
   return panel;
 }
 
 async function tab(panel: Page, name: string): Promise<void> {
   await panel.getByRole('tab', { name, exact: true }).click();
+}
+
+/** A checklist item by its concept label, so a reordered checklist cannot move an answer. */
+function item(panel: Page, concept: string): Locator {
+  return panel
+    .locator('.validity-item')
+    .filter({ has: panel.locator('.validity-item__concept', { hasText: concept }) });
 }
 
 /** Frames `shot` at 1280×800 beside its caption, and writes it to `path`. */
@@ -110,6 +123,7 @@ async function frame(
   await page.close();
 }
 
+/** The store's guidance for the small tile is little or no text, so it carries only the name. */
 async function promoTile(context: BrowserContext): Promise<void> {
   const page = await context.newPage();
   await page.setViewportSize({ width: 440, height: 280 });
@@ -117,14 +131,12 @@ async function promoTile(context: BrowserContext): Promise<void> {
     body { margin: 0; width: 440px; height: 280px; overflow: hidden; box-sizing: border-box;
       font-family: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       background: linear-gradient(135deg, #0b5c6b 0%, #0f7385 100%); color: #fff;
-      display: flex; flex-direction: column; justify-content: center; padding: 0 36px; }
-    img { width: 64px; height: 64px; border-radius: 14px; box-shadow: 0 0 0 2px #ffffff33; margin-bottom: 18px; }
-    h1 { font-size: 30px; margin: 0 0 8px; font-weight: 700; letter-spacing: -.01em; }
-    p { font-size: 17px; line-height: 1.4; margin: 0; color: #d5ecef; }
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+    img { width: 112px; height: 112px; border-radius: 24px; box-shadow: 0 0 0 3px #ffffff33; }
+    h1 { font-size: 32px; margin: 0; font-weight: 700; letter-spacing: -.01em; }
   </style></head><body>
     <img src="${ICON}" alt="">
     <h1>Journal Club Helper</h1>
-    <p>Critical appraisal next to the abstract: PICO, NNT and a validity checklist.</p>
   </body></html>`);
   await page.locator('img').evaluate((img: HTMLImageElement) => img.decode());
   writeFileSync('store/promo-small-440x280.png', await page.screenshot());
@@ -132,16 +144,17 @@ async function promoTile(context: BrowserContext): Promise<void> {
 }
 
 test('store listing images', async ({ context, page, extensionId }) => {
-  await openPubMed(page, articleUrl(RCT), 'article');
+  // A live run uses a persistent profile, whose saved appraisals would end up
+  // in the images and whose earlier answers would be toggled off again.
+  test.skip(LIVE, 'Render the store images from saved pages only: unset JCH_LIVE.');
+
+  await openPubMed(page, articleUrl(RECORD), 'article');
   await expect(page.locator('#jch-open')).toBeVisible();
   const panel = await openPanelInTab(context, extensionId);
 
   // 1. The design header with its evidence, and a PICO the reader has written.
   await panel.locator('.design__evidence-summary').click();
-  await type(panel, '#jch-pico-p', PICO.P);
-  await type(panel, '#jch-pico-i', PICO.I);
-  await type(panel, '#jch-pico-c', PICO.C);
-  await type(panel, '#jch-pico-o', PICO.O);
+  for (const [key, text] of Object.entries(PICO)) await type(panel, `#jch-pico-${key}`, text);
   await blur(panel);
   await panel.evaluate(() => window.scrollTo(0, 0));
   await frame(
@@ -153,13 +166,16 @@ test('store listing images', async ({ context, page, extensionId }) => {
     'The design is read from the publication type and the abstract, with the evidence shown. Change it if you disagree.',
   );
 
-  // 2. Numbers: the percent pair from the abstract, used.
+  // 2. Numbers: the relative risk from the abstract, applied to the usual-care rate.
   await tab(panel, 'Numbers');
-  const pair = panel
+  const ratio = panel
     .locator('.numbers__candidate')
-    .filter({ has: panel.locator('.numbers__raw', { hasText: RCT_PERCENT_PAIR.raw }) });
-  await pair.locator('.numbers__use').click();
-  await expect(panel.locator('.numbers__nnt')).toHaveText(RCT_PERCENT_PAIR.nnt);
+    .filter({ has: panel.locator('.numbers__raw', { hasText: RATIO_RAW }) });
+  await ratio.locator('.numbers__use').click();
+  await type(panel, '#jch-numbers-acr', BASELINE_RISK);
+  await panel.locator('.numbers__submit').click();
+  await expect(panel.locator('.numbers__nnt')).toHaveText(EXPECTED_NNT);
+  await blur(panel);
   await panel
     .locator('.numbers__result')
     .evaluate((result) => result.scrollIntoView({ block: 'end' }));
@@ -169,16 +185,16 @@ test('store listing images', async ({ context, page, extensionId }) => {
     await panel.screenshot(),
     PANEL,
     'Get the absolute effect, not just the relative one',
-    'Pick a result from the abstract and see ARR, RRR and the NNT, with a 95% CI when the numbers allow one.',
+    'Apply a ratio from the abstract to a baseline risk and see the ARR and the NNT, with the 95% CI carried over.',
   );
 
-  // 3. The appraisal checklist, answered honestly from the abstract alone.
+  // 3. The appraisal checklist, answered from what the abstract says.
   await tab(panel, 'Appraisal');
-  const items = panel.locator('.validity-item');
-  await items.nth(0).locator('.validity-choice--unclear').click();
-  await items.nth(1).locator('.validity-choice--unclear').click();
-  await items.nth(1).getByText('Add a note').click();
-  await items.nth(1).locator('.validity-note').fill(CONCEALMENT_NOTE);
+  await item(panel, 'Prespecified question').locator('.validity-choice--yes').click();
+  const search = item(panel, 'Search comprehensiveness');
+  await search.locator('.validity-choice--unclear').click();
+  await search.getByText('Add a note').click();
+  await search.locator('.validity-note').fill(SEARCH_NOTE);
   await blur(panel);
   await panel
     .locator('.validity-section__title')
@@ -215,14 +231,14 @@ test('store listing images', async ({ context, page, extensionId }) => {
   await options.setViewportSize(OPTIONS);
   await options.route(/^chrome-extension:/, (route) => route.continue());
   await options.goto(`chrome-extension://${extensionId}/options.html`);
-  await expect(options.locator('body')).toContainText(`PMID ${RCT.pmid}`);
+  await expect(options.locator('body')).toContainText(`PMID ${RECORD.pmid}`);
   await frame(
     context,
     'store/screenshot-5.png',
     await options.screenshot(),
     OPTIONS,
-    'Everything stays on your device',
-    'No account, no server, no analytics. Export a backup or delete everything from the settings page.',
+    'Your appraisals stay on your device',
+    'No account, no server, no analytics. Export a backup, or delete your appraisals, from the settings page.',
   );
 
   await promoTile(context);

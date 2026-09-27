@@ -89,4 +89,4 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-console.log('Manifest guard passed: permissions match the spec exactly.');
+console.log('Manifest guard passed: permissions, name and summary match the spec.');

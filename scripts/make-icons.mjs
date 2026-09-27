@@ -16,7 +16,8 @@ const OUTPUTS = [
   { path: 'store/icon-128.png', size: 128, padding: 16 },
 ];
 
-const browser = await chromium.launch();
+// The full Chromium build, as the e2e fixtures use: CI installs it without the headless shell.
+const browser = await chromium.launch({ channel: 'chromium' });
 try {
   const page = await browser.newPage();
   mkdirSync('src/public/icon', { recursive: true });
