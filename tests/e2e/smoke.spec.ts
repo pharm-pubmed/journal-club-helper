@@ -7,6 +7,7 @@
  * renders. Nothing is recomputed from src/ here, so a stale build cannot hide
  * behind current source.
  */
+import { readFileSync } from 'node:fs';
 import type { Page, Worker } from '@playwright/test';
 import type { PubMedArticle } from '../../src/lib/types';
 import { DESIGN_LABELS } from '../../src/ui/labels';
@@ -327,6 +328,71 @@ test('5. a page that cannot be read offers NCBI, asks inside the click, and send
   // is pinned by tests/ui/use-article.test.ts.
   const control = `fetch('data:text/plain,x').then(() => JSON.stringify(window.__jch.fetches))`;
   expect(await evaluateInPanel<string>(page, extensionId, control)).toBe('["data:text/plain,x"]');
+});
+
+test('7. once the reader allows it, the record comes from NCBI and the panel says so', async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  test.skip(LIVE, 'needs a page whose markup is broken on purpose, which only the fixtures have');
+  const url = articleUrl(RCT);
+  await page.route(url, (route) =>
+    route.fulfill({ contentType: 'text/html; charset=utf-8', body: unreadablePage() }),
+  );
+  await openPubMed(page, url, 'article');
+  await expect(page.locator('#jch-open'), BUTTON_MISSING).toBeVisible();
+
+  // Chrome's permission prompt is browser UI that no automated run can click,
+  // which is why scenario 5 stops at "nothing is sent without the grant". Here
+  // the prompt is answered Allow by a stand-in, and the panel is opened as a
+  // tab so that its request to NCBI can be served from the saved record. What
+  // follows the answer is the built extension's own code.
+  const panel = await context.newPage();
+  await panel.route(/^chrome-extension:/, (route) => route.continue());
+  const sent: string[] = [];
+  await panel.route('https://eutils.ncbi.nlm.nih.gov/**', (route) => {
+    sent.push(route.request().url());
+    return route.fulfill({
+      contentType: 'text/xml; charset=utf-8',
+      headers: { 'access-control-allow-origin': '*' },
+      body: readFileSync(`tests/fixtures/eutils/${RCT.pmid}.xml`, 'utf8'),
+    });
+  });
+  await panel.addInitScript((pmid) => {
+    const query = chrome.tabs.query.bind(chrome.tabs);
+    chrome.tabs.query = (() =>
+      query({
+        url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/*`,
+      })) as unknown as typeof chrome.tabs.query;
+    const asked: unknown[] = [];
+    (window as unknown as { __asked: unknown[] }).__asked = asked;
+    chrome.permissions.request = ((options: unknown) => {
+      asked.push(options);
+      return Promise.resolve(true);
+    }) as unknown as typeof chrome.permissions.request;
+  }, RCT.pmid);
+  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await expect(panel.locator('body')).toContainText('The abstract on this page could not be read');
+
+  await panel.getByRole('button', { name: 'Fetch from NCBI' }).click();
+  await expect(panel.locator('body')).toContainText('via NCBI E-utilities');
+  await expect(panel.locator('body')).toContainText(`PMID ${RCT.pmid}`);
+  await expect(panel.locator('body')).toContainText(DESIGN_LABELS[RCT.design]);
+  expect(await panel.evaluate(() => (window as unknown as { __asked: unknown[] }).__asked)).toEqual(
+    [{ origins: ['https://eutils.ncbi.nlm.nih.gov/*'] }],
+  );
+
+  // One request, for this record, naming the tool, and carrying nothing else.
+  expect(sent).toHaveLength(1);
+  const request = new URL(sent[0]!);
+  expect(request.pathname).toBe('/entrez/eutils/efetch.fcgi');
+  expect(Object.fromEntries(request.searchParams)).toMatchObject({
+    db: 'pubmed',
+    id: RCT.pmid,
+    tool: 'journal-club-helper',
+  });
+  await panel.close();
 });
 
 /**
