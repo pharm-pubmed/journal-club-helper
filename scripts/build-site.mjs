@@ -139,7 +139,12 @@ export function markdownToHtml(markdown, { headingOffset = 0 } = {}) {
   return { title, html: html.join('\n') };
 }
 
-/** The page around generated content. `source` names the file to edit instead. */
+/**
+ * The page around generated content. `source` names the file to edit instead.
+ * Every generated page sits one directory below the site root, and links are
+ * relative so the site works under a project Pages path such as
+ * `<org>.github.io/journal-club-helper/` as well as at a domain root.
+ */
 function layout({ source, title, description, main, index = true }) {
   return `<!doctype html>
 <!-- Generated from ${source} by scripts/build-site.mjs. Edit that file, not this one. -->
@@ -151,12 +156,12 @@ function layout({ source, title, description, main, index = true }) {
     <meta name="description" content="${escapeHtml(description)}" />${
       index ? '' : '\n    <meta name="robots" content="noindex" />'
     }
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
     <header class="bar">
-      <a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28" />Journal Club Helper</a>
+      <a class="brand" href="../"><img src="../favicon.svg" alt="" width="28" height="28" />Journal Club Helper</a>
     </header>
     <main class="doc">
 ${main}
@@ -198,7 +203,7 @@ export function samplePage(markdown) {
 <div class="note">
 <p>This is a one-page summary exported from Journal Club Helper, unedited, for a published meta-analysis in The BMJ. For this example a person did what a reader would: typed the PICO, chose which of the abstract's ratios to use and entered the baseline risk to apply it to, marked two checklist questions Unclear with a note on each, and wrote the bottom line. The rest is what the extension filled in or calculated, or left blank for the reader.</p>
 <p>The absolute figures are calculated from the relative risk and that baseline risk, so they differ a little from the crude rates the abstract reports. The bottom line only shows what a reader might write. It is not a clinical conclusion and not advice.</p>
-<p><a href="/sample/summary.md">The exported Markdown file</a> is available as well.</p>
+<p><a href="summary.md">The exported Markdown file</a> is available as well.</p>
 </div>
 ${html}`,
   });
