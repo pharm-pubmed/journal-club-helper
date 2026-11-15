@@ -219,12 +219,9 @@ A rejection names the policy it cites. Record it in §6 with what was changed, s
 `site/` is the whole landing site: `index.html` and `style.css` by hand, and `privacy/index.html`, `sample/index.html` and `favicon.svg` generated from `docs/PRIVACY.md`, `site/sample/summary.md` and `store/icon.svg` by `pnpm site` (`scripts/build-site.mjs`). CI fails if the generated files are out of date, so the published policy is always the committed one. There is no framework, no external font, no script and no analytics. Lighthouse gave the home page and the privacy page 100 in every category, mobile and desktop, on a local server (2026-09-27). The example page has not been measured.
 
 - **Hosting:** GitHub Pages from the organization's repository, deployed by `.github/workflows/pages.yml`. It is chosen because it moves with the organization and costs nothing. There is no custom domain (§7), so the site is served at `https://<org>.github.io/journal-club-helper/`, and every link in `site/` is relative so that subpath works; a test fails on a link from the root. The workflow runs on every push to `main` that touches `site/`, and by hand. First published 2026-11-15.
-- **Going live, once #30 is done:**
-  1. Enable Pages with the source set to GitHub Actions.
-  2. Check that Enforce HTTPS is on in the repository's Pages settings.
-  3. Verify the Pages URL in Google Search Console under the publisher account (§3, step 4).
-  4. Replace the `TBD(#nn)` placeholders in `site/index.html`: the store link and the contact.
-  5. Run the workflow, and add the push trigger its comment describes.
+- **Live since 2026-11-15** at https://pharm-pubmed.github.io/journal-club-helper/, Pages source GitHub Actions, HTTPS enforced. Left to do:
+  1. Optional: verify the Pages URL in Google Search Console under the publisher account (§3, step 4).
+  2. Replace the store link placeholder in `site/index.html` once the item is published (#31).
 - **Images:** `site/img/*.png` are the unframed panel images from `pnpm store:assets`, so they change together with the store screenshots.
 - **Demo video:** `site/video/demo.mp4` (about 33 s, H.264, no sound) and its poster come from `pnpm store:video` (`store/demo.spec.ts`), which needs `ffmpeg` with libx264. It records the panel over CDP while it enters the same appraisal as the store images (`store/scenario.ts`). Re-record it after a UI change it shows, and watch it through before committing.
 - **Example summary:** `site/sample/summary.md` is the file the Export tab's **Download .md** saves for the screenshot appraisal, also written by `pnpm store:assets` and linked from the page as the example output (spec §11). A note above it says which parts were typed in by hand. CI checks only that its page matches it, not that it matches the current summary format, so run `pnpm store:assets` again whenever `src/lib/summary-builder.ts` changes what the summary says.
@@ -442,6 +439,7 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
 - 2026-11-15: **No custom domain (#29, #30).** The owner decided to go without one: the site goes on the organization's GitHub Pages URL and the contact is a Gmail address (§7). Every link in `site/` was made relative, since a project Pages URL has a subpath, and a test now fails on a link from the root or to a missing file. Served under `/journal-club-helper/` locally, every link on the three pages returned 200.
 - 2026-11-15: **Published as `pharm-pubmed/journal-club-helper` (#30).** A new repository with the author e-mail rewritten out of the history, issue numbers preserved, and the old one kept private as `journal-club-helper-archive`; §7 has why and how. Every repository URL in the code and documents now points at the organization, and the Pages URL is filled in wherever it was a placeholder. Still a placeholder: the contact address, which waits for the dedicated Gmail.
 - 2026-11-15: **The project mailbox is `journal.club.helper@gmail.com` (#30).** It is the contact in the privacy policy, the store listing and the landing page, and the E-utilities request now sends it as `email`. The policy and `CHROMEWEBSTORE.md` say so, since what is sent changed.
+- 2026-11-15: **The landing site is live (#29).** Pages enabled through the API, first deployed by the push that merged #73. Checked from outside: the three pages and every local file, the video included, return 200; the policy shows its effective date and the contact. `doi.org` and PubMed refuse `curl` (403 and 203), as they refuse any non-browser client. The site was watched through by the owner before going live (step 1 of their checklist). Not yet measured on the live URL: Lighthouse, and video playback in Safari.
 
 ## 7. Decisions and why
 
