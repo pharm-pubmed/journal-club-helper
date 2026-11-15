@@ -15,13 +15,18 @@ export interface SmokeRecord {
   design: StudyDesign;
   journal: string;
   year: string;
-  /** In the form the page's citation meta gives it, which differs by dialect. */
-  firstAuthor: string;
+  /**
+   * Every form the page's citation meta has given it. The form follows the
+   * dialect, and the live page has switched dialect under a saved fixture
+   * before (36577095 and 34844936 went from `citation_author` "Zhujun Cao" to
+   * `citation_authors` "Cao Z" by 2026-11), so either reading is accepted.
+   */
+  firstAuthor: readonly string[];
 }
 
 /**
  * VV116 versus nirmatrelvir-ritonavir, NEJM 2023. The regression case
- * everywhere else (HANDOVER §7), NLM citation-meta dialect, and its abstract
+ * everywhere else (HANDOVER §7), NLM citation-meta dialect in the saved fixture, and its abstract
  * reports event rates as a `vs` percent pair, which the NNT scenario needs.
  */
 export const RCT: SmokeRecord = {
@@ -31,7 +36,7 @@ export const RCT: SmokeRecord = {
   design: 'rct',
   journal: 'N Engl J Med',
   year: '2023',
-  firstAuthor: 'Zhujun Cao',
+  firstAuthor: ['Zhujun Cao', 'Cao Z'],
 };
 
 /** The percent pair in the RCT's abstract, and the NNT the panel computes from it. */
@@ -50,10 +55,10 @@ export const META_ANALYSIS: SmokeRecord = {
   design: 'sr-ma',
   journal: 'BMJ',
   year: '2022',
-  firstAuthor: 'Weatherald J',
+  firstAuthor: ['Weatherald J'],
 };
 
-/** BMJ cohort, NLM dialect: an observational design alongside the two above. */
+/** BMJ cohort, NLM dialect in the saved fixture: an observational design alongside the two above. */
 export const COHORT: SmokeRecord = {
   pmid: '34844936',
   fixture: 'cohort-34844936.html',
@@ -61,7 +66,7 @@ export const COHORT: SmokeRecord = {
   design: 'cohort',
   journal: 'BMJ',
   year: '2021',
-  firstAuthor: 'Edouard L Fu',
+  firstAuthor: ['Edouard L Fu', 'Fu EL'],
 };
 
 export const RECORDS: readonly SmokeRecord[] = [RCT, META_ANALYSIS, COHORT];
