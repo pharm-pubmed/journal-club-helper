@@ -193,7 +193,9 @@ export async function openPubMed(
   if (!LIVE) return;
   const message = 'Pass the PubMed browser check in the open Chromium window';
   if (kind === 'article') {
-    await expect(page.locator('h1.heading-title'), message).toBeVisible({
+    // PubMed renders the title twice, in the full view and in the short view
+    // (#short-view-heading), so the locator has to pick one.
+    await expect(page.locator('h1.heading-title').first(), message).toBeVisible({
       timeout: HUMAN_CHECK_TIMEOUT,
     });
   } else {
