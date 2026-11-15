@@ -140,7 +140,8 @@ describe('the landing site builder', () => {
   it('links only relatively, to files that exist', () => {
     for (const page of ['site/index.html', 'site/privacy/index.html', 'site/sample/index.html']) {
       const html = readFileSync(page, 'utf8');
-      for (const [, target] of html.matchAll(/\b(?:href|src|poster)="([^"]*)"/g)) {
+      for (const [, found] of html.matchAll(/\b(?:href|src|poster)="([^"]*)"/g)) {
+        const target = found ?? '';
         if (/^(https:|mailto:|#|TBD\()/.test(target)) continue;
         expect(target, `${page}: ${target}`).not.toMatch(/^\//);
         const file = join(dirname(page), target);
