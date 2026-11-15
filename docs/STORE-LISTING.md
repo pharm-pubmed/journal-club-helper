@@ -6,23 +6,23 @@ Placeholders read `TBD(#nn)`, naming the issue that fills them in. The listing c
 
 ## Store listing tab
 
-| Field              | Value                                                                                                                                                                                                                          |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Name               | `Journal Club Helper: Critical Appraisal for PubMed`, taken from the manifest                                                                                                                                                  |
-| Summary            | Taken from the manifest's `description`, which is the spec §6 text word for word (120 characters, 132 allowed). See below.                                                                                                     |
-| Description        | [Below](#description)                                                                                                                                                                                                          |
-| Category           | Education. The store now lists Education as a subcategory of Productivity, so this keeps spec §6's reason for choosing Productivity and also puts the item where students and educators look. Check the list in the dashboard. |
-| Language           | English                                                                                                                                                                                                                        |
-| Store icon         | `store/icon-128.png`                                                                                                                                                                                                           |
-| Screenshots        | `store/screenshot-1.png` … `store/screenshot-5.png`, 1280×800, in the order [below](#screenshots)                                                                                                                              |
-| Small promo tile   | `store/promo-small-440x280.png`                                                                                                                                                                                                |
-| Marquee promo tile | Not needed. It is optional and only used if the store features the item.                                                                                                                                                       |
-| YouTube video      | None yet. Spec §11 suggests a short demo for the landing page, which could go here too.                                                                                                                                        |
-| Official URL       | TBD(#29), the landing page at the organization's Pages URL. The dashboard only offers sites verified in Google Search Console for the publisher account; leave it empty if it does not offer this one (HANDOVER §3).           |
-| Homepage URL       | TBD(#29)                                                                                                                                                                                                                       |
-| Support URL        | TBD(#30), the repository's issues page once it has moved to the organization                                                                                                                                                   |
-| Support email      | TBD(#30), the dedicated Gmail address, set as the developer account's contact email                                                                                                                                            |
-| Mature content     | No                                                                                                                                                                                                                             |
+| Field              | Value                                                                                                                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name               | `Journal Club Helper: Critical Appraisal for PubMed`, taken from the manifest                                                                                                                                                   |
+| Summary            | Taken from the manifest's `description`, which is the spec §6 text word for word (120 characters, 132 allowed). See below.                                                                                                      |
+| Description        | [Below](#description)                                                                                                                                                                                                           |
+| Category           | Education. The store now lists Education as a subcategory of Productivity, so this keeps spec §6's reason for choosing Productivity and also puts the item where students and educators look. Check the list in the dashboard.  |
+| Language           | English                                                                                                                                                                                                                         |
+| Store icon         | `store/icon-128.png`                                                                                                                                                                                                            |
+| Screenshots        | `store/screenshot-1.png` … `store/screenshot-5.png`, 1280×800, in the order [below](#screenshots)                                                                                                                               |
+| Small promo tile   | `store/promo-small-440x280.png`                                                                                                                                                                                                 |
+| Marquee promo tile | Not needed. It is optional and only used if the store features the item.                                                                                                                                                        |
+| YouTube video      | None yet. Spec §11 suggests a short demo for the landing page, which could go here too.                                                                                                                                         |
+| Official URL       | https://pharm-pubmed.github.io/journal-club-helper/, the landing page. The dashboard only offers sites verified in Google Search Console for the publisher account; leave it empty if it does not offer this one (HANDOVER §3). |
+| Homepage URL       | https://pharm-pubmed.github.io/journal-club-helper/                                                                                                                                                                             |
+| Support URL        | https://github.com/pharm-pubmed/journal-club-helper/issues                                                                                                                                                                      |
+| Support email      | TBD(#30), the dedicated Gmail address, set as the developer account's contact email                                                                                                                                             |
+| Mature content     | No                                                                                                                                                                                                                              |
 
 `scripts/check-manifest.mjs` fails the build if the name is over 75 characters or starts with "PubMed", or if the summary is over 132 characters. The summary is:
 
@@ -105,7 +105,7 @@ Every answer is in [CHROMEWEBSTORE.md](../CHROMEWEBSTORE.md). Copy it from there
 | Remote code                               | _Remote code_: No                                                                      |
 | Data usage                                | _Data handling_: the three categories it lists                                         |
 | Certifications                            | All three can be ticked (_Data handling_)                                              |
-| Privacy policy URL                        | TBD(#29), where `docs/PRIVACY.md` is published                                         |
+| Privacy policy URL                        | https://pharm-pubmed.github.io/journal-club-helper/privacy/                            |
 
 The test instructions tab takes the reviewer notes at the end of CHROMEWEBSTORE.md.
 
