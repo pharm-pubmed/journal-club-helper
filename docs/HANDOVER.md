@@ -8,7 +8,7 @@ Everything a new owner needs to build, release, and operate this extension. Star
 | ------------------------------------------- | --------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
 | GitHub repository                           | `piroshi1989/journal-club-helper` | personal account | Spec §10 requires a dedicated GitHub Org. Transfer the repo once the org exists (tracked in issues). |
 | Google account (Chrome Web Store developer) | —                                 | not created      | Must be a dedicated account, never the personal one. Needed before v0.3 submission.                  |
-| Domain (landing page, privacy policy)       | —                                 | not registered   | Use a registrar that makes transfer easy. Hosting is GitHub Pages; see §3, _Landing site_.           |
+| Domain (landing page, privacy policy)       | none, by decision                 | not used         | The site lives at the organization's GitHub Pages URL and the contact is a Gmail address (§7).       |
 | ExtensionPay / Stripe                       | —                                 | not created      | After demand validation. Check costs and operating/transfer terms before billing (spec §4.8).        |
 | Anthropic / OpenAI                          | none                              | n/a              | Users bring their own API keys. The project holds no provider account.                               |
 | Bank account for revenue / costs            | —                                 | not created      | Keep separate from personal finances.                                                                |
@@ -191,7 +191,7 @@ Written before the first submission, so each step is a plan, not yet a record. C
 1. The dedicated Google account exists (#30, §1), never the personal one. It has 2-Step Verification on, which publishing requires, and it has paid the developer registration fee.
 2. In the dashboard's account settings: the publisher name, a verified contact email (the project's address from #30), and the trader or non-trader declaration the EU requires.
 3. The repository has moved to the organization and is public (#30, §7), so every URL below is final.
-4. The landing page and the privacy policy are live over HTTPS (#29, #28). The domain is verified in Google Search Console under the publisher account, which is what lets the listing name it as the official URL.
+4. The landing page and the privacy policy are live over HTTPS (#29, #28). To name the site as the listing's official URL, verify `https://<org>.github.io/journal-club-helper/` in Google Search Console under the publisher account as a URL-prefix property (HTML tag method). Whether the dashboard offers a URL-prefix property on `github.io` is unverified; if it does not, leave the official URL empty, which the listing allows.
 5. No placeholder is left. This prints nothing:
 
    ```bash
@@ -217,11 +217,11 @@ A rejection names the policy it cites. Record it in §6 with what was changed, s
 
 `site/` is the whole landing site: `index.html` and `style.css` by hand, and `privacy/index.html`, `sample/index.html` and `favicon.svg` generated from `docs/PRIVACY.md`, `site/sample/summary.md` and `store/icon.svg` by `pnpm site` (`scripts/build-site.mjs`). CI fails if the generated files are out of date, so the published policy is always the committed one. There is no framework, no external font, no script and no analytics. Lighthouse gave the home page and the privacy page 100 in every category, mobile and desktop, on a local server (2026-09-27). The example page has not been measured.
 
-- **Hosting:** GitHub Pages from the organization's repository, deployed by `.github/workflows/pages.yml`. It is chosen because it moves with the organization and costs nothing. The domain stays at the registrar, which transfers separately (§1). The workflow runs only by hand until #30, and it has never run.
+- **Hosting:** GitHub Pages from the organization's repository, deployed by `.github/workflows/pages.yml`. It is chosen because it moves with the organization and costs nothing. There is no custom domain (§7), so the site is served at `https://<org>.github.io/journal-club-helper/`, and every link in `site/` is relative so that subpath works; a test fails on a link from the root. The workflow runs only by hand until #30, and it has never run.
 - **Going live, once #30 is done:**
   1. Enable Pages with the source set to GitHub Actions.
-  2. Add the custom domain in the repository's Pages settings, and add the DNS records GitHub lists at the registrar. Enforce HTTPS.
-  3. Verify the domain in Google Search Console under the publisher account (§3).
+  2. Check that Enforce HTTPS is on in the repository's Pages settings.
+  3. Verify the Pages URL in Google Search Console under the publisher account (§3, step 4).
   4. Replace the `TBD(#nn)` placeholders in `site/index.html`: the store link and the contact.
   5. Run the workflow, and add the push trigger its comment describes.
 - **Images:** `site/img/*.png` are the unframed panel images from `pnpm store:assets`, so they change together with the store screenshots.
@@ -438,6 +438,7 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   - The live page now renders `h1.heading-title` twice (full view and `#short-view-heading`), so the wait for a human to pass the check hit a strict-mode violation (#67). The extractor's `querySelector` already takes the first, full-view heading, as the saved meta-analysis page shows.
   - 36577095 and 34844936 now come with one joined `citation_authors` (`Cao Z;...`) instead of repeated `citation_author` (`Zhujun Cao`). The extractor reads both dialects; the expectation was pinned to the saved fixture's (#68). Exports of these papers now show the short form of author names, as the meta-analysis already did.
   - Third run: 8 passed, 2 skipped (the two fixture-only scenarios).
+- 2026-11-15: **No custom domain (#29, #30).** The owner decided to go without one: the site goes on the organization's GitHub Pages URL and the contact is a Gmail address (§7). Every link in `site/` was made relative, since a project Pages URL has a subpath, and a test now fails on a link from the root or to a missing file. Served under `/journal-club-helper/` locally, every link on the three pages returned 200.
 
 ## 7. Decisions and why
 
@@ -610,3 +611,9 @@ Most of the translation cost is the 55 checklist questions and their help text, 
 ### The repository moves to a dedicated org before the store submission (#30, #31)
 
 Today the repository URL appears in exactly one shipped place, `src/ui/options/OptionsPage.tsx`. After submission it is also in the store listing and the published privacy policy, and changing it there means a re-review. Branch protection is a repository setting and does not survive a transfer, so re-apply it on the other side.
+
+### No custom domain for now — decided 2026-11-15
+
+The landing page and the privacy policy are served from the organization's GitHub Pages URL, and the contact address is a Gmail address on the dedicated Google account. The store asks for a privacy policy URL, not a domain, and a free cohort of ten does not need one. Both the Pages URL and the mailbox move with the organization and the Google account, so the transfer argument of spec §10 still holds.
+
+What it costs: the URL names GitHub, not the product, and changing it later means a re-review of the listing and a new policy URL. Reverse this before the public launch if the listing's look matters, or before billing, where a stable address on receipts does. Adding a domain then is a Pages setting plus DNS records; the site already uses relative links.

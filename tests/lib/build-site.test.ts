@@ -4,7 +4,8 @@
  * but it must never pass markup through unescaped or publish a link that is
  * not https.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error -- a plain .mjs script with no type declarations.
 import { inline, markdownToHtml, privacyPage, samplePage } from '../../scripts/build-site.mjs';
@@ -131,6 +132,23 @@ describe('the landing site builder', () => {
     expect(page).toContain('<meta name="robots" content="noindex" />');
     for (const [, text] of markdown.matchAll(/^#{1,3} (.+)$/gm)) {
       expect(page).toContain(`>${inline(text)}</h`);
+    }
+  });
+
+  // Pages serves the site under /journal-club-helper/ until there is a domain,
+  // so a link from the root would leave it.
+  it('links only relatively, to files that exist', () => {
+    for (const page of ['site/index.html', 'site/privacy/index.html', 'site/sample/index.html']) {
+      const html = readFileSync(page, 'utf8');
+      for (const [, target] of html.matchAll(/\b(?:href|src|poster)="([^"]*)"/g)) {
+        if (/^(https:|mailto:|#|TBD\()/.test(target)) continue;
+        expect(target, `${page}: ${target}`).not.toMatch(/^\//);
+        const file = join(dirname(page), target);
+        expect(
+          existsSync(target.endsWith('/') || target === '.' ? join(file, 'index.html') : file),
+          `${page}: ${target}`,
+        ).toBe(true);
+      }
     }
   });
 });
