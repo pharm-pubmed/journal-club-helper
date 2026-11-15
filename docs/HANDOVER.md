@@ -181,7 +181,7 @@ The v0.1 steps below are for an internal pre-release. The store steps follow the
    - A draft creates no tag, and `--target` pins the tag to the commit that will be tested, not to whatever `main` is when the release is published.
    - Do not use the CI artifact for this. It arrives wrapped in a second zip, expires after 14 days, and is missing for a run that `cancel-in-progress` cancelled.
 4. Someone downloads the zip from the draft, runs `docs/QA.md` against it, and fills in the results table. Also run `pnpm test:e2e:live` once by hand; it is the only check against live PubMed (§4, row 3).
-5. Put the QA results into the notes and publish, which creates the tag. `gh` 2.4 has no `release edit`, so use the API: `gh api -X PATCH repos/<owner>/<repo>/releases/<id> -F draft=false -F body=@<notes>`.
+5. Put the QA results into the notes and publish, which creates the tag. `gh` 2.4 has no `release edit`, so use the API: `gh api -X PATCH repos/<owner>/<repo>/releases/<id> -F draft=false -F body=@<notes>` Pass `-f tag_name=v<version>` in every PATCH to a draft: one without it blanked the draft's tag name to `untagged-…` (2026-11-15), and publishing that would have created the wrong tag.
 
 ### Chrome Web Store (v0.3 onwards)
 
@@ -304,6 +304,8 @@ One set of gaps was not deliberate: **#49**, three common forms the number extra
 - A fraction pair with prose between its arms. ISIS-2's primary result is written this way. **Still a gap, on purpose.** A first attempt read it when each arm carried a matching percentage, and review found false positives that passed every guard: subgroup splits, nested proportions, two outcomes in one arm, and a three-arm sentence that offered placebo versus overall and lost the real pair. It is left to manual entry, or to the AI extraction (#34).
 
 Still not read after #49: a count with words between it and the slash, such as D's `42 exposed cases/18 061 cases`; a count right after a 1–3 digit number with no percentage to settle it, such as `In 3 120 of 300`; and a count with a number right behind it, such as `45/300 vs 62/298 100 days`. v0.1.0 read the last one, correctly there, as 62/298, but the same reading makes `11 of 90 305 controls` into 11/90. All three are misses, not wrong candidates.
+
+**#77**, found in the v0.3.0 QA pass: on a harm result the Numbers tab labels the effect row ARI and shows it positive, but the CI row below still reads `95% CI for the ARR` with negative values (`-5.0 to -4.3 points` for D's NNH 22). The export shows the same interval as a positive ARI CI. The numbers are right; only the panel's label and sign disagree with the export.
 
 One consequence of the fix to know about: fraction pairs are offered whatever the design. On a case-control abstract such as QA record D, they are the shares of cases and of controls exposed, and an NNH computed from them means nothing. The Numbers tab does not say so; `docs/QA.md` D3 does.
 
@@ -440,6 +442,13 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
 - 2026-11-15: **Published as `pharm-pubmed/journal-club-helper` (#30).** A new repository with the author e-mail rewritten out of the history, issue numbers preserved, and the old one kept private as `journal-club-helper-archive`; §7 has why and how. Every repository URL in the code and documents now points at the organization, and the Pages URL is filled in wherever it was a placeholder. Still a placeholder: the contact address, which waits for the dedicated Gmail.
 - 2026-11-15: **The project mailbox is `journal.club.helper@gmail.com` (#30).** It is the contact in the privacy policy, the store listing and the landing page, and the E-utilities request now sends it as `email`. The policy and `CHROMEWEBSTORE.md` say so, since what is sent changed.
 - 2026-11-15: **The landing site is live (#29).** Pages enabled through the API, first deployed by the push that merged #73. Checked from outside: the three pages and every local file, the video included, return 200; the policy shows its effective date and the contact. `doi.org` and PubMed refuse `curl` (403 and 203), as they refuse any non-browser client. The site was watched through by the owner before going live (step 1 of their checklist). Not yet measured on the live URL: Lighthouse, and video playback in Safari.
+- 2026-11-15: **v0.3.0 passed QA; not yet submitted (#31).** The owner checked the draft's zip with `certutil` and the hash matched (`c127a3bc…`). The owner then handed the QA pass to Claude Code, which ran `docs/QA.md` A–F as a Playwright script on live PubMed, so this pass differs from v0.1.0's:
+  - It ran on Chromium 153, headed, under WSL2, with the unpacked zip.
+  - The page button was clicked for real. Inside the panel, clicks and typing were DOM events sent over CDP.
+  - The clipboard was read back. The `.md` download was checked from the link the panel created.
+  - Every step passed. D3 is correct but looks wrong, filed as #77.
+  - The zip's contents are byte-identical to a build of c67da2e. On that build, `pnpm test:e2e:live` gave 8 passed and 2 skipped. The first page took 2.7 minutes to get past PubMed's check.
+  - The draft release carries the results. It stays a draft until the store item is live (§3, store step 8).
 
 ## 7. Decisions and why
 
