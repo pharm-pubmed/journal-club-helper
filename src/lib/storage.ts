@@ -10,6 +10,7 @@
  *   settings                     one Settings
  *   appraisal-unreadable:<PMID>  a record this version could not read, set aside
  */
+import { isLocalePreference, type LocalePreference } from './i18n';
 import { getStore } from './kv-store';
 import type {
   Appraisal,
@@ -198,6 +199,8 @@ function pickSettings(s: Settings): Settings {
       exports: s.counters.exports,
       aiRuns: s.counters.aiRuns,
     },
+    // The language is a setting of this browser, and import ignores it.
+    locale: 'auto',
   };
 }
 
@@ -358,7 +361,11 @@ function hasReadableSettings(value: unknown): value is Settings {
 }
 
 export function defaultSettings(): Settings {
-  return { schemaVersion: 1, counters: { panelOpens: 0, exports: 0, aiRuns: 0 } };
+  return {
+    schemaVersion: 1,
+    counters: { panelOpens: 0, exports: 0, aiRuns: 0 },
+    locale: 'auto',
+  };
 }
 
 function toCount(value: unknown): number {
@@ -369,12 +376,13 @@ function toCount(value: unknown): number {
  * Repairs a partial or foreign settings record instead of throwing: losing a
  * usage counter is never worth breaking the panel over.
  *
- * v0.2 note: when Settings gains `apiKey` / `license`, copy them here too, or
- * `incrementCounter` (load → save) will drop them on the next panel open.
+ * Every field has to be copied here, or `incrementCounter` (load → save) drops
+ * it on the next panel open. v0.2 adds `apiKey` / `license`.
  */
 function normaliseSettings(raw: unknown): Settings {
   const settings = defaultSettings();
   if (!isRecord(raw)) return settings;
+  if (isLocalePreference(raw['locale'])) settings.locale = raw['locale'];
   const counters = raw['counters'];
   if (!isRecord(counters)) return settings;
   for (const name of COUNTER_NAMES) settings.counters[name] = toCount(counters[name]);
@@ -387,6 +395,12 @@ export async function loadSettings(): Promise<Settings> {
 
 export async function saveSettings(settings: Settings): Promise<void> {
   await getStore().set(SETTINGS_KEY, settings);
+}
+
+/** Read-modify-write of the language alone, keeping the counters as stored. */
+export async function saveLocalePreference(locale: LocalePreference): Promise<void> {
+  const settings = await loadSettings();
+  await saveSettings({ ...settings, locale });
 }
 
 /* ------------------------------------------------------------ export/import */
@@ -479,6 +493,10 @@ export async function importAll(
   let imported = 0;
   try {
     const store = getStore();
+    // The language is this browser's choice, not part of the data, so a backup
+    // never changes it, whichever the mode (#82). Read before a replace removes
+    // the settings record.
+    const deviceLocale = (await loadSettings()).locale;
     if (mode === 'replace' && !settingsOnly) {
       const all = await store.getAll();
       const ours = Object.keys(all).filter(
@@ -506,6 +524,7 @@ export async function importAll(
     const settings = parsed['settings'];
     if (isRecord(settings)) {
       const incomingSettings = normaliseSettings(settings);
+      incomingSettings.locale = deviceLocale;
       if (mode === 'merge') {
         // Counters only ever go up, so merging a backup from another device must
         // not hand back a lower number than this device has already reached.
@@ -518,6 +537,9 @@ export async function importAll(
         }
       }
       await saveSettings(incomingSettings);
+    } else if (mode === 'replace' && !settingsOnly && deviceLocale !== 'auto') {
+      // The replace removed the record and the file brought none back.
+      await saveSettings({ ...defaultSettings(), locale: deviceLocale });
     }
 
     if (!settingsOnly) await evictOldest();

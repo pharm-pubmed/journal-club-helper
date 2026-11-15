@@ -23,6 +23,7 @@ import {
   appraisalKey,
 } from '../../src/lib/storage';
 import type { Appraisal } from '../../src/lib/types';
+import { applyPreference } from '../../src/ui/i18n';
 import { OptionsPage } from '../../src/ui/options/OptionsPage';
 
 const SETTINGS = { schemaVersion: 1, counters: { panelOpens: 3, exports: 1, aiRuns: 0 } };
@@ -93,6 +94,8 @@ beforeEach(() => {
 
 afterEach(() => {
   render(null, document.body);
+  // The language is module state; a failed test must not leave it Japanese.
+  applyPreference('auto');
   vi.unstubAllGlobals();
   resetStore();
 });
@@ -169,4 +172,23 @@ it('announces an import to any open side panel', async () => {
 
   expect(status()).toBe('Imported 1 appraisal.');
   expect(sendMessage).toHaveBeenCalledWith(REPLACED);
+});
+
+// #82: the language choice is stored with the counters, and the page switches
+// at once instead of waiting for storage to report the write.
+it('switches the page to Japanese and stores the choice', async () => {
+  await kv.set(SETTINGS_KEY, SETTINGS);
+  await mount();
+  expect(document.body.textContent).toContain('Your data');
+
+  const japanese = [...document.querySelectorAll<HTMLInputElement>('input[name="locale"]')].find(
+    (input) => input.value === 'ja',
+  );
+  if (!japanese) throw new Error('no Japanese option');
+  await act(() => japanese.click());
+  await settle();
+
+  expect(document.body.textContent).toContain('保存データ');
+  expect(document.body.textContent).not.toContain('Your data');
+  expect(await kv.get(SETTINGS_KEY)).toEqual({ ...SETTINGS, locale: 'ja' });
 });

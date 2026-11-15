@@ -6,20 +6,11 @@
  * tab bodies are cheap to render, so focusing a tab shows it.
  */
 import { useRef } from 'preact/hooks';
+import { useMessages } from './i18n';
 import { actions, useStore } from './store';
 import type { TabId } from './store';
 
 export const TAB_ORDER: readonly TabId[] = ['pico', 'numbers', 'validity', 'export'];
-
-export const TAB_LABELS: Record<TabId, string> = {
-  pico: 'PICO',
-  numbers: 'Numbers',
-  // The tab id stays `validity` because stored appraisals key off it; the label
-  // follows the section it now contains, which covers internal validity,
-  // applicability and funding rather than validity alone.
-  validity: 'Appraisal',
-  export: 'Export',
-};
 
 /** Shared with App so the tabpanel can point back at its tab. */
 export function tabButtonId(id: TabId): string {
@@ -32,6 +23,7 @@ export function tabPanelId(id: TabId): string {
 
 export function Tabs() {
   const activeTab = useStore((s) => s.activeTab);
+  const m = useMessages();
   const listRef = useRef<HTMLDivElement>(null);
 
   const select = (id: TabId, moveFocus: boolean): void => {
@@ -70,7 +62,7 @@ export function Tabs() {
     <div
       class="tabs"
       role="tablist"
-      aria-label="Appraisal sections"
+      aria-label={m.tabs.listLabel}
       ref={listRef}
       onKeyDown={onKeyDown}
     >
@@ -86,7 +78,7 @@ export function Tabs() {
           tabIndex={id === activeTab ? 0 : -1}
           onClick={() => select(id, false)}
         >
-          {TAB_LABELS[id]}
+          {m.tabs[id]}
         </button>
       ))}
     </div>

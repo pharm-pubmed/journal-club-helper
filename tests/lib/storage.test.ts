@@ -16,6 +16,7 @@ import {
   loadAppraisal,
   loadSettings,
   saveAppraisal,
+  saveLocalePreference,
   saveSettings,
 } from '../../src/lib/storage';
 import type { Appraisal, Settings } from '../../src/lib/storage';
@@ -217,7 +218,11 @@ describe('deleteAllAppraisals / countUnreadableAppraisals', () => {
     // Set aside by an earlier load, and a v1 record that was never reopened.
     await store.set(`${UNREADABLE_PREFIX}33333333`, { schemaVersion: 1, pmid: '33333333' });
     await store.set(appraisalKey('44444444'), { ...makeAppraisal('44444444'), schemaVersion: 1 });
-    await saveSettings({ schemaVersion: 1, counters: { panelOpens: 3, exports: 1, aiRuns: 0 } });
+    await saveSettings({
+      schemaVersion: 1,
+      counters: { panelOpens: 3, exports: 1, aiRuns: 0 },
+      locale: 'auto',
+    });
     await store.set('another-feature', { kept: true });
   }
 
@@ -286,7 +291,11 @@ describe('eviction', () => {
 
   it('never evicts non-appraisal keys', async () => {
     vi.useFakeTimers();
-    await saveSettings({ schemaVersion: 1, counters: { panelOpens: 3, exports: 1, aiRuns: 0 } });
+    await saveSettings({
+      schemaVersion: 1,
+      counters: { panelOpens: 3, exports: 1, aiRuns: 0 },
+      locale: 'auto',
+    });
     for (let i = 0; i <= MAX_APPRAISALS; i += 1) {
       vi.setSystemTime(new Date(2026, 0, 1, 0, 0, i));
       await saveAppraisal(makeAppraisal(String(10_000_000 + i)));
@@ -316,11 +325,16 @@ describe('settings', () => {
     expect(await loadSettings()).toEqual({
       schemaVersion: 1,
       counters: { panelOpens: 0, exports: 0, aiRuns: 0 },
+      locale: 'auto',
     });
   });
 
   it('round trips settings', async () => {
-    await saveSettings({ schemaVersion: 1, counters: { panelOpens: 2, exports: 5, aiRuns: 1 } });
+    await saveSettings({
+      schemaVersion: 1,
+      counters: { panelOpens: 2, exports: 5, aiRuns: 1 },
+      locale: 'auto',
+    });
     expect((await loadSettings()).counters).toEqual({ panelOpens: 2, exports: 5, aiRuns: 1 });
   });
 
@@ -328,12 +342,41 @@ describe('settings', () => {
     await store.set('settings', { schemaVersion: 1, counters: { exports: 4 } });
     expect((await loadSettings()).counters).toEqual({ panelOpens: 0, exports: 4, aiRuns: 0 });
   });
+
+  // #82: a record from before the language setting reads as `auto`, and an
+  // unknown value does not leak through.
+  it('reads the language preference, defaulting to auto', async () => {
+    await store.set('settings', { schemaVersion: 1, counters: { exports: 4 } });
+    expect((await loadSettings()).locale).toBe('auto');
+    await store.set('settings', { schemaVersion: 1, counters: {}, locale: 'fr' });
+    expect((await loadSettings()).locale).toBe('auto');
+    await store.set('settings', { schemaVersion: 1, counters: {}, locale: 'ja' });
+    expect((await loadSettings()).locale).toBe('ja');
+  });
+
+  it('saves the language without touching the counters', async () => {
+    await saveSettings({
+      schemaVersion: 1,
+      counters: { panelOpens: 2, exports: 5, aiRuns: 1 },
+      locale: 'auto',
+    });
+    await saveLocalePreference('ja');
+    expect(await loadSettings()).toEqual({
+      schemaVersion: 1,
+      counters: { panelOpens: 2, exports: 5, aiRuns: 1 },
+      locale: 'ja',
+    });
+  });
 });
 
 describe('exportAll', () => {
   it('produces exportedAt, appraisals and settings', async () => {
     await saveAppraisal(makeAppraisal('11111111'));
-    await saveSettings({ schemaVersion: 1, counters: { panelOpens: 7, exports: 2, aiRuns: 0 } });
+    await saveSettings({
+      schemaVersion: 1,
+      counters: { panelOpens: 7, exports: 2, aiRuns: 0 },
+      locale: 'auto',
+    });
 
     const parsed = JSON.parse(await exportAll());
     expect(typeof parsed.exportedAt).toBe('string');
@@ -360,6 +403,7 @@ describe('exportAll', () => {
     expect(JSON.parse(json).settings).toEqual({
       schemaVersion: 1,
       counters: { panelOpens: 1, exports: 0, aiRuns: 0 },
+      locale: 'auto',
     });
   });
 });
@@ -431,7 +475,11 @@ describe('importAll', () => {
     { schemaVersion: 2, appraisals: null },
   ])('rejects an empty or malformed payload before any replacement: %j', async (payload) => {
     await saveAppraisal(makeAppraisal('11111111'));
-    await saveSettings({ schemaVersion: 1, counters: { panelOpens: 9, exports: 2, aiRuns: 0 } });
+    await saveSettings({
+      schemaVersion: 1,
+      counters: { panelOpens: 9, exports: 2, aiRuns: 0 },
+      locale: 'auto',
+    });
     const before = await store.getAll();
 
     await expect(importAll(JSON.stringify(payload), 'replace')).rejects.toThrow();
@@ -486,6 +534,7 @@ describe('importAll', () => {
     const json = await exportOf([], {
       schemaVersion: 1,
       counters: { panelOpens: 9, exports: 4, aiRuns: 0 },
+      locale: 'auto',
     });
     await saveAppraisal(makeAppraisal('11111111'));
     const existing = await store.get(appraisalKey('11111111'));
@@ -500,10 +549,12 @@ describe('importAll', () => {
     const json = await exportOf([], {
       schemaVersion: 1,
       counters: { panelOpens: 9, exports: 1, aiRuns: 0 },
+      locale: 'auto',
     });
     await saveSettings({
       schemaVersion: 1,
       counters: { panelOpens: 2, exports: 7, aiRuns: 0 },
+      locale: 'auto',
     });
 
     await saveAppraisal(makeAppraisal('11111111'));
@@ -517,14 +568,53 @@ describe('importAll', () => {
     const json = await exportOf([], {
       schemaVersion: 1,
       counters: { panelOpens: 1, exports: 1, aiRuns: 0 },
+      locale: 'auto',
     });
     await saveSettings({
       schemaVersion: 1,
       counters: { panelOpens: 50, exports: 50, aiRuns: 0 },
+      locale: 'auto',
     });
 
     await importAll(json, 'replace');
     expect((await loadSettings()).counters).toEqual({ panelOpens: 1, exports: 1, aiRuns: 0 });
+  });
+
+  // A replace removes the settings record before writing the file's back, so
+  // the language has to be read first. The settings-only case below never
+  // removes it, which is why these two need appraisals in the file.
+  it('keeps this browser’s language on a replace that brings appraisals', async () => {
+    const json = await exportOf([makeAppraisal('22222222')], {
+      schemaVersion: 1,
+      counters: { panelOpens: 1, exports: 1, aiRuns: 0 },
+      locale: 'en',
+    });
+    await saveLocalePreference('ja');
+    await importAll(json, 'replace');
+    expect((await loadSettings()).locale).toBe('ja');
+  });
+
+  it('keeps this browser’s language on a replace whose file has no settings', async () => {
+    const parsed = JSON.parse(await exportOf([makeAppraisal('22222222')])) as Record<
+      string,
+      unknown
+    >;
+    delete parsed['settings'];
+    await saveLocalePreference('ja');
+    await importAll(JSON.stringify(parsed), 'replace');
+    expect((await loadSettings()).locale).toBe('ja');
+  });
+
+  // The language belongs to this browser, so a backup never changes it.
+  it.each(['merge', 'replace'] as const)('keeps this browser’s language on %s', async (mode) => {
+    const json = await exportOf([], {
+      schemaVersion: 1,
+      counters: { panelOpens: 1, exports: 1, aiRuns: 0 },
+      locale: 'en',
+    });
+    await saveLocalePreference('ja');
+    await importAll(json, mode);
+    expect((await loadSettings()).locale).toBe('ja');
   });
 
   it.each([
@@ -533,7 +623,11 @@ describe('importAll', () => {
     { schemaVersion: 1, counters: { panelOpens: 'bad', exports: 2, aiRuns: 0 } },
   ])('rejects an empty appraisal list with unreadable settings: %j', async (settings) => {
     await saveAppraisal(makeAppraisal('11111111'));
-    await saveSettings({ schemaVersion: 1, counters: { panelOpens: 9, exports: 2, aiRuns: 0 } });
+    await saveSettings({
+      schemaVersion: 1,
+      counters: { panelOpens: 9, exports: 2, aiRuns: 0 },
+      locale: 'auto',
+    });
     const before = await store.getAll();
 
     await expect(

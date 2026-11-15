@@ -305,6 +305,12 @@ One set of gaps was not deliberate: **#49**, three common forms the number extra
 
 Still not read after #49: a count with words between it and the slash, such as D's `42 exposed cases/18 061 cases`; a count right after a 1–3 digit number with no percentage to settle it, such as `In 3 120 of 300`; and a count with a number right behind it, such as `45/300 vs 62/298 100 days`. v0.1.0 read the last one, correctly there, as 62/298, but the same reading makes `11 of 90 305 controls` into 11/90. All three are misses, not wrong candidates.
 
+**Language (#82), in progress.** The panel and the options page follow the browser language, or the one pinned in Settings. Known limits:
+
+- **Two pages can overwrite each other's settings change.** The language and the usage counters share one `settings` record, and each page does read-modify-write on it. `incrementCounter` queues only within its own page. If the side panel counts at the same moment the options page saves a language, one of the two changes can be lost. The window is milliseconds, and choosing the language again fixes it.
+- **The e2e browser is pinned to English** with `--lang` (Windows) and `LANGUAGE`/`LANG` (Linux). Playwright sets en-US only on the pages it opens, not on the side panel. Unverified on macOS, where the system language may win.
+- **Page languages for screen readers.** Until the tab bodies, the checklists and the summary are translated, a Japanese page carries `lang="ja"` over English text.
+
 **#77**, found in the v0.3.0 QA pass: on a harm result the Numbers tab labels the effect row ARI and shows it positive, but the CI row below still reads `95% CI for the ARR` with negative values (`-5.0 to -4.3 points` for D's NNH 22). The export shows the same interval as a positive ARI CI. The numbers are right; only the panel's label and sign disagree with the export.
 
 One consequence of the fix to know about: fraction pairs are offered whatever the design. On a case-control abstract such as QA record D, they are the shares of cases and of controls exposed, and an NNH computed from them means nothing. The Numbers tab does not say so; `docs/QA.md` D3 does.

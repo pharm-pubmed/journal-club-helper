@@ -12,6 +12,8 @@
  * Nothing in this file may import `chrome.*` or touch the DOM.
  */
 
+import type { LocalePreference } from './i18n';
+
 /* ------------------------------------------------------------------ article */
 
 export type StudyDesign =
@@ -319,6 +321,8 @@ export type CounterName = 'panelOpens' | 'exports' | 'aiRuns';
 export interface Settings {
   schemaVersion: 1;
   counters: Record<CounterName, number>;
+  /** The language the extension speaks; `auto` follows the browser (#82). */
+  locale: LocalePreference;
 }
 
 /* ------------------------------------------------------------------ messaging */
