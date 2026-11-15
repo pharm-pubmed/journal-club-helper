@@ -9,6 +9,7 @@ import { Header } from './Header';
 import { Tabs, tabButtonId, tabPanelId } from './Tabs';
 import { useAppraisalSession } from './hooks/useAppraisalSession';
 import { useArticle } from './hooks/useArticle';
+import { useMessages } from './i18n';
 import { useStore } from './store';
 import type { TabId } from './store';
 import { ExportTab } from './tabs/ExportTab';
@@ -61,6 +62,7 @@ export function App() {
   const unreadablePmid = useStore((s) => s.unreadablePmid);
   const ncbiPending = useStore((s) => s.ncbiPending);
   const activeTab = useStore((s) => s.activeTab);
+  const m = useMessages();
   const ready = status === 'ready';
 
   return (
@@ -90,13 +92,13 @@ export function App() {
         )}
       </main>
       <footer class="footer">
-        <span class="footer__note">Educational appraisal aid — not clinical advice.</span>
+        <span class="footer__note">{m.app.footer}</span>
         <button
           class="icon-button"
           type="button"
           onClick={openOptions}
-          title="Settings"
-          aria-label="Settings"
+          title={m.app.settings}
+          aria-label={m.app.settings}
         >
           <GearIcon />
         </button>

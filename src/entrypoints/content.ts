@@ -10,9 +10,13 @@ import { defineContentScript } from 'wxt/utils/define-content-script';
 import { extractArticleFromDocument } from '../lib/pubmed-dom';
 import { parsePmidFromUrl } from '../lib/pubmed-url';
 import type { GetArticleResponse, OpenSidePanelMessage, PubMedArticle } from '../lib/types';
+import { en, type Messages } from '../locales/en';
+import { loadMessages } from '../locales/load';
 
 const BUTTON_ID = 'jch-open';
-const BUTTON_LABEL = 'Journal Club';
+
+/** English until the stored language has been read, which is before the button is added. */
+let messages: Messages = en;
 
 /** Inline so the extension ships no global CSS into the page (issue #5). */
 const BUTTON_STYLE = [
@@ -59,8 +63,8 @@ function findAnchor(): { element: Element; inline: boolean } | null {
  * broken extension; "reload the page" is both true and actionable.
  */
 function reportStale(button: HTMLButtonElement): void {
-  button.textContent = 'Reload the page';
-  button.title = 'The extension was updated. Reload this page to use the panel.';
+  button.textContent = messages.pageButton.stale;
+  button.title = messages.pageButton.staleTitle;
   button.disabled = true;
 }
 
@@ -99,8 +103,8 @@ function injectButton(): void {
   const button = document.createElement('button');
   button.id = BUTTON_ID;
   button.type = 'button';
-  button.textContent = BUTTON_LABEL;
-  button.title = 'Open the critical appraisal panel';
+  button.textContent = messages.pageButton.label;
+  button.title = messages.pageButton.title;
   button.style.cssText = BUTTON_STYLE;
   button.addEventListener('click', () => {
     requestPanel(button);
@@ -133,10 +137,32 @@ export default defineContentScript({
       return false;
     });
 
+    // A language change in Settings relabels a button already on the page (#82).
     try {
-      injectButton();
-    } catch (error) {
-      console.error('[journal-club-helper] could not add the Journal Club button:', error);
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local' || !('settings' in changes)) return;
+        void loadMessages().then((loaded) => {
+          messages = loaded;
+          const button = document.getElementById(BUTTON_ID);
+          if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+          button.textContent = messages.pageButton.label;
+          button.title = messages.pageButton.title;
+        });
+      });
+    } catch {
+      // No storage events in this context; the label stays as first read.
     }
+
+    void loadMessages()
+      .then((loaded) => {
+        messages = loaded;
+      })
+      .finally(() => {
+        try {
+          injectButton();
+        } catch (error) {
+          console.error('[journal-club-helper] could not add the Journal Club button:', error);
+        }
+      });
   },
 });

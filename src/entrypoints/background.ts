@@ -12,18 +12,17 @@
 
 import { defineBackground } from 'wxt/utils/define-background';
 import { isPubMedUrl } from '../lib/pubmed-url';
+import { loadMessages } from '../locales/load';
 
 const SIDE_PANEL_PATH = 'sidepanel.html';
 
-/** Matches `action.default_title` in wxt.config.ts. */
-const ACTIVE_TITLE = 'Open Journal Club Helper';
-
-/**
- * Disabling the panel on a tab leaves the toolbar icon lit and its click
- * silent, which reads as a broken extension. Greying the icon out and saying
- * where the extension works turns that dead click into an answer (#43).
+/*
+ * The toolbar title says where the extension works. Disabling the panel on a
+ * tab leaves the icon lit and its click silent, which reads as a broken
+ * extension; greying it out and saying why turns that dead click into an answer
+ * (#43). The wording comes from the catalogs (`action.active`, `action.idle`),
+ * in the reader's language (#82).
  */
-const IDLE_TITLE = 'Journal Club Helper — open a PubMed abstract page to use it';
 
 function report(error: unknown): void {
   console.error('[journal-club-helper] side panel:', error);
@@ -48,8 +47,11 @@ function isOpenSidePanel(message: unknown): boolean {
  */
 export async function applyTabScope(tabId: number, url: string | undefined): Promise<void> {
   const onPubMed = isPubMedUrl(url);
+  // Read before the first call, so the language lookup does not widen the gap
+  // between two calls for the same tab.
+  const { action } = await loadMessages();
   await chrome.sidePanel.setOptions({ tabId, path: SIDE_PANEL_PATH, enabled: onPubMed });
-  await chrome.action.setTitle({ tabId, title: onPubMed ? ACTIVE_TITLE : IDLE_TITLE });
+  await chrome.action.setTitle({ tabId, title: onPubMed ? action.active : action.idle });
   if (onPubMed) await chrome.action.enable(tabId);
   else await chrome.action.disable(tabId);
 }
@@ -88,6 +90,12 @@ export default defineBackground(() => {
 
   chrome.runtime.onStartup.addListener(() => {
     void scopeAllTabs().catch(report);
+  });
+
+  // The toolbar title is in the reader's language (#82), so a change in
+  // Settings re-titles every tab rather than waiting for each one's next event.
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && 'settings' in changes) void scopeAllTabs().catch(report);
   });
 
   chrome.tabs.onActivated.addListener(({ tabId }) => {

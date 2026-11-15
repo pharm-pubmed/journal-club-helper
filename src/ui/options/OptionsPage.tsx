@@ -24,10 +24,14 @@ import {
   importAll,
   listAppraisals,
   loadSettings,
+  saveLocalePreference,
 } from '../../lib/storage';
+import { LOCALE_PREFERENCES, browserLanguage, resolveLocale } from '../../lib/i18n';
+import type { Locale, LocalePreference } from '../../lib/i18n';
 import type { Appraisal, Settings } from '../../lib/storage';
 import type { AppraisalsReplacedMessage } from '../../lib/types';
-import { PRODUCT_NAME } from '../labels';
+import { applyPreference, useLocale, useMessages } from '../i18n';
+import type { Messages } from '../../locales';
 import './options.css';
 
 /** The published policy, generated from docs/PRIVACY.md (HANDOVER §3, _Landing site_). */
@@ -47,14 +51,18 @@ function messageOf(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
-function plural(count: number, one: string, many: string): string {
-  return `${count.toLocaleString()} ${count === 1 ? one : many}`;
-}
-
-function formatDate(ms: number): string {
+function formatDate(ms: number, locale: Locale, m: Messages): string {
   const date = new Date(ms);
-  if (Number.isNaN(date.getTime())) return 'an unknown date';
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  if (Number.isNaN(date.getTime())) return m.options.unknownDate;
+  // The browser's own date format while the page speaks the browser's language,
+  // as before #82; a pinned language gets that language's format instead.
+  const pinned = resolveLocale('auto', browserLanguage()) !== locale;
+  const tag = pinned ? (locale === 'ja' ? 'ja-JP' : 'en-US') : undefined;
+  return date.toLocaleDateString(tag, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 /** `journal-club-helper-backup-2026-09-15.json`, in the user's own local date. */
@@ -104,38 +112,17 @@ async function announceAppraisalsReplaced(): Promise<void> {
   }
 }
 
-/** Stored records `listAppraisals` hides, set aside or never reopened (storage.ts). */
-function unreadablePhrase(count: number): string {
-  return plural(count, 'record this version could not read', 'records this version could not read');
-}
-
-/**
- * "3 saved appraisals", "3 saved appraisals and 2 records this version could
- * not read", or only the second half when those are all there is.
- */
-function recordsPhrase(readable: number, unreadable: number, one: string, many: string): string {
-  const hidden = unreadablePhrase(unreadable);
-  if (unreadable === 0) return plural(readable, one, many);
-  if (readable === 0) return hidden;
-  return `${plural(readable, one, many)} and ${hidden}`;
-}
-
-function importSummary(imported: number, skipped: number, mode: ImportMode): string {
-  const head =
-    mode === 'replace'
-      ? `Replaced everything stored here with ${plural(imported, 'appraisal', 'appraisals')} from the file.`
-      : `Imported ${plural(imported, 'appraisal', 'appraisals')}.`;
-  if (skipped === 0) return head;
-  const why =
-    mode === 'replace'
-      ? 'they could not be read'
-      : 'the copy already saved here is newer, or they could not be read';
-  return `${head} Skipped ${skipped.toLocaleString()} (${why}).`;
-}
-
 /* --------------------------------------------------------------------- page */
 
+function preferenceLabel(preference: LocalePreference, m: Messages): string {
+  if (preference === 'en') return m.options.languageEnglish;
+  if (preference === 'ja') return m.options.languageJapanese;
+  return m.options.languageAuto(m.options.languageNames[resolveLocale('auto', browserLanguage())]);
+}
+
 export function OptionsPage() {
+  const m = useMessages();
+  const { locale, preference } = useLocale();
   const [appraisals, setAppraisals] = useState<AppraisalSummary[] | null>(null);
   /** Records the list above hides because this version cannot read them. */
   const [unreadable, setUnreadable] = useState(0);
@@ -146,6 +133,26 @@ export function OptionsPage() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+
+  // refresh() stays stable for its callers, so it reads the current messages
+  // through a ref rather than closing over the first render's.
+  const messagesRef = useRef(m);
+  messagesRef.current = m;
+
+  useEffect(() => {
+    document.title = m.options.documentTitle;
+  }, [m]);
+
+  async function handleLocale(next: LocalePreference): Promise<void> {
+    try {
+      await saveLocalePreference(next);
+      applyPreference(next);
+      // The counters shown below live in the same record, so read it back too.
+      setSettings(await loadSettings());
+    } catch (error) {
+      setMessage({ tone: 'error', text: messageOf(error, m.options.languageSaveError) });
+    }
+  }
 
   const refresh = useCallback(async () => {
     try {
@@ -160,7 +167,7 @@ export function OptionsPage() {
       setLoadError(null);
     } catch (error) {
       setAppraisals([]);
-      setLoadError(messageOf(error, 'Could not read your saved data from this browser.'));
+      setLoadError(messageOf(error, messagesRef.current.options.loadError));
     }
   }, []);
 
@@ -176,10 +183,10 @@ export function OptionsPage() {
       downloadJson(json, backupFilename());
       setMessage({
         tone: 'ok',
-        text: `Saved ${plural(appraisals?.length ?? 0, 'appraisal', 'appraisals')} to your downloads folder.`,
+        text: m.options.exported(appraisals?.length ?? 0),
       });
     } catch (error) {
-      setMessage({ tone: 'error', text: messageOf(error, 'Could not build the backup file.') });
+      setMessage({ tone: 'error', text: messageOf(error, m.options.exportError) });
     } finally {
       setBusy(false);
     }
@@ -209,8 +216,8 @@ export function OptionsPage() {
       setMessage({
         tone: 'ok',
         text: settingsOnly
-          ? 'Restored usage counts. Existing appraisals were kept.'
-          : importSummary(imported, skipped, importMode),
+          ? m.options.countsRestored
+          : m.options.importSummary(imported, skipped, importMode),
       });
     } catch (error) {
       // Storage failures can leave a partially applied import. Show the actual
@@ -219,10 +226,7 @@ export function OptionsPage() {
       await refresh();
       setMessage({
         tone: 'error',
-        text: messageOf(
-          error,
-          'Could not read that file. Choose a backup exported by this extension.',
-        ),
+        text: messageOf(error, m.options.importError),
       });
     } finally {
       setBusy(false);
@@ -244,12 +248,12 @@ export function OptionsPage() {
       setConfirmingDelete(false);
       setMessage({
         tone: 'ok',
-        text: `Deleted ${recordsPhrase(deleted, removed, 'appraisal', 'appraisals')}. The usage counts below were kept.`,
+        text: m.options.deleted(deleted, removed),
       });
     } catch (error) {
       await announceAppraisalsReplaced();
       await refresh();
-      setMessage({ tone: 'error', text: messageOf(error, 'Could not delete your appraisals.') });
+      setMessage({ tone: 'error', text: messageOf(error, m.options.deleteError) });
     } finally {
       setBusy(false);
     }
@@ -263,79 +267,92 @@ export function OptionsPage() {
   return (
     <div class="options">
       <header class="options__masthead">
-        <h1 class="options__title">{PRODUCT_NAME}</h1>
-        <p class="options__tagline">
-          Settings and saved data. Everything on this page is stored in this browser, on this
-          device.
-        </p>
+        <h1 class="options__title">{m.common.productName}</h1>
+        <p class="options__tagline">{m.options.tagline}</p>
       </header>
+
+      {/* ---------------------------------------------------------- language */}
+      <section class="options__section" aria-labelledby="language-heading">
+        <h2 class="options__heading" id="language-heading">
+          {m.options.languageHeading}
+        </h2>
+        <p class="options__note">{m.options.languageNote}</p>
+        <fieldset class="options__choices">
+          <legend class="options__legend">{m.options.languageLegend}</legend>
+          {LOCALE_PREFERENCES.map((option) => (
+            <label class="options__choice" key={option}>
+              <input
+                type="radio"
+                name="locale"
+                value={option}
+                checked={preference === option}
+                onChange={() => void handleLocale(option)}
+                disabled={busy}
+              />
+              <span class="options__choice-text">
+                <span class="options__choice-title" lang={option === 'auto' ? undefined : option}>
+                  {preferenceLabel(option, m)}
+                </span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      </section>
 
       {/* --------------------------------------------------------- your data */}
       <section class="options__section" aria-labelledby="data-heading">
         <h2 class="options__heading" id="data-heading">
-          Your data
+          {m.options.dataHeading}
         </h2>
 
         {loadError ? (
           <p class="options__message options__message--error">{loadError}</p>
         ) : loading ? (
-          <p class="options__note">Reading your saved appraisals…</p>
+          <p class="options__note">{m.options.reading}</p>
         ) : (
           <>
             <p class="options__count">
               <strong class="options__count-value">{count.toLocaleString()}</strong>
               <span class="options__count-label">
-                {count === 1 ? 'appraisal saved' : 'appraisals saved'} of{' '}
-                {MAX_APPRAISALS.toLocaleString()}
+                {m.options.countLabel(count, MAX_APPRAISALS)}
               </span>
             </p>
             {count === 0 && unreadable === 0 ? (
-              <p class="options__note">
-                Nothing saved yet. Open a PubMed abstract and start an appraisal in the side panel —
-                it is saved here automatically.
-              </p>
+              <p class="options__note">{m.options.nothingSaved}</p>
             ) : null}
             {unreadable > 0 ? (
-              <p class="options__note">
-                Also stored here: {unreadablePhrase(unreadable)}. They are kept rather than
-                overwritten, but not listed or exported. Delete all removes them too.
-              </p>
+              <p class="options__note">{m.options.alsoStored(unreadable)}</p>
             ) : null}
             {nearCap ? (
               <p class="options__note options__note--warning">
-                You are close to the limit. Past {MAX_APPRAISALS.toLocaleString()}, the appraisal
-                you edited least recently is removed to make room for a new one. Export a backup if
-                you want to keep the older ones.
+                {m.options.nearCap(MAX_APPRAISALS)}
               </p>
             ) : null}
             {recent.length > 0 ? (
               <>
-                <h3 class="options__subheading">Most recent</h3>
+                <h3 class="options__subheading">{m.options.mostRecent}</h3>
                 <ul class="options__list">
                   {recent.map((item) => (
                     <li class="options__list-item" key={item.pmid}>
                       <span class="options__list-title">
-                        {item.citation.title || `PMID ${item.pmid}`}
+                        {item.citation.title || m.header.pmid(item.pmid)}
                       </span>
                       <span class="options__list-meta">
-                        PMID {item.pmid} · edited {formatDate(item.updatedAt)}
+                        {m.options.listMeta(item.pmid, formatDate(item.updatedAt, locale, m))}
                       </span>
                     </li>
                   ))}
                 </ul>
                 {count > recent.length ? (
-                  <p class="options__note">…and {plural(count - recent.length, 'more', 'more')}.</p>
+                  <p class="options__note">{m.options.andMore(count - recent.length)}</p>
                 ) : null}
               </>
             ) : null}
           </>
         )}
 
-        <h3 class="options__subheading">Export</h3>
-        <p class="options__note">
-          Writes every appraisal and your usage counts to one JSON file in your downloads folder.
-          Nothing is uploaded: the file is built in this page and handed straight to the browser.
-        </p>
+        <h3 class="options__subheading">{m.options.exportHeading}</h3>
+        <p class="options__note">{m.options.exportNote}</p>
         <div class="options__actions">
           <button
             class="button options__button--primary"
@@ -343,14 +360,14 @@ export function OptionsPage() {
             onClick={() => void handleExport()}
             disabled={busy || loading}
           >
-            Export all
+            {m.options.exportAll}
           </button>
         </div>
 
-        <h3 class="options__subheading">Import</h3>
-        <p class="options__note">Choose what should happen to what is already saved here.</p>
+        <h3 class="options__subheading">{m.options.importHeading}</h3>
+        <p class="options__note">{m.options.importNote}</p>
         <fieldset class="options__choices">
-          <legend class="options__legend">When importing a backup</legend>
+          <legend class="options__legend">{m.options.importLegend}</legend>
           <label class="options__choice">
             <input
               type="radio"
@@ -360,11 +377,8 @@ export function OptionsPage() {
               disabled={busy}
             />
             <span class="options__choice-text">
-              <span class="options__choice-title">Merge (recommended)</span>
-              <span class="options__choice-hint">
-                Keeps what is saved here and adds the appraisals from the file. If both have the
-                same article, the newer version is kept and the older one is skipped.
-              </span>
+              <span class="options__choice-title">{m.options.mergeTitle}</span>
+              <span class="options__choice-hint">{m.options.mergeHint}</span>
             </span>
           </label>
           <label class="options__choice">
@@ -376,19 +390,12 @@ export function OptionsPage() {
               disabled={busy}
             />
             <span class="options__choice-text">
-              <span class="options__choice-title">Replace</span>
-              <span class="options__choice-hint">
-                Deletes every appraisal saved here first, then loads the file. Anything saved here
-                that is not in the file is gone. A backup containing only usage counts keeps all
-                existing appraisals.
-              </span>
+              <span class="options__choice-title">{m.options.replaceTitle}</span>
+              <span class="options__choice-hint">{m.options.replaceHint}</span>
             </span>
           </label>
         </fieldset>
-        <p class="options__note">
-          Merging keeps the higher of the two usage counts below; replacing takes the counts from
-          the file.
-        </p>
+        <p class="options__note">{m.options.countsNote}</p>
         <div class="options__actions">
           <button
             class="button"
@@ -396,7 +403,7 @@ export function OptionsPage() {
             onClick={() => fileRef.current?.click()}
             disabled={busy}
           >
-            Choose a backup file…
+            {m.options.chooseFile}
           </button>
           <input
             class="options__file-input"
@@ -407,15 +414,10 @@ export function OptionsPage() {
           />
         </div>
 
-        <h3 class="options__subheading">Delete</h3>
+        <h3 class="options__subheading">{m.options.deleteHeading}</h3>
         {confirmingDelete ? (
-          <div class="options__confirm" role="group" aria-label="Confirm deleting all appraisals">
-            <p class="options__confirm-text">
-              Delete {recordsPhrase(count, unreadable, 'saved appraisal', 'saved appraisals')}? They
-              are stored only in this browser, on this device. There is no copy on a server and no
-              account to restore from, so this cannot be undone. Export a backup first if there is
-              any chance you want them back.
-            </p>
+          <div class="options__confirm" role="group" aria-label={m.options.confirmLabel}>
+            <p class="options__confirm-text">{m.options.confirmText(count, unreadable)}</p>
             <div class="options__actions">
               <button
                 class="button"
@@ -423,7 +425,7 @@ export function OptionsPage() {
                 onClick={() => setConfirmingDelete(false)}
                 disabled={busy}
               >
-                Cancel
+                {m.options.cancel}
               </button>
               <button
                 class="button options__button--danger"
@@ -431,15 +433,13 @@ export function OptionsPage() {
                 onClick={() => void handleDeleteAll()}
                 disabled={busy}
               >
-                Yes, delete everything
+                {m.options.confirmDelete}
               </button>
             </div>
           </div>
         ) : (
           <>
-            <p class="options__note">
-              Removes every saved appraisal from this browser. Your usage counts are kept.
-            </p>
+            <p class="options__note">{m.options.deleteNote}</p>
             <div class="options__actions">
               <button
                 class="button options__button--danger"
@@ -450,7 +450,7 @@ export function OptionsPage() {
                 }}
                 disabled={busy || loading || count + unreadable === 0}
               >
-                Delete all appraisals
+                {m.options.deleteAll}
               </button>
             </div>
           </>
@@ -468,37 +468,28 @@ export function OptionsPage() {
       {/* ------------------------------------------------------------- usage */}
       <section class="options__section" aria-labelledby="usage-heading">
         <h2 class="options__heading" id="usage-heading">
-          Usage (stored only on this device)
+          {m.options.usageHeading}
         </h2>
-        <p class="options__note">
-          These numbers never leave your browser. This version contains no analytics and no tracking
-          of any kind, this page makes no network requests at all, and there is no server to send
-          them to — check the Network tab in developer tools if you want to see for yourself. They
-          are counted here only so you can see them, and they disappear when you remove the
-          extension.
-        </p>
+        <p class="options__note">{m.options.usageNote}</p>
         <dl class="options__stats">
           <div class="options__stat">
-            <dt class="options__stat-label">Side panel opened</dt>
+            <dt class="options__stat-label">{m.options.panelOpens}</dt>
             <dd class="options__stat-value">
               {(settings?.counters.panelOpens ?? 0).toLocaleString()}
             </dd>
           </div>
           <div class="options__stat">
-            <dt class="options__stat-label">Summaries exported</dt>
+            <dt class="options__stat-label">{m.options.exports}</dt>
             <dd class="options__stat-value">
               {(settings?.counters.exports ?? 0).toLocaleString()}
             </dd>
           </div>
           <div class="options__stat">
-            <dt class="options__stat-label">AI runs</dt>
+            <dt class="options__stat-label">{m.options.aiRuns}</dt>
             <dd class="options__stat-value">{(settings?.counters.aiRuns ?? 0).toLocaleString()}</dd>
           </div>
         </dl>
-        <p class="options__note">
-          AI runs stay at 0 in this version: the AI features arrive in a later version and are not
-          part of what you have installed.
-        </p>
+        <p class="options__note">{m.options.aiNote}</p>
       </section>
 
       {/*
@@ -534,30 +525,23 @@ export function OptionsPage() {
       {/* ------------------------------------------------------------- about */}
       <section class="options__section" aria-labelledby="about-heading">
         <h2 class="options__heading" id="about-heading">
-          About
+          {m.options.aboutHeading}
         </h2>
         <p class="options__note">
-          {PRODUCT_NAME}
-          {extensionVersion() ? ` — version ${extensionVersion()}` : ' — development build'}
+          {m.common.productName}
+          {m.options.version(extensionVersion())}
         </p>
-        <p class="options__about">
-          {PRODUCT_NAME} is an educational aid for critical appraisal, for journal club and for
-          learning to read a paper. It is not clinical decision support: it gives no recommendation,
-          no interpretation and no clinical advice, and it must not be used to make a decision about
-          a patient. It also does not summarize papers. It gives you the appraisal template — PICO,
-          the study design, the absolute effect with NNT, a validity checklist — and you fill it in,
-          so every judgement in the summary is yours. Check what you write against the full text.
-        </p>
-        <p class="options__note">Not affiliated with NLM / NIH.</p>
+        <p class="options__about">{m.options.about(m.common.productName)}</p>
+        <p class="options__note">{m.options.notAffiliated}</p>
         <ul class="options__links">
           <li>
             <a href={PRIVACY_URL} target="_blank" rel="noreferrer noopener">
-              Privacy policy
+              {m.options.privacy}
             </a>
           </li>
           <li>
             <a href={ISSUES_URL} target="_blank" rel="noreferrer noopener">
-              Report a problem or suggest something
+              {m.options.report}
             </a>
           </li>
         </ul>

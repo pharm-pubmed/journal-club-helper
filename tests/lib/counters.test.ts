@@ -41,7 +41,11 @@ describe('incrementCounter', () => {
   });
 
   it('preserves counters that were already stored', async () => {
-    await saveSettings({ schemaVersion: 1, counters: { panelOpens: 41, exports: 3, aiRuns: 0 } });
+    await saveSettings({
+      schemaVersion: 1,
+      counters: { panelOpens: 41, exports: 3, aiRuns: 0 },
+      locale: 'auto',
+    });
     await incrementCounter('panelOpens');
     expect((await loadSettings()).counters).toEqual({ panelOpens: 42, exports: 3, aiRuns: 0 });
   });
@@ -70,5 +74,16 @@ describe('incrementCounter', () => {
     await expect(incrementCounter('exports')).rejects.toThrow(/quota/);
     await incrementCounter('exports');
     expect((await loadSettings()).counters.exports).toBe(1);
+  });
+
+  // #82: the counters and the language share one record.
+  it('keeps the language preference when it counts', async () => {
+    await saveSettings({
+      schemaVersion: 1,
+      counters: { panelOpens: 1, exports: 0, aiRuns: 0 },
+      locale: 'ja',
+    });
+    await incrementCounter('exports');
+    expect((await loadSettings()).locale).toBe('ja');
   });
 });

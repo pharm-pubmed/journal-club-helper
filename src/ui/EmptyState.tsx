@@ -1,4 +1,5 @@
 /** What the panel shows whenever no article is bound (issue #6). */
+import { useMessages } from './i18n';
 import type { ArticleStatus } from './store';
 
 export interface EmptyStateProps {
@@ -13,11 +14,6 @@ export interface EmptyStateProps {
   onFetchFromNcbi: () => void;
 }
 
-const NO_ARTICLE = 'Open a PubMed abstract page to start';
-
-const NO_ARTICLE_HINT =
-  'The panel reads the abstract of a single record — a pubmed.ncbi.nlm.nih.gov address ending in a PMID. Search results and other sites are not read.';
-
 function Unreadable({
   message,
   pmid,
@@ -26,17 +22,13 @@ function Unreadable({
   onFetchFromNcbi,
 }: Omit<EmptyStateProps, 'status'>) {
   const busy = ncbiPending !== null;
+  const m = useMessages();
   return (
     <div class="empty">
-      <h2 class="empty__title">The abstract on this page could not be read</h2>
-      <p class="empty__hint">
-        The record may have no abstract (letters and editorials often do not), or PubMed may have
-        changed its layout. The same record can be fetched from NCBI’s E-utilities service instead.
-        Only the PMID{pmid ? ` (${pmid})` : ''} and this extension’s name are sent. Your browser
-        asks for permission the first time.
-      </p>
+      <h2 class="empty__title">{m.empty.unreadableTitle}</h2>
+      <p class="empty__hint">{m.empty.unreadableHint(pmid)}</p>
       <p class="empty__hint" role="status">
-        {busy ? `Fetching PMID ${ncbiPending} from NCBI…` : ''}
+        {busy ? m.empty.fetching(ncbiPending) : ''}
       </p>
       {message && !busy ? (
         <p class="empty__hint empty__hint--error" role="alert" id="empty-error">
@@ -51,10 +43,10 @@ function Unreadable({
           disabled={busy}
           aria-describedby={message && !busy ? 'empty-error' : undefined}
         >
-          Fetch from NCBI
+          {m.empty.fetchFromNcbi}
         </button>
         <button class="button" type="button" onClick={onRetry} disabled={busy}>
-          Read the page again
+          {m.empty.readAgain}
         </button>
       </div>
     </div>
@@ -69,6 +61,7 @@ export function EmptyState({
   onRetry,
   onFetchFromNcbi,
 }: EmptyStateProps) {
+  const m = useMessages();
   if (status === 'unreadable') {
     return (
       <Unreadable
@@ -84,10 +77,10 @@ export function EmptyState({
   if (status === 'error') {
     return (
       <div class="empty empty--error" role="status">
-        <p class="empty__title">The panel could not read this page</p>
+        <p class="empty__title">{m.empty.errorTitle}</p>
         {message ? <p class="empty__hint">{message}</p> : null}
         <button class="button" type="button" onClick={onRetry}>
-          Retry
+          {m.empty.retry}
         </button>
       </div>
     );
@@ -97,15 +90,15 @@ export function EmptyState({
     // With a message, this is a record NCBI confirmed has nothing to appraise.
     return (
       <div class="empty" role="status">
-        <p class="empty__title">{message ? 'Nothing to appraise on this page' : NO_ARTICLE}</p>
-        <p class="empty__hint">{message ?? NO_ARTICLE_HINT}</p>
+        <p class="empty__title">{message ? m.empty.nothingToAppraise : m.empty.noArticle}</p>
+        <p class="empty__hint">{message ?? m.empty.noArticleHint}</p>
       </div>
     );
   }
 
   return (
     <div class="empty" role="status">
-      <p class="empty__hint">Looking for a PubMed abstract…</p>
+      <p class="empty__hint">{m.empty.looking}</p>
     </div>
   );
 }

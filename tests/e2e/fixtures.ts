@@ -120,7 +120,18 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         // The full Chromium build: extensions do not load in the headless shell.
         channel: 'chromium',
         headless: !LIVE,
-        args: [`--disable-extensions-except=${EXTENSION_DIR}`, `--load-extension=${EXTENSION_DIR}`],
+        // English whatever the machine's language: the extension follows the
+        // browser's (#82), and these tests and the store images read English.
+        // Playwright already sets en-US on the pages it opens; the side panel is
+        // not one of them, so the browser's own language is pinned too: `--lang`
+        // on Windows, the environment on Linux. Unverified on macOS, where the
+        // system language may still win.
+        env: { ...process.env, LANGUAGE: 'en_US', LANG: 'en_US.UTF-8' },
+        args: [
+          '--lang=en-US',
+          `--disable-extensions-except=${EXTENSION_DIR}`,
+          `--load-extension=${EXTENSION_DIR}`,
+        ],
       });
       try {
         if (!LIVE) await serveFixtures(context);
