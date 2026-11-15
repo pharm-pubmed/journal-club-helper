@@ -206,7 +206,7 @@ docs/                 # PRIVACY.md, STORE-LISTING.md, HANDOVER.md
 
 ## 6. Web Store 掲載
 
-- 名前: `Journal Club Helper: Critical Appraisal for PubMed`（決定済み。PubMed は NLM の商標なので、名前の先頭に置かない・公式と誤認させない。説明文に `Not affiliated with NLM/NIH` を入れる）
+- 名前: `Journal Club Helper: Critical Appraisal`（2026-11-15 に変更。当初は `Journal Club Helper: Critical Appraisal for PubMed` で、PubMed を名前の先頭に置かない方針だったが、PubMed は商標なので初回申請前に名前から外した。概要と説明文では対応サイトを示すためにだけ使う。説明文に `Not affiliated with NLM/NIH` を入れる）
 - キーワード: critical appraisal, journal club, evidence-based medicine, PICO, NNT, PubMed
 - 短い説明（132 字以内）: `Structured critical appraisal on PubMed: PICO, study design, NNT/ARR, validity checklist, one-page journal club summary.`
 - スクリーンショット 5 枚: 判定 / Numbers / Validity / Export / 設定

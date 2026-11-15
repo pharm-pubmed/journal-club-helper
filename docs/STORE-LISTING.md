@@ -8,7 +8,7 @@ Placeholders read `TBD(#nn)`, naming the issue that fills them in. The listing c
 
 | Field              | Value                                                                                                                                                                                                                           |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Name               | `Journal Club Helper: Critical Appraisal for PubMed`, taken from the manifest                                                                                                                                                   |
+| Name               | `Journal Club Helper: Critical Appraisal`, taken from the manifest                                                                                                                                                              |
 | Summary            | Taken from the manifest's `description`, which is the spec §6 text word for word (120 characters, 132 allowed). See below.                                                                                                      |
 | Description        | [Below](#description)                                                                                                                                                                                                           |
 | Category           | Education. The store now lists Education as a subcategory of Productivity, so this keeps spec §6's reason for choosing Productivity and also puts the item where students and educators look. Check the list in the dashboard.  |
@@ -24,7 +24,7 @@ Placeholders read `TBD(#nn)`, naming the issue that fills them in. The listing c
 | Support email      | journal.club.helper@gmail.com, also the developer account's contact email                                                                                                                                                       |
 | Mature content     | No                                                                                                                                                                                                                              |
 
-`scripts/check-manifest.mjs` fails the build if the name is over 75 characters or starts with "PubMed", or if the summary is over 132 characters. The summary is:
+`scripts/check-manifest.mjs` fails the build if the name is over 75 characters or contains "PubMed", or if the summary is over 132 characters. The summary is:
 
 > Structured critical appraisal on PubMed: PICO, study design, NNT/ARR, validity checklist, one-page journal club summary.
 
@@ -76,7 +76,7 @@ Checked against the store's policies and the spec's positioning (§1, §9):
 - **No named appraisal instruments.** CASP, JBI, CONSORT and the like are not named, as with the checklists themselves (HANDOVER §2, _Editing the checklists_).
 - **No AI.** The AI features are not in this version, so the listing does not mention them. The description is rewritten when they ship.
 
-**A risk to know about:** PubMed's disclaimer says that unauthorized use of the PubMed marks is prohibited. The name and summary use the word to say which site the extension works on, which is how similar extensions describe themselves, and the name does not lead with it (spec §6). The name was decided in spec §13. If the store or HHS ever objects, the fallback is a name without the word, such as "Journal Club Helper: Critical Appraisal", with PubMed mentioned only in the description.
+**The name leaves PubMed out (decided 2026-11-15).** PubMed's disclaimer says that unauthorized use of the PubMed marks is prohibited. Spec §6 had settled on `Journal Club Helper: Critical Appraisal for PubMed`, with the word kept out of the lead. Before the first submission the owner chose to leave it out of the name entirely, which was the documented fallback. The summary and the description still use the word, only to say which site the extension works on. If the store or HHS objects to that use too, rewrite the summary without it next.
 
 ## Screenshots
 
