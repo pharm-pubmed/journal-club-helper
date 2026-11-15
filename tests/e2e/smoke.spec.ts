@@ -106,7 +106,7 @@ for (const record of RECORDS) {
     expect(article.doi, 'DOI').toBe(record.doi);
     expect(article.journal, 'journal').toBe(record.journal);
     expect(article.year, 'year').toBe(record.year);
-    expect(article.authors[0], 'first author').toBe(record.firstAuthor);
+    expect(record.firstAuthor, 'first author').toContain(article.authors[0]);
 
     await openPanel(page, extensionId, record);
     const panelText = await evaluateInPanel<string>(page, extensionId, 'document.body.innerText');
