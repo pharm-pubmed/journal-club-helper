@@ -5,7 +5,7 @@ Everything a reviewer asks for, kept next to the code so it cannot drift from wh
 The permission arrays below are enforced, not described: `scripts/check-manifest.mjs` fails CI if the built manifest differs from them by one entry. See `docs/HANDOVER.md` §7 for the reasoning behind each decision.
 
 - **Item:** Journal Club Helper: Critical Appraisal for PubMed
-- **Version:** 0.1.0 (not yet submitted)
+- **Version:** 0.3.0 (not yet submitted; the first store submission)
 - **Minimum Chrome version:** 116 — `chrome.sidePanel.open()` is not available before it
 - **Listing text and assets:** [docs/STORE-LISTING.md](docs/STORE-LISTING.md), `store/` (#27) · **Privacy policy:** [docs/PRIVACY.md](docs/PRIVACY.md) (#28) · **Submission:** #31
 
@@ -55,7 +55,7 @@ For the store's data-use disclosure form. The store's User Data FAQ says handlin
 
 **Certifications, all three true:** the data is not sold to third parties, not used or transferred for purposes unrelated to the single purpose, and not used or transferred to determine creditworthiness or for lending.
 
-The 0.1.0 internal build made **no network request of any kind**. The build on `main` since #23 (2026-09-27) has one exception. When a PubMed page cannot be read, the panel offers to fetch the same record from NCBI E-utilities. Nothing is sent until the user clicks that offer, and the first time also grants the optional host permission. The request carries the PMID of the page, the database and format parameters and the tool name `journal-club-helper`, the project's contact address `journal.club.helper@gmail.com` that NCBI asks for, plus what any HTTPS request carries (IP address, user agent, the extension's origin). None of the user's own notes or answers are in it.
+The extension makes **one network request of its own, and only on request**. When a PubMed page cannot be read, the panel offers to fetch the same record from NCBI E-utilities. Nothing is sent until the user clicks that offer, and the first time also grants the optional host permission. The request carries the PMID of the page, the database and format parameters and the tool name `journal-club-helper`, the project's contact address `journal.club.helper@gmail.com` that NCBI asks for, plus what any HTTPS request carries (IP address, user agent, the extension's origin). None of the user's own notes or answers are in it.
 
 When the AI features ship this section has to be rewritten: the abstract text, title and publication types would be sent to the provider the user chose, with the user's own API key, and the user's own notes would still never be sent. Billing would add its own requests and data. Update `docs/PRIVACY.md` in the same change, and publish it before the release.
 
