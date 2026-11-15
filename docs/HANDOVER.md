@@ -449,6 +449,7 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   - Every step passed. D3 is correct but looks wrong, filed as #77.
   - The zip's contents are byte-identical to a build of c67da2e. On that build, `pnpm test:e2e:live` gave 8 passed and 2 skipped. The first page took 2.7 minutes to get past PubMed's check.
   - The draft release carries the results. It stays a draft until the store item is live (§3, store step 8).
+- 2026-11-15: **The name leaves PubMed out (#79), so v0.3.0 was rebuilt.** The owner decided before the first submission: `Journal Club Helper: Critical Appraisal`, the fallback `docs/STORE-LISTING.md` already named. `check:manifest` now rejects the word anywhere in the name. The draft's zip was replaced with one built at 799c367 (SHA-256 `a8c67074…`), and QA was run again in the same way. Every recorded value matched the first pass except the extension ID. `pnpm test:e2e:live` gave 8 passed and 2 skipped. The owner's choices for the data-disclosure form are still to come; `CHROMEWEBSTORE.md` _Data handling_ has the recommended ticks.
 
 ## 7. Decisions and why
 
