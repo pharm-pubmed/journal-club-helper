@@ -31,11 +31,14 @@ export const EFETCH_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.
 
 export interface EutilsContact {
   tool: string;
-  /** Empty until the project mailbox exists (#30); an empty address is not sent. */
+  /** The project's mailbox (#30), never a user's. An empty address is not sent. */
   email: string;
 }
 
-export const EUTILS_CONTACT: EutilsContact = { tool: 'journal-club-helper', email: '' };
+export const EUTILS_CONTACT: EutilsContact = {
+  tool: 'journal-club-helper',
+  email: 'journal.club.helper@gmail.com',
+};
 
 export type EutilsErrorKind =
   'network' | 'timeout' | 'http' | 'rate-limit' | 'not-found' | 'no-abstract' | 'book';
