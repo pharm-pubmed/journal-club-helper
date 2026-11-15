@@ -157,7 +157,7 @@ describe('parseEfetchDocument', () => {
 
 describe('efetchUrl', () => {
   it('names the tool and leaves out an empty contact address', () => {
-    const url = new URL(efetchUrl('2899772', EUTILS_CONTACT));
+    const url = new URL(efetchUrl('2899772', { tool: 'journal-club-helper', email: '' }));
     expect(url.origin + url.pathname).toBe(
       'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi',
     );
@@ -174,8 +174,11 @@ describe('efetchUrl', () => {
     expect(url.searchParams.get('email')).toBe('team@example.org');
   });
 
-  it('ships with no contact address until the project mailbox exists (#30)', () => {
-    expect(EUTILS_CONTACT.email).toBe('');
+  it('ships with the project mailbox, not a personal address (#30)', () => {
+    expect(EUTILS_CONTACT).toEqual({
+      tool: 'journal-club-helper',
+      email: 'journal.club.helper@gmail.com',
+    });
   });
 });
 

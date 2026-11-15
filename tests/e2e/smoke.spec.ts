@@ -391,6 +391,7 @@ test('7. once the reader allows it, the record comes from NCBI and the panel say
     db: 'pubmed',
     id: RCT.pmid,
     tool: 'journal-club-helper',
+    email: 'journal.club.helper@gmail.com',
   });
   await panel.close();
 });

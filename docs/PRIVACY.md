@@ -3,7 +3,7 @@
 - **Extension:** Journal Club Helper: Critical Appraisal for PubMed (the "extension").
 - **Status:** draft, not yet published. It describes the extension as it will be submitted to the Chrome Web Store, which includes the NCBI fallback described below.
 - **Effective date:** TBD(#29), set on the day this policy is first published.
-- **Contact:** TBD(#30), the project's own address.
+- **Contact:** journal.club.helper@gmail.com
 
 ## In short
 
@@ -37,7 +37,7 @@ The extension reads the PubMed abstract page you are viewing (title, abstract, p
 If the extension cannot read a PubMed abstract page, for example after PubMed changes its layout, the side panel offers to fetch the same record from NCBI's E-utilities service (`https://eutils.ncbi.nlm.nih.gov`) instead.
 
 - Nothing is sent until you click **Fetch from NCBI**. The first time, your browser also asks you to allow the extension to access that site. If you decline, nothing is sent.
-- The request contains the article's PMID, the name of the database and the format asked for, and the extension's name (`journal-club-helper`). NCBI asks tools to identify themselves this way. A contact address for the project may be added once it exists. It is the project's address, never yours.
+- The request contains the article's PMID, the name of the database and the format asked for, the extension's name (`journal-club-helper`) and the project's contact address (`journal.club.helper@gmail.com`). NCBI asks tools to identify themselves this way. The address is the project's, never yours.
 - Like any web request, it also reveals your IP address, your browser's user agent and the extension's identifier to NCBI. NCBI's policies apply to that: <https://www.ncbi.nlm.nih.gov/home/about/policies/>.
 - None of your notes, answers or other appraisals are sent.
 

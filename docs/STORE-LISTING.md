@@ -21,7 +21,7 @@ Placeholders read `TBD(#nn)`, naming the issue that fills them in. The listing c
 | Official URL       | https://pharm-pubmed.github.io/journal-club-helper/, the landing page. The dashboard only offers sites verified in Google Search Console for the publisher account; leave it empty if it does not offer this one (HANDOVER §3). |
 | Homepage URL       | https://pharm-pubmed.github.io/journal-club-helper/                                                                                                                                                                             |
 | Support URL        | https://github.com/pharm-pubmed/journal-club-helper/issues                                                                                                                                                                      |
-| Support email      | TBD(#30), the dedicated Gmail address, set as the developer account's contact email                                                                                                                                             |
+| Support email      | journal.club.helper@gmail.com, also the developer account's contact email                                                                                                                                                       |
 | Mature content     | No                                                                                                                                                                                                                              |
 
 `scripts/check-manifest.mjs` fails the build if the name is over 75 characters or starts with "PubMed", or if the summary is over 132 characters. The summary is:
