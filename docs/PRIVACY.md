@@ -1,8 +1,8 @@
 # Privacy policy
 
 - **Extension:** Journal Club Helper: Critical Appraisal for PubMed (the "extension").
-- **Status:** draft, not yet published. It describes the extension as it will be submitted to the Chrome Web Store, which includes the NCBI fallback described below.
-- **Effective date:** TBD(#29), set on the day this policy is first published.
+- **Status:** published. It describes the extension as it will be submitted to the Chrome Web Store, which includes the NCBI fallback described below.
+- **Effective date:** 2026-11-15
 - **Contact:** journal.club.helper@gmail.com
 
 ## In short
@@ -79,6 +79,6 @@ The extension is an independent educational tool. It is not affiliated with or e
 
 Any change is recorded below and in the project's public history, and takes effect when the version that needs it is released. A change that stores or sends more data, or sends it somewhere new, is always made before the version that does so ships.
 
-| Date     | Change                  |
-| -------- | ----------------------- |
-| TBD(#29) | First published policy. |
+| Date       | Change                  |
+| ---------- | ----------------------- |
+| 2026-11-15 | First published policy. |

@@ -1,10 +1,12 @@
 name: Landing site
 
-# Publishes site/ to GitHub Pages (#29). Manual only until the repository is
-# public under the organization (#30): Pages is not
-# available on a private repository on the free plan, so a push trigger would
-# fail on every merge. Add `push: { branches: [main], paths: [site/**] }` then.
+# Publishes site/ to GitHub Pages (#29) at
+# https://pharm-pubmed.github.io/journal-club-helper/ whenever site/ changes on
+# main, or by hand.
 on:
+  push:
+    branches: [main]
+    paths: [site/**]
   workflow_dispatch:
 
 permissions:
