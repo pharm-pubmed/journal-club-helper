@@ -90,7 +90,39 @@ If a working paid version offered to 10 people gets 0 or 1 purchases, stop addin
 
 Only if introductions do not reach enough people. For each channel, first read its current rules: the sidebar, any pinned self-promotion thread, and whether moderator approval is needed. Then post once, with a worked example that is useful on its own, and stay to answer comments. No blanket posting and no paid advertising.
 
-The drafts below are for subreddits. They say that it is free and educational and not affiliated with NLM or NIH. They mention no AI and no price: neither exists in the free version, and a post should not promise either. They say nothing about who made it. Add that only if it is true. These communities notice, and resent, a product post dressed up as a colleague's story.
+The X threads come first. The drafts after them are for subreddits. They say that it is free and educational and not affiliated with NLM or NIH. They mention no AI and no price: neither exists in the free version, and a post should not promise either. They say nothing about who made it. Add that only if it is true. These communities notice, and resent, a product post dressed up as a colleague's story.
+
+### X (decided 2026-11-15: English, starting now)
+
+The owner chose to start recruiting on X straight away, in English, for the same group as above. It is the first public channel, so introductions and X run side by side. Record the people who come through X separately in the validation record.
+
+Two threads. **Recruiting** can go out before the listing is live. It asks for people with a presentation coming up, and the session can be booked for once the listing is approved. Do not ask anyone to load the unpacked zip. **Launch** goes out once, after the listing is live, with the store link filled in. Each post is under 280 characters, with every link counted as 23. Use at most one or two hashtags, such as `#MedTwitter` or `#JournalClub`, and only where people in the target group actually use them. Do not tag strangers or reply to unrelated threads with the link.
+
+**Recruiting thread:**
+
+> 1/ Have a journal club or paper presentation in the next month or two? I'm looking for a few residents and students (pharmacy or medicine) to try a free Chrome extension I made for preparing one, and to tell me where it gets in the way. 🧵
+
+> 2/ It opens beside a PubMed abstract: detects the study design and shows why, sets up PICO, works out ARR/NNT (with a 95% CI when there are counts), gives a checklist for the design, and exports a one-page summary.
+
+> 3/ It doesn't summarize the paper or tell you what to conclude; you write the judgements. No account, no analytics, notes stay in your browser. Not affiliated with NLM/NIH.
+>
+> Example summary + 30-second demo: https://pharm-pubmed.github.io/journal-club-helper/
+
+> 4/ What I'd ask: use it for your real presentation, let me watch once for 20–30 min (screen share is fine), and a few questions after you present. Nothing about patients is involved.
+>
+> Interested? Reply or DM me.
+
+The thread says "I made". Keep that only if it is true of whoever posts it.
+
+**Launch thread** (after the listing is live):
+
+> 1/ Journal club prep, built into a side panel next to the PubMed abstract: study design, PICO, ARR/NNT with a 95% CI, a design-specific checklist, and a one-page summary. Free, no account, no tracking.
+>
+> TBD(#31)
+
+> 2/ It's an educational tool, not decision support: it never writes the conclusion for you. Example output and a 30-second demo: https://pharm-pubmed.github.io/journal-club-helper/
+>
+> Feedback welcome: https://github.com/pharm-pubmed/journal-club-helper/issues/new?template=feedback.yml
 
 ### r/Residency
 
