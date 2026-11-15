@@ -3,158 +3,720 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Journal Club Helper: critical appraisal beside the PubMed abstract</title>
+    <meta name="theme-color" content="#f6f7f2" />
+    <title>Journal Club Helper — Read the paper. Lead the discussion.</title>
     <meta
       name="description"
-      content="A free Chrome extension for journal club: study design, PICO, the absolute effect with NNT, and a risk-of-bias checklist, next to the PubMed abstract you are reading."
+      content="A little structure for your next journal club. Explore a free, local-first Chrome extension for PubMed: PICO, absolute effects, critical appraisal, and a one-page summary."
     />
+    <meta
+      property="og:title"
+      content="Journal Club Helper — Read the paper. Lead the discussion."
+    />
+    <meta
+      property="og:description"
+      content="Your paper. Your judgement. A clearer path from PubMed abstract to journal club discussion."
+    />
+    <meta property="og:type" content="website" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="style.css" />
+    <script src="site.js" defer></script>
   </head>
-  <body>
-    <header class="bar">
-      <a class="brand" href="./"
-        ><img src="favicon.svg" alt="" width="28" height="28" />Journal Club Helper</a
+  <body class="landing">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6" /></symbol>
+        <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M6 18 18 6M6 6h12v12" /></symbol>
+        <symbol id="i-play" viewBox="0 0 24 24"><path d="m9 5 11 7-11 7z" /></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24">
+          <path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z" />
+          <path d="m8 12 3 3 5-6" />
+        </symbol>
+        <symbol id="i-book" viewBox="0 0 24 24">
+          <path d="M12 6v15M3 3l9 3 9-3v15l-9 3-9-3z" />
+        </symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+        <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6" /></symbol>
+        <symbol id="i-chart" viewBox="0 0 24 24">
+          <path d="M4 4v16h16M8 15v-4m5 4V7m5 8v-6" />
+        </symbol>
+        <symbol id="i-file" viewBox="0 0 24 24">
+          <path d="M14 3H5v18h14V8zm0 0v5h5M9 12h6m-6 4h6" />
+        </symbol>
+      </defs>
+    </svg>
+    <header class="bar site-header">
+      <a class="brand" href="./" aria-label="Journal Club Helper home"
+        ><img src="favicon.svg" alt="" width="36" height="36" /><span
+          >journal club<span class="brand__second"
+            >helper<span class="brand__dot">.</span></span
+          ></span
+        ></a
       >
-      <a href="privacy/">Privacy</a>
+      <nav class="header-nav" aria-label="Main navigation">
+        <a href="#workflow">The workflow</a><a href="#why">Why it’s different</a
+        ><a
+          href="https://github.com/pharm-pubmed/journal-club-helper"
+          target="_blank"
+          rel="noopener noreferrer"
+          >GitHub <svg class="icon small"><use href="#i-arrow-up" /></svg
+        ></a>
+      </nav>
+      <a class="button button--small button--dark" href="#get-started"
+        >Get started <svg class="icon"><use href="#i-arrow-up" /></svg
+      ></a>
     </header>
-
-    <main>
-      <section class="hero">
-        <div class="hero__inner">
-          <h1>Critical appraisal, next to the abstract you are reading</h1>
-          <p>
-            A side panel for PubMed that sets up your journal club appraisal: the study design,
-            PICO, the absolute effect with the NNT, and a checklist for the design. It does not
-            summarize the paper and it does not tell you what to conclude. You make every judgement.
+    <main id="main">
+      <noscript
+        ><p class="no-script-note wrap">
+          The interactive previews need JavaScript.
+          <a href="sample/">Read the full worked example</a> or watch the linked demo video. The
+          figures below show a fixed example.
+        </p></noscript
+      >
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero__copy">
+          <div class="eyebrow"><span class="status-dot"></span> A CLEARER WAY TO JOURNAL CLUB</div>
+          <h1 id="hero-title">
+            Read the paper.<br />Lead the<br /><em>discussion.</em
+            ><span class="title-spark" aria-hidden="true">✳</span>
+          </h1>
+          <p class="hero__description">
+            Turn a PubMed abstract into a thoughtful appraisal. A little structure for the numbers,
+            the questions, and <strong>your own conclusions.</strong>
           </p>
-          <!-- TBD(#31): the Chrome Web Store listing URL, once the item is published. -->
-          <a class="cta" href="TBD(#31)">Add to Chrome, free</a>
-          <span class="cta__note">Chrome and Edge. No account, no analytics.</span>
+          <div class="hero__actions">
+            <a class="button button--dark" href="#workflow"
+              >Explore the workflow <svg class="icon"><use href="#i-arrow" /></svg></a
+            ><a class="watch-link" href="video/demo.mp4" data-open-demo
+              ><span class="play-circle"
+                ><svg class="icon"><use href="#i-play" /></svg
+              ></span>
+              Watch the demo <span class="watch-time">0:33</span></a
+            >
+          </div>
+          <div class="hero__reassurance">
+            <span
+              ><svg class="icon small"><use href="#i-check" /></svg> Free &amp; open source</span
+            ><span
+              ><svg class="icon small"><use href="#i-check" /></svg> No account needed</span
+            >
+          </div>
+        </div>
+        <div class="hero__visual" aria-label="Interactive illustration of the appraisal workflow">
+          <div class="orbit orbit--one" aria-hidden="true"></div>
+          <div class="orbit orbit--two" aria-hidden="true"></div>
+          <div class="visual-topnote">
+            <span class="tiny-cross" aria-hidden="true">+</span> LESS FRICTION. MORE THINKING.
+          </div>
+          <div class="browser-preview">
+            <div class="browser-chrome">
+              <span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span
+              ><span class="address-bar"
+                ><svg class="icon"><use href="#i-shield" /></svg> pubmed.ncbi.nlm.nih.gov</span
+              ><svg class="icon small"><use href="#i-plus" /></svg>
+            </div>
+            <div class="browser-content">
+              <article class="paper-preview" aria-label="Example paper">
+                <div class="paper-wordmark">Pub<span>Med</span><sup>®</sup></div>
+                <div class="paper-rule"></div>
+                <span class="paper-type">SYSTEMATIC REVIEW</span>
+                <h2>
+                  Efficacy of awake prone positioning in patients with covid-19 related hypoxemic
+                  respiratory failure
+                </h2>
+                <p class="paper-citation">Weatherald J, et al. · BMJ, 2022</p>
+                <span class="paper-pmid">PMID: 36740866</span>
+                <h3>Abstract</h3>
+                <div class="abstract-lines" aria-hidden="true">
+                  <i></i><i></i><i></i><i class="highlight"></i><i class="highlight short"></i
+                  ><i></i><i></i><i class="short"></i>
+                </div>
+                <div class="paper-annotation">
+                  <svg class="icon"><use href="#i-book" /></svg> Stay with the paper.<br />Keep your
+                  thinking beside it.
+                </div>
+              </article>
+              <div class="app-preview">
+                <div class="app-preview__brand">
+                  <img src="favicon.svg" alt="" width="21" height="21" /><strong
+                    >Journal Club Helper</strong
+                  ><span class="local-indicator" title="Illustrative preview">●</span>
+                </div>
+                <div class="design-label">
+                  <span class="status-dot"></span> Systematic review / meta-analysis
+                </div>
+                <div class="preview-tabs" role="tablist" aria-label="Explore the extension preview">
+                  <button
+                    id="tab-pico"
+                    role="tab"
+                    aria-selected="true"
+                    aria-controls="preview-pico"
+                    tabindex="0"
+                    data-preview-tab="pico"
+                    disabled
+                  >
+                    PICO
+                  </button>
+                  <button
+                    id="tab-numbers"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="preview-numbers"
+                    tabindex="-1"
+                    data-preview-tab="numbers"
+                    disabled
+                  >
+                    Numbers
+                  </button>
+                  <button
+                    id="tab-appraisal"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="preview-appraisal"
+                    tabindex="-1"
+                    data-preview-tab="appraisal"
+                    disabled
+                  >
+                    Appraisal
+                  </button>
+                  <button
+                    id="tab-export"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="preview-export"
+                    tabindex="-1"
+                    data-preview-tab="export"
+                    disabled
+                  >
+                    Export
+                  </button>
+                </div>
+                <div
+                  class="preview-panel"
+                  id="preview-pico"
+                  role="tabpanel"
+                  aria-labelledby="tab-pico"
+                  tabindex="0"
+                >
+                  <div class="preview-panel__heading">
+                    <h3>The clinical question</h3>
+                    <span>01 / 04</span>
+                  </div>
+                  <div class="pico-row">
+                    <span class="pico-letter">P</span>
+                    <div>
+                      <span>POPULATION</span>
+                      <p>Adults with covid-19 related hypoxemic respiratory failure</p>
+                    </div>
+                  </div>
+                  <div class="pico-row">
+                    <span class="pico-letter">I</span>
+                    <div>
+                      <span>INTERVENTION</span>
+                      <p>Awake prone positioning</p>
+                    </div>
+                  </div>
+                  <div class="pico-row">
+                    <span class="pico-letter">C</span>
+                    <div>
+                      <span>COMPARISON</span>
+                      <p>Usual care</p>
+                    </div>
+                  </div>
+                  <div class="pico-row">
+                    <span class="pico-letter">O</span>
+                    <div>
+                      <span>OUTCOME</span>
+                      <p>Endotracheal intubation</p>
+                    </div>
+                  </div>
+                  <div class="preview-tip">
+                    <svg class="icon"><use href="#i-book" /></svg> The question, in the reader’s
+                    words.
+                  </div>
+                </div>
+                <div
+                  class="preview-panel"
+                  id="preview-numbers"
+                  role="tabpanel"
+                  aria-labelledby="tab-numbers"
+                  tabindex="0"
+                  hidden
+                >
+                  <div class="preview-panel__heading">
+                    <h3>Make the effect tangible</h3>
+                    <span>02 / 04</span>
+                  </div>
+                  <div class="preview-ratio">
+                    REPORTED RELATIVE RISK<strong>0.83 <span>95% CI 0.73–0.94</span></strong>
+                  </div>
+                  <div class="preview-stat-row">
+                    <div>
+                      <span>ABSOLUTE REDUCTION</span><strong>5.1<span> pp</span></strong>
+                    </div>
+                    <div><span>NUMBER TO TREAT</span><strong>20</strong></div>
+                  </div>
+                  <p class="preview-small">
+                    NNT 95% CI: 13–56. Estimated using an assumed baseline risk of 29.8%.
+                  </p>
+                  <div class="preview-tip">
+                    <svg class="icon"><use href="#i-chart" /></svg> You choose and confirm the
+                    inputs.
+                  </div>
+                </div>
+                <div
+                  class="preview-panel"
+                  id="preview-appraisal"
+                  role="tabpanel"
+                  aria-labelledby="tab-appraisal"
+                  tabindex="0"
+                  hidden
+                >
+                  <div class="preview-panel__heading">
+                    <h3>Ask the right questions</h3>
+                    <span>03 / 04</span>
+                  </div>
+                  <div class="preview-question">
+                    <span>01 · INTERNAL VALIDITY</span>
+                    <p>Were the question and eligibility rules prespecified?</p>
+                    <span class="verdict">Unclear</span>
+                  </div>
+                  <div class="preview-question">
+                    <span>READER’S NOTE</span>
+                    <p>Check the protocol registration date against the last search.</p>
+                  </div>
+                  <div class="preview-tip">
+                    <svg class="icon"><use href="#i-book" /></svg> Unclear means there’s more to
+                    check.
+                  </div>
+                </div>
+                <div
+                  class="preview-panel"
+                  id="preview-export"
+                  role="tabpanel"
+                  aria-labelledby="tab-export"
+                  tabindex="0"
+                  hidden
+                >
+                  <div class="preview-panel__heading">
+                    <h3>Bring your thinking together</h3>
+                    <span>04 / 04</span>
+                  </div>
+                  <div class="preview-export">
+                    <svg class="icon"><use href="#i-file" /></svg
+                    ><strong>Your journal club summary</strong><span>Citation &amp; PICO</span
+                    ><span>Key results &amp; absolute effects</span
+                    ><span>Appraisal &amp; your bottom line</span>
+                  </div>
+                  <a class="preview-sample" href="sample/"
+                    >Read the real example <svg class="icon small"><use href="#i-arrow-up" /></svg
+                  ></a>
+                </div>
+                <div class="preview-footer">
+                  <span class="status-dot"></span> Interactive illustration · example entries
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="floating-note">
+            <span class="note-icon"
+              ><svg class="icon"><use href="#i-check" /></svg
+            ></span>
+            <div>Your paper. Your judgement.<span>We just help you connect the dots.</span></div>
+            <span class="note-dots" aria-hidden="true">⠿</span>
+          </div>
+          <div class="visual-bottomnote">
+            <span class="mini-line" aria-hidden="true"></span> TRY THE TABS. FOLLOW THE THINKING.
+            <span aria-hidden="true">↗</span>
+          </div>
         </div>
       </section>
-
-      <section class="section demo" aria-labelledby="demo">
+      <div class="audience-strip wrap">
+        <span>BUILT FOR CURIOUS MINDS</span>
         <div>
-          <h2 id="demo">See it in use</h2>
+          Medical residents <span aria-hidden="true">✳</span> Pharmacy residents
+          <span aria-hidden="true">✳</span> Students <span aria-hidden="true">✳</span> EBM educators
+        </div>
+      </div>
+      <section class="workflow-section section wrap" id="workflow" aria-labelledby="workflow-title">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">01 / THE WORKFLOW</span>
+            <h2 id="workflow-title">From abstract to<br /><em>an actual point of view.</em></h2>
+          </div>
           <p>
-            One appraisal of a published meta-analysis, in about half a minute: the detected design
-            and its evidence, a PICO in the reader's words, the abstract's relative risk turned into
-            an NNT, one checklist question with a note, and the bottom line that goes into the
-            one-page summary.
-          </p>
-          <p class="demo__note">
-            No sound. Recorded from the extension's side panel on a saved copy of the abstract.
+            Four connected steps. One place to think.<br />Right beside the PubMed paper you’re
+            reading.
           </p>
         </div>
-        <video
-          controls
-          muted
-          playsinline
-          preload="none"
-          width="400"
-          height="720"
-          poster="video/demo-poster.png"
-          aria-label="Demo: appraising a meta-analysis in the Journal Club Helper side panel"
-        >
-          <source src="video/demo.mp4" type="video/mp4" />
-          <a href="video/demo.mp4">Download the demo video</a>
-        </video>
-      </section>
-
-      <section class="section" aria-labelledby="features">
-        <h2 id="features">What it does</h2>
-
-        <div class="feature">
-          <div>
-            <h3>The absolute effect, not just the relative one</h3>
+        <div class="workflow-grid">
+          <a class="workflow-step" href="#tab-pico" data-go-tab="pico"
+            ><span class="step-number"
+              >01 <svg class="icon"><use href="#i-arrow-up" /></svg
+            ></span>
+            <h3>Frame the question.</h3>
             <p>
-              Pick a result from the abstract and see the absolute risk reduction, the relative risk
-              reduction and the number needed to treat, with a 95% confidence interval when the
-              numbers allow one. You confirm every number before it is used.
+              Identify the design. Put the population, intervention, comparison, and outcome into
+              your own words.
             </p>
-          </div>
-          <img
-            src="img/numbers.png"
-            width="400"
-            height="720"
-            alt="The Numbers tab: a relative risk of 0.83 (95% CI 0.73 to 0.94) applied to a baseline risk of 29.8% gives NNT 20 (95% CI 13 to 56), with the ARR and its CI."
-          />
-        </div>
-
-        <div class="feature">
-          <div>
-            <h3>Risk of bias, one question at a time</h3>
+            <span class="step-tag">DESIGN + PICO</span></a
+          >
+          <a class="workflow-step" href="#tab-numbers" data-go-tab="numbers"
+            ><span class="step-number"
+              >02 <svg class="icon"><use href="#i-arrow-up" /></svg
+            ></span>
+            <h3>Understand the effect.</h3>
             <p>
-              A checklist written for each study design. Every question says what to look for, why
-              it matters, and whether the abstract can settle it or you need the full text.
+              Move from relative results to absolute risks and NNT. Confirm the numbers before you
+              use them.
             </p>
-          </div>
-          <img
-            src="img/appraisal.png"
-            width="400"
-            height="720"
-            loading="lazy"
-            alt="The Appraisal tab for a meta-analysis: the prespecified question and search comprehensiveness both answered Unclear, each with a note on what to check in the full record."
-          />
-        </div>
-
-        <div class="feature">
-          <div>
-            <h3>A one-page summary for journal club</h3>
+            <span class="step-tag">ARR · RRR · NNT</span></a
+          >
+          <a class="workflow-step" href="#tab-appraisal" data-go-tab="appraisal"
+            ><span class="step-number"
+              >03 <svg class="icon"><use href="#i-arrow-up" /></svg
+            ></span>
+            <h3>Question the evidence.</h3>
             <p>
-              Citation, clinical question, design, key results with the absolute effect, validity
-              and your own bottom line. Copy it as Markdown or plain text, or download it.
+              Work through a checklist for the study design. Record what you know and what needs the
+              full text.
             </p>
-            <p class="feature__more"><a href="sample/">See an example summary</a></p>
-          </div>
-          <img
-            src="img/export.png"
-            width="400"
-            height="720"
-            loading="lazy"
-            alt="The Export tab: the reader's bottom line, with buttons to copy the summary as Markdown or plain text, or download it."
-          />
+            <span class="step-tag">CRITICAL APPRAISAL</span></a
+          >
+          <a class="workflow-step" href="#tab-export" data-go-tab="export"
+            ><span class="step-number"
+              >04 <svg class="icon"><use href="#i-arrow-up" /></svg
+            ></span>
+            <h3>Bring your perspective.</h3>
+            <p>
+              Pull your appraisal into a one-page summary. Add your bottom line and take it to the
+              discussion.
+            </p>
+            <span class="step-tag">MARKDOWN + PLAIN TEXT</span></a
+          >
         </div>
       </section>
-
-      <section class="section" aria-labelledby="who">
-        <h2 id="who">Who it is for</h2>
-        <div class="panel">
-          <ul>
-            <li>Medical and pharmacy residents preparing journal club.</li>
-            <li>Medical, pharmacy and nursing students learning evidence-based medicine.</li>
-            <li>Anyone who teaches critical appraisal and wants a shared structure.</li>
-          </ul>
+      <section class="features-section section wrap" id="why" aria-labelledby="features-title">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">02 / ROOM FOR BETTER THINKING</span>
+            <h2 id="features-title">Small details.<br /><em>More meaningful discussions.</em></h2>
+          </div>
+          <span class="section-aside"
+            ><svg class="icon"><use href="#i-plus" /></svg> A TOOL FOR THINKING WITH.</span
+          >
+        </div>
+        <div class="bento-grid">
+          <article class="effect-card" aria-labelledby="effect-title">
+            <div class="card-topline">
+              <svg class="icon"><use href="#i-chart" /></svg
+              ><span>MAKE THE NUMBERS MEAN SOMETHING</span
+              ><span class="live-badge">TRY IT LIVE</span>
+            </div>
+            <h3 id="effect-title">Same relative effect.<br />A different absolute story.</h3>
+            <p>
+              A relative risk of 0.83 only tells part of the story. Move the baseline risk to see
+              why context matters.
+            </p>
+            <div class="effect-comparison">
+              <div>
+                <span>WITHOUT INTERVENTION</span
+                ><strong><span data-control-risk>29.8</span><small>%</small></strong>
+                <div class="risk-track"><span data-control-bar style="width: 29.8%"></span></div>
+              </div>
+              <div>
+                <span>WITH INTERVENTION</span
+                ><strong><span data-treatment-risk>24.7</span><small>%</small></strong>
+                <div class="risk-track risk-track--lime">
+                  <span data-treatment-bar style="width: 24.734%"></span>
+                </div>
+              </div>
+            </div>
+            <div class="risk-slider-heading">
+              <label for="baseline-risk">Assumed baseline risk</label
+              ><output for="baseline-risk" id="baseline-output">29.8%</output>
+            </div>
+            <input
+              disabled
+              id="baseline-risk"
+              class="risk-slider"
+              type="range"
+              min="5"
+              max="60"
+              step="0.1"
+              value="29.8"
+              aria-describedby="risk-note"
+            />
+            <div class="effect-results" aria-live="polite" aria-atomic="true">
+              <div>
+                <span>ABSOLUTE RISK REDUCTION</span
+                ><strong><span data-arr>5.1</span><small> percentage points</small></strong>
+              </div>
+              <div><span>NUMBER NEEDED TO TREAT</span><strong data-nnt>20</strong></div>
+            </div>
+            <p class="effect-footnote" id="risk-note">
+              Illustrative calculation with fixed RR 0.83; uncertainty is not shown here. The
+              extension includes 95% CIs when calculable.
+              <a href="sample/">See the worked example ↗</a>
+            </p>
+          </article>
+          <article class="appraisal-card">
+            <div class="card-topline">
+              <svg class="icon"><use href="#i-book" /></svg><span>THE RIGHT KIND OF QUESTIONS</span>
+            </div>
+            <h3>Structure, without<br />the shortcuts.</h3>
+            <p>
+              A design-specific checklist explains what to look for and why it matters. You make
+              every judgement.
+            </p>
+            <div class="checklist-illustration">
+              <div>
+                <span class="check-number">01</span><span>Was the question prespecified?</span
+                ><span class="verdict">Unclear</span>
+              </div>
+              <div>
+                <span class="check-number">02</span><span>Was the search comprehensive?</span
+                ><span class="verdict">Unclear</span>
+              </div>
+              <p>
+                <span aria-hidden="true">↳</span> A prompt to check the full text. Not an automatic
+                verdict.
+              </p>
+            </div>
+            <div class="card-bottom">
+              YOUR REASONING STAYS AT THE CENTRE <svg class="icon"><use href="#i-plus" /></svg>
+            </div>
+          </article>
+          <article class="export-card">
+            <div>
+              <div class="card-topline">
+                <svg class="icon"><use href="#i-file" /></svg
+                ><span>TAKE YOUR THINKING WITH YOU</span>
+              </div>
+              <h3>A paper.<br />A perspective.<br />A one-page summary.</h3>
+              <a class="text-link" href="sample/"
+                >Explore a real export <svg class="icon"><use href="#i-arrow-up" /></svg
+              ></a>
+            </div>
+            <div class="summary-sheet" aria-hidden="true">
+              <span class="sheet-eyebrow">JOURNAL CLUB / 01</span
+              ><strong>The evidence,<br />in perspective.</strong><span class="sheet-rule"></span
+              ><span class="sheet-label">CLINICAL QUESTION</span><span class="sheet-line"></span
+              ><span class="sheet-line short"></span><span class="sheet-label">KEY RESULTS</span>
+              <div class="sheet-metrics">
+                <span>RR <b>0.83</b></span
+                ><span>NNT <b>20</b></span>
+              </div>
+              <span class="sheet-label">YOUR BOTTOM LINE</span><span class="sheet-line"></span
+              ><span class="sheet-line short"></span
+              ><span class="sheet-signoff">Your appraisal. Ready to discuss.</span>
+            </div>
+          </article>
         </div>
       </section>
-
-      <section class="section" aria-labelledby="privacy">
-        <h2 id="privacy">Your notes stay on your device</h2>
-        <p>
-          There is no account, no server and no analytics. Appraisals are saved in your browser, one
-          per article, and you can export or delete them at any time. The extension's only network
-          request is made when you ask for it: if a page cannot be read, it can fetch the same
-          record from NCBI, sending the article's PubMed ID and nothing you wrote.
-          <a href="privacy/">Read the privacy policy</a>.
-        </p>
+      <section class="demo-section wrap" aria-labelledby="demo-title">
+        <div class="demo-copy">
+          <span class="eyebrow">03 / SEE THE REAL THING</span>
+          <h2 id="demo-title">One paper.<br />The whole <em>picture.</em></h2>
+          <p>
+            Follow a real appraisal of a published BMJ meta-analysis, from the clinical question to
+            the reader’s bottom line.
+          </p>
+          <a class="button button--lime" href="video/demo.mp4" data-open-demo
+            ><svg class="icon"><use href="#i-play" /></svg> Watch the 33-second walkthrough</a
+          ><span class="demo-caption">Actual extension recording. No sound, no sign-up.</span>
+        </div>
+        <div class="demo-art">
+          <span class="demo-art__label">YOUR WORKSPACE, RIGHT BESIDE PUBMED</span>
+          <div class="demo-screens">
+            <img
+              class="demo-screen demo-screen--back"
+              src="img/appraisal.png"
+              alt="Appraisal tab with design-specific questions and the reader’s notes"
+              width="400"
+              height="720"
+              loading="lazy"
+            /><a
+              class="demo-screen-link"
+              href="video/demo.mp4"
+              data-open-demo
+              aria-label="Watch the extension walkthrough"
+              ><img
+                class="demo-screen demo-screen--front"
+                src="img/numbers.png"
+                alt="Actual Numbers tab showing RR 0.83, ARR 5.1 percentage points, and NNT 20 with a 95% confidence interval of 13–56"
+                width="400"
+                height="720"
+                loading="lazy" /><span class="demo-play"
+                ><svg class="icon"><use href="#i-play" /></svg></span
+            ></a>
+          </div>
+          <span class="demo-art__bottom">REAL PAPER. REAL WORKFLOW. YOUR CONCLUSIONS.</span>
+        </div>
+      </section>
+      <section class="privacy-section section wrap" aria-labelledby="privacy-title">
+        <div class="privacy-mark">
+          <svg class="icon"><use href="#i-shield" /></svg
+          ><span class="privacy-orbit" aria-hidden="true"></span>
+        </div>
+        <div class="privacy-copy">
+          <span class="eyebrow">THOUGHTFULLY LOCAL</span>
+          <h2 id="privacy-title">Your notes belong<br /><em>on your device.</em></h2>
+          <p>
+            No account. No analytics. No server holding your appraisals. Your work is saved in your
+            browser, ready to export or delete whenever you choose.
+          </p>
+          <a class="text-link" href="privacy/"
+            >Read the privacy policy <svg class="icon"><use href="#i-arrow-up" /></svg
+          ></a>
+        </div>
+        <div class="privacy-facts">
+          <span
+            ><svg class="icon"><use href="#i-check" /></svg> Browser-local storage</span
+          ><span
+            ><svg class="icon"><use href="#i-check" /></svg> No tracking or analytics</span
+          ><span
+            ><svg class="icon"><use href="#i-check" /></svg> Open-source code</span
+          >
+          <p>
+            If you request the NCBI fallback, only the article’s PubMed ID is sent with the tool’s
+            contact details. Your notes stay local.
+          </p>
+        </div>
+      </section>
+      <section class="faq-section section wrap" aria-labelledby="faq-title">
+        <div>
+          <span class="eyebrow">A FEW THINGS TO KNOW</span>
+          <h2 id="faq-title">Good questions.<br /><em>Clear answers.</em></h2>
+        </div>
+        <div class="faq-list">
+          <details>
+            <summary>
+              Does it summarize papers for me?<svg class="icon"><use href="#i-plus" /></svg>
+            </summary>
+            <p>
+              It provides a structured appraisal workspace: study design, PICO, effect calculations,
+              and a checklist. You confirm the inputs, assess the evidence, and write your own
+              bottom line. Always check the full text.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Which study designs are supported?<svg class="icon"><use href="#i-plus" /></svg>
+            </summary>
+            <p>
+              Randomized controlled trials, cohort studies, case-control studies, cross-sectional
+              studies, diagnostic studies, and systematic reviews / meta-analyses have their own
+              checklists. An unclear design has a general checklist to help you get started.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Can I use it without an account?<svg class="icon"><use href="#i-plus" /></svg>
+            </summary>
+            <p>
+              Yes. The core workflow runs locally in Chrome or Edge with no account. Your appraisals
+              are saved per article in the browser. You can copy summaries as Markdown or plain
+              text, or download them.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Is it a clinical decision-support tool?<svg class="icon"><use href="#i-plus" /></svg>
+            </summary>
+            <p>
+              It is an educational aid for critical appraisal and journal club preparation. It gives
+              no clinical advice or treatment recommendations. Verify the results and your
+              interpretation against the full text.
+            </p>
+          </details>
+        </div>
+      </section>
+      <section class="get-started wrap" id="get-started" aria-labelledby="get-started-title">
+        <div>
+          <span class="eyebrow"
+            ><span class="status-dot"></span> FREE. OPEN SOURCE. YOURS TO EXPLORE.</span
+          >
+          <h2 id="get-started-title">Make room for<br /><em>the discussion.</em></h2>
+          <p>Your next journal club starts with a better question.</p>
+          <div class="get-started-actions">
+            <a
+              class="button button--dark"
+              href="https://github.com/pharm-pubmed/journal-club-helper#development"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Get the extension on GitHub <svg class="icon"><use href="#i-arrow-up" /></svg></a
+            ><a class="text-link" href="sample/"
+              >See an example first <svg class="icon"><use href="#i-arrow" /></svg
+            ></a>
+          </div>
+          <p class="release-note">
+            Early access · Install from source using the GitHub instructions.<br />Chrome Web Store
+            listing coming soon. Chrome and Edge supported.
+          </p>
+        </div>
+        <div class="closing-art" aria-hidden="true">
+          <svg viewBox="0 0 240 240">
+            <path d="M120 20v200M20 120h200M49 49l142 142M49 191 191 49" /></svg
+          ><span>STAY CURIOUS.</span>
+        </div>
       </section>
     </main>
-
-    <footer class="foot">
-      <nav>
-        <a href="privacy/">Privacy policy</a>
-        <a href="mailto:journal.club.helper@gmail.com">Contact</a>
-        <a href="https://github.com/pharm-pubmed/journal-club-helper">Source</a>
-      </nav>
-      <p>
-        Educational use only. Journal Club Helper is not clinical decision support and gives no
-        clinical advice. Check everything against the full text.
-      </p>
-      <p>
-        Not affiliated with NLM, NIH or HHS. The PubMed wordmark is a registered trademark of the
-        U.S. Department of Health and Human Services.
-      </p>
+    <footer class="foot wrap">
+      <div class="footer-top">
+        <a class="brand" href="./"
+          ><img src="favicon.svg" alt="" width="32" height="32" /><span
+            >journal club<span class="brand__second"
+              >helper<span class="brand__dot">.</span></span
+            ></span
+          ></a
+        ><span class="footer-tagline">A little structure. A lot of independent thinking.</span>
+        <nav aria-label="Footer navigation">
+          <a href="privacy/">Privacy</a><a href="mailto:journal.club.helper@gmail.com">Contact</a
+          ><a
+            href="https://github.com/pharm-pubmed/journal-club-helper"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Source <svg class="icon small"><use href="#i-arrow-up" /></svg
+          ></a>
+        </nav>
+      </div>
+      <div class="footer-bottom">
+        <p>
+          For educational use only. Not clinical decision support. Verify against the full text.
+        </p>
+        <p>
+          Not affiliated with NLM, NIH or HHS. PubMed is a registered trademark of the U.S.
+          Department of Health and Human Services.
+        </p>
+      </div>
     </footer>
+    <dialog class="demo-dialog" aria-labelledby="demo-dialog-title">
+      <div class="dialog-header">
+        <h2 id="demo-dialog-title">A real appraisal, in 33 seconds.</h2>
+        <button class="dialog-close" type="button" aria-label="Close demo">
+          <svg class="icon"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <video
+        controls
+        muted
+        playsinline
+        preload="none"
+        width="400"
+        height="720"
+        poster="video/demo-poster.png"
+        aria-label="Appraising a meta-analysis in the Journal Club Helper side panel"
+      >
+        <source src="video/demo.mp4" type="video/mp4" />
+        <a href="video/demo.mp4">Download the demo video</a>
+      </video>
+      <p>
+        Actual extension recording · No sound · <a href="sample/">Read the example summary ↗</a>
+      </p>
+    </dialog>
   </body>
 </html>
