@@ -30,9 +30,9 @@ import type { AppraisalsReplacedMessage } from '../../lib/types';
 import { PRODUCT_NAME } from '../labels';
 import './options.css';
 
-/** TODO(#28): replace with the published privacy policy URL before the store submission. */
-const PRIVACY_URL = 'https://github.com/piroshi1989/journal-club-helper/blob/main/docs/PRIVACY.md';
-const ISSUES_URL = 'https://github.com/piroshi1989/journal-club-helper/issues';
+/** The published policy, generated from docs/PRIVACY.md (HANDOVER §3, _Landing site_). */
+const PRIVACY_URL = 'https://pharm-pubmed.github.io/journal-club-helper/privacy/';
+const ISSUES_URL = 'https://github.com/pharm-pubmed/journal-club-helper/issues';
 
 type AppraisalSummary = Pick<Appraisal, 'pmid' | 'updatedAt' | 'citation'>;
 type ImportMode = 'merge' | 'replace';
@@ -551,7 +551,6 @@ export function OptionsPage() {
         <p class="options__note">Not affiliated with NLM / NIH.</p>
         <ul class="options__links">
           <li>
-            {/* TODO(#28): swap PRIVACY_URL for the published privacy policy URL. */}
             <a href={PRIVACY_URL} target="_blank" rel="noreferrer noopener">
               Privacy policy
             </a>

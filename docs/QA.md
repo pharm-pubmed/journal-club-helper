@@ -1,6 +1,6 @@
 # Manual QA script
 
-> **QA of the v0.1.0 build:** use [this file as of commit 0fdb3af](https://github.com/piroshi1989/journal-club-helper/blob/0fdb3af/docs/QA.md). #49 changed the number extractor and #58 added the case-control note after that build, so records B and D below expect behaviour the v0.1.0 zip does not have.
+> **QA of the v0.1.0 build:** use [this file as of the `v0.1.0` tag](https://github.com/pharm-pubmed/journal-club-helper/blob/v0.1.0/docs/QA.md). #49 changed the number extractor and #58 added the case-control note after that build, so records B and D below expect behaviour the v0.1.0 zip does not have.
 
 A pass of about ten minutes over five real PubMed records, run by a person in a real browser before each tagged release. It covers what the automated suites cannot: the live PubMed page, the side panel as a reader sees it, the clipboard, the downloaded file, and persistence across a closed panel. The e2e smoke run (`pnpm test:e2e`) already checks button injection, URL gating, extraction, one NNT and one close-and-restore on saved pages, so this script spends its time elsewhere.
 

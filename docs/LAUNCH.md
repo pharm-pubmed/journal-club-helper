@@ -8,8 +8,8 @@ The goal of the first 90 days is **not installs**. It is 10 people who have a jo
 
 ## Before recruiting
 
-- [ ] The listing is live (TBD(#31)), and so is the landing page with its example summary and demo video (TBD(#29)). A person has watched the video through.
-- [ ] The repository is public under the organization (#30), so anyone can open the feedback form. Its link is TBD(#30).
+- [ ] The listing is live (TBD(#31)), and so is the landing page with its example summary and demo video (https://pharm-pubmed.github.io/journal-club-helper/). A person has watched the video through.
+- [ ] The repository is public under the organization (#30), so anyone can open the feedback form. Its link is https://github.com/pharm-pubmed/journal-club-helper/issues/new?template=feedback.yml.
 - [x] The `feedback` label exists (created 2026-09-27).
 - [ ] A place for the validation record exists **outside this repository**. See below: it holds names and dates of real people.
 - [ ] Hours are set aside. The spec assumes about 4 hours a week, 50 hours at most over the 90 days. If they are not there, move the dates rather than cutting the observation short.
@@ -26,7 +26,7 @@ A message for a colleague to forward. Add a sentence about yourself only if it i
 >
 > I've built a free Chrome extension that sits beside a PubMed abstract and walks you through the appraisal. It detects the study design, sets up PICO, works out the absolute effect and the NNT from the abstract's numbers, gives you a checklist for the design, and exports a one-page summary. It does not summarize the paper or tell you what to conclude. It has no account or analytics, and your notes stay in your browser.
 >
-> Here is an example of the summary it produces and a 30-second demo: TBD(#29)
+> Here is an example of the summary it produces and a 30-second demo: https://pharm-pubmed.github.io/journal-club-helper/
 >
 > If you would try it for your next presentation, I'd like to watch you use it once for 20–30 minutes (screen share is fine), and ask a few questions after you present. I'll ask before recording anything, and nothing about patients is involved.
 
@@ -103,13 +103,13 @@ The drafts below are for subreddits. They say that it is free and educational an
 > - Detects the study design and shows why (publication type, abstract wording). You can override it.
 > - Pulls candidate numbers out of the abstract and computes ARR, RRR and NNT, with a 95% CI when there are counts to work from. You confirm every number.
 > - A checklist for each design, built on risk-of-bias thinking, that says whether the abstract can even answer the question or you need the full text.
-> - Exports a one-page summary as Markdown or text. There's an example here: TBD(#29)
+> - Exports a one-page summary as Markdown or text. There's an example here: https://pharm-pubmed.github.io/journal-club-helper/sample/
 >
 > It does not summarize papers and it does not tell you what to conclude. You write the judgements. It is free, it has no account and no analytics, and your notes stay in your browser. It is not affiliated with NLM or NIH.
 >
 > Chrome Web Store: TBD(#31)
 >
-> I would really like to hear where it gets in the way or gets something wrong. There is a feedback form here: TBD(#30)
+> I would really like to hear where it gets in the way or gets something wrong. There is a feedback form here: https://github.com/pharm-pubmed/journal-club-helper/issues/new?template=feedback.yml
 
 ### r/pharmacy
 
@@ -120,13 +120,13 @@ The drafts below are for subreddits. They say that it is free and educational an
 > - PICO, with the matching sentences in the abstract highlighted.
 > - ARR, RRR and NNT or NNH from the event rates or counts in the abstract, with a 95% CI when the counts allow one. It can also convert a hazard, risk or odds ratio at a baseline risk you choose.
 > - Checklists for RCTs, non-inferiority trials, cohort and case-control studies, systematic reviews and diagnostic studies.
-> - A one-page summary you can paste into your handout. An example: TBD(#29)
+> - A one-page summary you can paste into your handout. An example: https://pharm-pubmed.github.io/journal-club-helper/sample/
 >
 > It is an educational tool, not clinical decision support: it gives no recommendations, and every judgement in the summary is typed by you. Free, no account, no analytics, and not affiliated with NLM or NIH.
 >
 > Chrome Web Store: TBD(#31)
 >
-> Feedback, especially from anyone who teaches literature evaluation: TBD(#30)
+> Feedback, especially from anyone who teaches literature evaluation: https://github.com/pharm-pubmed/journal-club-helper/issues/new?template=feedback.yml
 
 ### r/medicalschool
 
@@ -144,4 +144,4 @@ The drafts below are for subreddits. They say that it is free and educational an
 >
 > Chrome Web Store: TBD(#31)
 >
-> If something is confusing, I want to know: TBD(#30)
+> If something is confusing, I want to know: https://github.com/pharm-pubmed/journal-club-helper/issues/new?template=feedback.yml
