@@ -4,7 +4,7 @@ Everything a reviewer asks for, kept next to the code so it cannot drift from wh
 
 The permission arrays below are enforced, not described: `scripts/check-manifest.mjs` fails CI if the built manifest differs from them by one entry. See `docs/HANDOVER.md` §7 for the reasoning behind each decision.
 
-- **Item:** Journal Club Helper: Critical Appraisal for PubMed
+- **Item:** Journal Club Helper: Critical Appraisal
 - **Version:** 0.3.0 (not yet submitted; the first store submission)
 - **Minimum Chrome version:** 116 — `chrome.sidePanel.open()` is not available before it
 - **Listing text and assets:** [docs/STORE-LISTING.md](docs/STORE-LISTING.md), `store/` (#27) · **Privacy policy:** [docs/PRIVACY.md](docs/PRIVACY.md) (#28) · **Submission:** #31

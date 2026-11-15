@@ -28,7 +28,7 @@ export default defineConfig({
     },
   },
   manifest: {
-    name: 'Journal Club Helper: Critical Appraisal for PubMed',
+    name: 'Journal Club Helper: Critical Appraisal',
     short_name: 'Journal Club Helper',
     // The store listing's summary, word for word from spec §6 (#27, docs/STORE-LISTING.md).
     description:

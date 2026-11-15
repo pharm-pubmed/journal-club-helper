@@ -1,4 +1,4 @@
-# Journal Club Helper: Critical Appraisal for PubMed
+# Journal Club Helper: Critical Appraisal
 
 A Chrome extension (Manifest V3) that adds a structured critical-appraisal workflow to PubMed abstract pages: study design detection, PICO, ARR / RRR / NNT with 95% CI, design-specific validity checklists, and a one-page journal club summary.
 

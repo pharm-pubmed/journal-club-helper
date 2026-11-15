@@ -70,8 +70,9 @@ if (manifest.minimum_chrome_version !== '116') {
 }
 
 // The store takes the listing's name and summary from here (#27). Chrome caps
-// the summary at 132 characters and the name at 75. PubMed is the NLM's
-// trademark, so the name may describe the site but must not lead with it.
+// the summary at 132 characters and the name at 75. PubMed is a trademark of
+// HHS, so the name leaves it out (decided 2026-11-15); the summary may still
+// say which site the extension works on.
 if (typeof manifest.description !== 'string' || manifest.description.length > 132) {
   problems.push(
     `description must be at most 132 characters (store summary), got ${manifest.description?.length}`,
@@ -80,8 +81,8 @@ if (typeof manifest.description !== 'string' || manifest.description.length > 13
 if (typeof manifest.name !== 'string' || manifest.name.length > 75) {
   problems.push(`name must be at most 75 characters, got ${manifest.name?.length}`);
 }
-if (/^\s*pubmed/i.test(manifest.name ?? '')) {
-  problems.push(`name must not start with "PubMed" (spec §6), got "${manifest.name}"`);
+if (/pubmed/i.test(manifest.name ?? '')) {
+  problems.push(`name must not contain "PubMed" (STORE-LISTING.md), got "${manifest.name}"`);
 }
 
 if (problems.length > 0) {
