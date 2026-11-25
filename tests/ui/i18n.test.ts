@@ -67,7 +67,7 @@ it('reads the stored preference and follows changes to it', async () => {
   stored['settings'] = { locale: 'ja' };
   vi.stubGlobal('chrome', fakeChrome());
   const { i18n, Probe } = await load();
-  i18n.startLocale();
+  void i18n.startLocale();
   await act(() => render(h(Probe, null), document.body));
   await flush();
   expect(document.body.textContent).toBe('設定');
@@ -92,7 +92,7 @@ it('switches a component rendered before the stored value arrives', async () => 
   stored['settings'] = { locale: 'ja' };
   vi.stubGlobal('chrome', fakeChrome(true));
   const { i18n, Probe } = await load();
-  i18n.startLocale();
+  void i18n.startLocale();
   const vnode = h(Probe, null);
   // Render without letting effects run, then answer the storage read.
   render(vnode, document.body);
@@ -101,11 +101,41 @@ it('switches a component rendered before the stored value arrives', async () => 
   expect(document.body.textContent).toBe('設定');
 });
 
-it('paints first in the language this page used last time', async () => {
-  localStorage.setItem('jch-locale-preference', 'ja');
+it('resolves only once the stored language is known, so the first paint can wait for it', async () => {
+  stored['settings'] = { locale: 'ja' };
   vi.stubGlobal('chrome', fakeChrome(true));
   const { i18n, Probe } = await load();
-  i18n.startLocale();
+  let ready = false;
+  const started = i18n.startLocale().then(() => {
+    ready = true;
+  });
+  await flush();
+  expect(ready).toBe(false);
+  resolveGet?.();
+  await started;
   await act(() => render(h(Probe, null), document.body));
   expect(document.body.textContent).toBe('設定');
+  // The policy says everything is kept in chrome.storage.local.
+  expect(localStorage.length).toBe(0);
+});
+
+it('keeps a change that arrives while the stored value is still being read', async () => {
+  stored['settings'] = { locale: 'ja' };
+  vi.stubGlobal('chrome', fakeChrome(true));
+  const { i18n } = await load();
+  const started = i18n.startLocale();
+  emit('local', 'settings', { locale: 'en' });
+  resolveGet?.();
+  await started;
+  expect(i18n.currentLocale()).toBe('en');
+});
+
+it('falls back to the browser language when storage cannot be read', async () => {
+  vi.stubGlobal('chrome', {
+    ...fakeChrome(),
+    storage: { local: { get: () => Promise.reject(new Error('gone')) } },
+  });
+  const { i18n } = await load();
+  await i18n.startLocale();
+  expect(i18n.currentLocale()).toBe('en');
 });
