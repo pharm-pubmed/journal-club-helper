@@ -17,6 +17,7 @@ Everything is kept in your browser's extension storage (`chrome.storage.local`) 
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | Appraisals        | One per article you work on, keyed by PMID. The article's citation (title, authors, journal, year, PMID, DOI). The study design the extension detected, with the publication types and abstract phrases it used. What you entered: PICO, the numbers you worked with (including the sentence of the abstract a number came from), checklist answers and notes, facts such as funding that you recorded, and your bottom line. When you created and last edited it. | 500 appraisals. The one you edited least recently is removed first. 64 KB per appraisal. |
 | Usage counts      | Three numbers, shown to you on the extension's settings page: how many articles you opened in the side panel, how many summaries you exported, and how many AI extractions ran. There are no AI features in this version, so the last one stays at 0 unless a backup you import says otherwise.                                                                                                                                                                    | —                                                                                        |
+| Language          | Which language you chose for the extension on its settings page (same as the browser, English or Japanese), from the version that adds Japanese. It is not part of a backup.                                                                                                                                                                                                                                                                                       | —                                                                                        |
 | Set-aside records | A saved appraisal that a later version of the extension cannot read. It is moved under its own key instead of being overwritten.                                                                                                                                                                                                                                                                                                                                   | —                                                                                        |
 
 Your appraisals are, in effect, a list of the articles you have worked on and when. That list stays on your device.
@@ -58,7 +59,7 @@ The settings page makes no network requests. Copying a summary uses your clipboa
 ## Keeping, exporting and deleting your data
 
 - **Export:** Settings → **Export all** saves every appraisal and your usage counts to a JSON file on your computer. Set-aside records are not included.
-- **Delete:** Settings → **Delete all appraisals** removes every saved appraisal from this browser, set-aside records included. Your usage counts are kept. It cannot be undone, but copies you exported or downloaded yourself are not affected.
+- **Delete:** Settings → **Delete all appraisals** removes every saved appraisal from this browser, set-aside records included. Your usage counts and language choice are kept. It cannot be undone, but copies you exported or downloaded yourself are not affected.
 - **Uninstall:** removing the extension deletes everything it stored, usage counts included.
 
 There is no server copy to request, correct or delete. Everything the extension holds is on your device and under your control.
@@ -79,7 +80,8 @@ The extension is an independent educational tool. It is not affiliated with or e
 
 Any change is recorded below and in the project's public history, and takes effect when the version that needs it is released. A change that stores or sends more data, or sends it somewhere new, is always made before the version that does so ships.
 
-| Date       | Change                                                                            |
-| ---------- | --------------------------------------------------------------------------------- |
-| 2026-11-15 | First published policy.                                                           |
-| 2026-11-15 | The extension's name no longer includes "PubMed". Nothing about the data changed. |
+| Date       | Change                                                                                                                 |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-15 | First published policy.                                                                                                |
+| 2026-11-15 | The extension's name no longer includes "PubMed". Nothing about the data changed.                                      |
+| 2026-11-25 | Added the language setting to what is stored on your device, for the version that adds Japanese. Nothing more is sent. |

@@ -1,15 +1,14 @@
 /**
  * The language the side panel and the options page render in (#82).
  *
- * It starts from the browser language, so the first paint is already right for
- * nearly everyone, then reads the stored preference and follows any change to
- * it. The options page writes the preference; an open side panel hears about
+ * The entry points wait for `startLocale()` before they render, so the first
+ * paint is already in the stored language, and the page then follows any change
+ * to it. The options page writes the preference; an open side panel hears about
  * it through `chrome.storage.onChanged` and re-renders in place.
  */
 import { useLayoutEffect, useState } from 'preact/hooks';
 import {
   browserLanguage,
-  isLocalePreference,
   preferenceFromSettings,
   resolveLocale,
   type Locale,
@@ -18,30 +17,6 @@ import {
 import { messagesFor, type Messages } from '../locales';
 
 const SETTINGS_KEY = 'settings';
-
-/**
- * The last preference this browser used, copied into the page's localStorage
- * so the first paint is in the right language before chrome.storage answers.
- * chrome.storage stays the source of truth; this is only a hint.
- */
-const HINT_KEY = 'jch-locale-preference';
-
-function readHint(): LocalePreference {
-  try {
-    const value = typeof localStorage === 'undefined' ? null : localStorage.getItem(HINT_KEY);
-    return isLocalePreference(value) ? value : 'auto';
-  } catch {
-    return 'auto';
-  }
-}
-
-function writeHint(next: LocalePreference): void {
-  try {
-    if (typeof localStorage !== 'undefined') localStorage.setItem(HINT_KEY, next);
-  } catch {
-    // No localStorage: the first paint follows the browser, then corrects.
-  }
-}
 
 let preference: LocalePreference = 'auto';
 let locale: Locale = resolveLocale('auto', browserLanguage());
@@ -65,32 +40,27 @@ function apply(next: LocalePreference): void {
 let started = false;
 
 /**
- * Reads the stored preference and starts following it. Safe to call more than
- * once, and a no-op outside the extension (a plain preview, a component test).
+ * Reads the stored preference and starts following it. Resolves once the
+ * language is known, and never rejects: if storage cannot be read, the browser
+ * language stands. Safe to call more than once, and outside the extension (a
+ * plain preview, a component test).
  */
-export function startLocale(): void {
+export async function startLocale(): Promise<void> {
   if (started) return;
   started = true;
-  const hint = readHint();
-  preference = hint;
-  locale = resolveLocale(hint, browserLanguage());
   if (typeof document !== 'undefined') document.documentElement.lang = locale;
   if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
   try {
-    void chrome.storage.local
-      .get(SETTINGS_KEY)
-      .then((items) => {
-        const stored = preferenceFromSettings(items[SETTINGS_KEY]);
-        writeHint(stored);
-        apply(stored);
-      })
-      .catch(() => undefined);
+    // A change heard while the read below is pending is newer than its answer.
+    let changed = false;
     chrome.storage.onChanged?.addListener((changes, area) => {
       if (area !== 'local' || !(SETTINGS_KEY in changes)) return;
+      changed = true;
       const next = preferenceFromSettings(changes[SETTINGS_KEY]?.newValue);
-      writeHint(next);
       if (next !== preference) apply(next);
     });
+    const items = await chrome.storage.local.get(SETTINGS_KEY);
+    if (!changed) apply(preferenceFromSettings(items[SETTINGS_KEY]));
   } catch {
     // A dead extension context: stay with the browser language.
   }
@@ -109,7 +79,6 @@ export function currentPreference(): LocalePreference {
  * Other pages follow through `chrome.storage.onChanged`. Tests use it too.
  */
 export function applyPreference(next: LocalePreference): void {
-  writeHint(next);
   if (next !== preference || resolveLocale(next, browserLanguage()) !== locale) apply(next);
 }
 
