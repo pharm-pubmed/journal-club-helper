@@ -46,13 +46,29 @@ export type EutilsErrorKind =
 /** NCBI normally answers in well under a second. */
 export const EFETCH_TIMEOUT_MS = 20_000;
 
+/** What a message needs to be written again in another language (#82). */
+export interface EutilsErrorDetail {
+  pmid?: string;
+  status?: number;
+  /** The underlying error's own text, which comes from the browser. */
+  cause?: string;
+  /** For `not-found`: the input was not a PMID at all, rather than an unknown one. */
+  notPmid?: boolean;
+  /** For `network`: the answer started and was cut off, rather than never arriving. */
+  cutOff?: boolean;
+  /** For `http`: what came back was not XML. */
+  notXml?: boolean;
+}
+
 export class EutilsError extends Error {
   readonly kind: EutilsErrorKind;
+  readonly detail: EutilsErrorDetail;
 
-  constructor(kind: EutilsErrorKind, message: string) {
+  constructor(kind: EutilsErrorKind, message: string, detail: EutilsErrorDetail = {}) {
     super(message);
     this.name = 'EutilsError';
     this.kind = kind;
+    this.detail = detail;
   }
 }
 
@@ -246,7 +262,11 @@ export async function fetchArticleFromEutils(
   contact: EutilsContact = EUTILS_CONTACT,
   deps: EutilsDeps = {},
 ): Promise<PubMedArticle> {
-  if (!/^\d+$/.test(pmid)) throw new EutilsError('not-found', `"${pmid}" is not a PMID.`);
+  if (!/^\d+$/.test(pmid))
+    throw new EutilsError('not-found', `"${pmid}" is not a PMID.`, {
+      pmid,
+      notPmid: true,
+    });
   const fetchImpl = deps.fetch ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
   const parse =
     deps.parse ?? ((xml: string) => new DOMParser().parseFromString(xml, 'application/xml'));
@@ -263,13 +283,15 @@ export async function fetchArticleFromEutils(
       throw new EutilsError('timeout', 'NCBI did not answer in time. Try again in a moment.');
     }
     const detail = error instanceof Error ? error.message : String(error);
-    throw new EutilsError('network', `Could not reach NCBI: ${detail}`);
+    throw new EutilsError('network', `Could not reach NCBI: ${detail}`, { cause: detail });
   }
   if (response.status === 429) {
     throw new EutilsError('rate-limit', 'NCBI asked us to slow down. Try again in a few seconds.');
   }
   if (!response.ok) {
-    throw new EutilsError('http', `NCBI answered with HTTP ${response.status}.`);
+    throw new EutilsError('http', `NCBI answered with HTTP ${response.status}.`, {
+      status: response.status,
+    });
   }
 
   let body: string;
@@ -277,17 +299,20 @@ export async function fetchArticleFromEutils(
     body = await response.text();
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    throw new EutilsError('network', `The answer from NCBI was cut off: ${detail}`);
+    throw new EutilsError('network', `The answer from NCBI was cut off: ${detail}`, {
+      cause: detail,
+      cutOff: true,
+    });
   }
   let doc: Document;
   try {
     doc = parse(body);
   } catch {
-    throw new EutilsError('http', 'NCBI sent something that is not XML.');
+    throw new EutilsError('http', 'NCBI sent something that is not XML.', { notXml: true });
   }
   // DOMParser reports malformed XML as a document, not an exception.
   if (doc.getElementsByTagName('parsererror').length > 0) {
-    throw new EutilsError('http', 'NCBI sent something that is not XML.');
+    throw new EutilsError('http', 'NCBI sent something that is not XML.', { notXml: true });
   }
   const held = Array.from(doc.getElementsByTagName('PubmedArticle')).some(
     (record) => text(path(record, 'MedlineCitation', 'PMID')) === pmid,
@@ -300,11 +325,13 @@ export async function fetchArticleFromEutils(
       throw new EutilsError(
         'book',
         `PubMed record ${pmid} is a book or book chapter, which the panel cannot appraise.`,
+        { pmid },
       );
     }
-    throw new EutilsError('not-found', `NCBI has no PubMed record ${pmid}.`);
+    throw new EutilsError('not-found', `NCBI has no PubMed record ${pmid}.`, { pmid });
   }
   const article = parseEfetchDocument(doc, pmid);
-  if (!article) throw new EutilsError('no-abstract', `PubMed record ${pmid} has no abstract.`);
+  if (!article)
+    throw new EutilsError('no-abstract', `PubMed record ${pmid} has no abstract.`, { pmid });
   return article;
 }

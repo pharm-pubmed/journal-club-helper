@@ -19,6 +19,9 @@ import { useCallback, useEffect, useRef } from 'preact/hooks';
 import { actions, store, useStore } from '../store';
 import type { ArticleStatus } from '../store';
 import { EUTILS_ORIGIN, EutilsError, fetchArticleFromEutils } from '../../lib/eutils';
+import { messagesFor, type Messages } from '../../locales';
+import { describeError } from '../../locales/errors';
+import { currentLocale } from '../i18n';
 import { parsePmidFromUrl } from '../../lib/pubmed-url';
 import type { GetArticleMessage, GetArticleResponse, PubMedArticle } from '../../lib/types';
 
@@ -38,12 +41,6 @@ const PUBMED_HOST = 'pubmed.ncbi.nlm.nih.gov';
 /** chrome.tabs.sendMessage rejects with one of these when no content script is listening. */
 const NO_RECEIVER =
   /receiving end does not exist|could not establish connection|message port closed/i;
-
-const NOT_GRANTED =
-  'NCBI was not contacted, because the permission was not granted. Nothing was sent.';
-
-const NO_PERMISSIONS_API =
-  'This browser cannot grant the permission the NCBI fetch needs. Nothing was sent.';
 
 /** The content script runs at document_idle, so a message sent too early can miss it once. */
 const RETRY_DELAY_MS = 400;
@@ -72,10 +69,24 @@ function readResponse(raw: unknown): PubMedArticle | null {
   return (raw as GetArticleResponse).article ?? null;
 }
 
+/** The language the panel is speaking now; read at the moment a message is written. */
+function messages(): Messages {
+  return messagesFor(currentLocale());
+}
+
+/** Shown to the reader, so in their language (#82). */
 function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'string' && error) return error;
-  return 'The panel could not read the page.';
+  const m = messages();
+  return describeError(error, m, m.errors.readFailed);
+}
+
+/**
+ * The browser's own text, for recognising its errors. Never shown: a match on
+ * it must not depend on the language the panel speaks.
+ */
+function rawText(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return typeof error === 'string' ? error : '';
 }
 
 function sleep(ms: number): Promise<void> {
@@ -87,7 +98,7 @@ async function requestArticle(tabId: number, retry: boolean): Promise<PubMedArti
   try {
     return readResponse(await chrome.tabs.sendMessage(tabId, message));
   } catch (error) {
-    if (!retry || !NO_RECEIVER.test(errorMessage(error))) throw error;
+    if (!retry || !NO_RECEIVER.test(rawText(error))) throw error;
     await sleep(RETRY_DELAY_MS);
     return readResponse(await chrome.tabs.sendMessage(tabId, message));
   }
@@ -123,7 +134,7 @@ async function fetchFromNcbi(pmid: string, request: Promise<boolean>): Promise<v
     }
     if (!stillHere()) return;
     if (!granted) {
-      actions.setUnreadable(pmid, NOT_GRANTED);
+      actions.setUnreadable(pmid, messages().errors.notGranted);
       return;
     }
 
@@ -206,7 +217,7 @@ async function load(isCurrent: () => boolean): Promise<void> {
   } catch (error) {
     if (!isCurrent()) return;
     pagePmid = null;
-    if (NO_RECEIVER.test(errorMessage(error))) {
+    if (NO_RECEIVER.test(rawText(error))) {
       // Nothing listening in that tab: not a failure, just not a PubMed abstract.
       actions.setStatus('unsupported');
       return;
@@ -231,7 +242,7 @@ export function useArticle(): UseArticle {
     // A second click while the first is still being answered does nothing.
     if (!unreadablePmid || ncbiPending) return;
     if (typeof chrome === 'undefined' || !chrome.permissions?.request) {
-      actions.setUnreadable(unreadablePmid, NO_PERMISSIONS_API);
+      actions.setUnreadable(unreadablePmid, messages().errors.noPermissionsApi);
       return;
     }
     const request = chrome.permissions.request({ origins: [EUTILS_ORIGIN] });

@@ -266,6 +266,47 @@ export const en = {
     wrap: 'Wrap long lines',
   },
 
+  errors: {
+    readFailed: 'The panel could not read the page.',
+    notGranted: 'NCBI was not contacted, because the permission was not granted. Nothing was sent.',
+    noPermissionsApi:
+      'This browser cannot grant the permission the NCBI fetch needs. Nothing was sent.',
+    ncbi: {
+      notPmid: (pmid: string) => `"${pmid}" is not a PMID.`,
+      timeout: 'NCBI did not answer in time. Try again in a moment.',
+      network: (cause: string) => `Could not reach NCBI: ${cause}`,
+      cutOff: (cause: string) => `The answer from NCBI was cut off: ${cause}`,
+      rateLimit: 'NCBI asked us to slow down. Try again in a few seconds.',
+      http: (status: number) => `NCBI answered with HTTP ${status}.`,
+      notXml: 'NCBI sent something that is not XML.',
+      book: (pmid: string) =>
+        `PubMed record ${pmid} is a book or book chapter, which the panel cannot appraise.`,
+      notFound: (pmid: string) => `NCBI has no PubMed record ${pmid}.`,
+      noAbstract: (pmid: string) => `PubMed record ${pmid} has no abstract.`,
+    },
+    storage: {
+      notPreserved:
+        'The saved appraisal could not be preserved safely. It has not been replaced. Free storage space or recover the existing record before trying again.',
+      noPmid: 'This article has no usable PubMed ID, so it cannot be saved.',
+      tooLarge: (kb: number, limitKb: number) =>
+        `This appraisal is too large to save (${kb} KB; the limit is ${limitKb} KB per article). Shorten your notes and try again.`,
+      notJson: 'That file is not valid JSON. Choose a file exported by this extension.',
+      notExport: 'That file is not a Journal Club Helper export.',
+      olderVersion:
+        'That backup was written by an earlier version of this extension, before the appraisal checklists changed, and cannot be read. Nothing here has been altered.',
+      otherVersion:
+        'That export was written by a different version of this extension and cannot be read. Nothing here has been altered.',
+      noList: 'That file has no valid appraisal list. Nothing here has been changed.',
+      nothingToImport:
+        'That file contains no appraisals and no readable usage counts to restore. Nothing here has been changed.',
+      noneReadable:
+        'None of the appraisals in that file could be read, so nothing was imported and nothing here has been changed.',
+      importStopped: (imported: number, skipped: number, cause: string) =>
+        `Import stopped: ${imported} appraisal(s) were written and ${skipped} skipped. Any earlier writes or removals were not rolled back. ${cause}`,
+      storageFailed: 'Browser storage could not be updated.',
+    },
+  },
+
   numbers: {
     title: 'Absolute effect and NNT',
     lead: 'Pick a result the abstract reports, or type one in. Nothing is calculated until you ask for it.',

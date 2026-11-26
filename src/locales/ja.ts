@@ -230,6 +230,49 @@ export const ja: Messages = {
     wrap: '長い行を折り返す',
   },
 
+  errors: {
+    readFailed: 'パネルがページを読み取れませんでした。',
+    notGranted: '許可されなかったため、NCBI には接続していません。何も送っていません。',
+    noPermissionsApi:
+      'このブラウザでは、NCBI からの取得に必要な許可を出せません。何も送っていません。',
+    ncbi: {
+      notPmid: (pmid: string) => `「${pmid}」は PMID ではありません。`,
+      timeout: 'NCBI から時間内に応答がありませんでした。少し待ってから再度お試しください。',
+      network: (cause: string) => `NCBI に接続できませんでした：${cause}`,
+      cutOff: (cause: string) => `NCBI からの応答が途中で切れました：${cause}`,
+      rateLimit: 'NCBI からアクセスを控えるよう求められました。数秒待ってから再度お試しください。',
+      http: (status: number) => `NCBI が HTTP ${status} を返しました。`,
+      notXml: 'NCBI から XML ではないデータが返ってきました。',
+      book: (pmid: string) =>
+        `PubMed の記録 ${pmid} は書籍または書籍の章のため、このパネルでは吟味できません。`,
+      notFound: (pmid: string) => `NCBI には PubMed の記録 ${pmid} がありません。`,
+      noAbstract: (pmid: string) => `PubMed の記録 ${pmid} には抄録がありません。`,
+    },
+    storage: {
+      notPreserved:
+        '保存済みの吟味を安全に退避できなかったため、置き換えていません。ストレージの空きを作るか、既存の記録を復旧してから、もう一度お試しください。',
+      noPmid: 'この論文には使える PubMed ID がないため、保存できません。',
+      tooLarge: (kb: number, limitKb: number) =>
+        `この吟味は大きすぎて保存できません（${kb} KB。上限は 1 論文あたり ${limitKb} KB）。メモを短くしてから、もう一度お試しください。`,
+      notJson:
+        'このファイルは正しい JSON ではありません。この拡張機能で書き出したファイルを選んでください。',
+      notExport: 'このファイルは Journal Club Helper の書き出しファイルではありません。',
+      olderVersion:
+        'このバックアップは、チェックリストが変わる前の古いバージョンで書き出されたため、読み込めません。ここにあるデータは何も変更していません。',
+      otherVersion:
+        'このファイルは別のバージョンの拡張機能で書き出されたため、読み込めません。ここにあるデータは何も変更していません。',
+      noList:
+        'このファイルには正しい吟味の一覧がありません。ここにあるデータは何も変更していません。',
+      nothingToImport:
+        'このファイルには、吟味も、復元できる利用回数も含まれていません。ここにあるデータは何も変更していません。',
+      noneReadable:
+        'このファイルの吟味はどれも読み取れなかったため、何も読み込んでいません。ここにあるデータは何も変更していません。',
+      importStopped: (imported: number, skipped: number, cause: string) =>
+        `読み込みが途中で止まりました。${imported} 件を書き込み、${skipped} 件は読み込んでいません。それまでの書き込みや削除は元に戻していません。${cause}`,
+      storageFailed: 'ブラウザのストレージを更新できませんでした。',
+    },
+  },
+
   numbers: {
     title: '絶対効果と NNT',
     lead: '抄録に書かれた結果を選ぶか、自分で入力してください。求められるまで計算はしません。',

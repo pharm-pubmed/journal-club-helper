@@ -204,6 +204,46 @@ function pickSettings(s: Settings): Settings {
   };
 }
 
+/* ------------------------------------------------------------------- errors */
+
+/**
+ * Every message here is shown to the reader. The code and values let the page
+ * write it in the reader's language (#82); the English text stays the message.
+ */
+export type StorageErrorCode =
+  | 'not-preserved'
+  | 'no-pmid'
+  | 'too-large'
+  | 'not-json'
+  | 'not-export'
+  | 'older-version'
+  | 'other-version'
+  | 'no-list'
+  | 'nothing-to-import'
+  | 'none-readable'
+  | 'import-stopped';
+
+export interface StorageErrorValues {
+  kb?: number;
+  limitKb?: number;
+  imported?: number;
+  skipped?: number;
+  /** For `import-stopped`: what stopped it. */
+  cause?: unknown;
+}
+
+export class StorageError extends Error {
+  readonly code: StorageErrorCode;
+  readonly values: StorageErrorValues;
+
+  constructor(code: StorageErrorCode, message: string, values: StorageErrorValues = {}) {
+    super(message);
+    this.name = 'StorageError';
+    this.code = code;
+    this.values = values;
+  }
+}
+
 /* --------------------------------------------------------------- appraisals */
 
 /**
@@ -229,7 +269,8 @@ async function quarantine(pmid: string, key: string, raw: unknown): Promise<void
   } catch {
     // A new archive can exceed the quota while a smaller overwrite would fit.
     // Do not permit replacement until preservation succeeds.
-    throw new Error(
+    throw new StorageError(
+      'not-preserved',
       'The saved appraisal could not be preserved safely. It has not been replaced. ' +
         'Free storage space or recover the existing record before trying again.',
     );
@@ -238,7 +279,10 @@ async function quarantine(pmid: string, key: string, raw: unknown): Promise<void
 
 export async function saveAppraisal(appraisal: Appraisal): Promise<void> {
   if (!isValidPmid(appraisal.pmid)) {
-    throw new Error('This article has no usable PubMed ID, so it cannot be saved.');
+    throw new StorageError(
+      'no-pmid',
+      'This article has no usable PubMed ID, so it cannot be saved.',
+    );
   }
   const stamped: Appraisal = { ...appraisal, updatedAt: Date.now() };
   assertWithinSizeLimit(stamped);
@@ -309,9 +353,13 @@ function byteLength(json: string): number {
 function assertWithinSizeLimit(appraisal: Appraisal): void {
   const bytes = byteLength(JSON.stringify(appraisal));
   if (bytes <= MAX_APPRAISAL_BYTES) return;
-  throw new Error(
-    `This appraisal is too large to save (${Math.ceil(bytes / KB)} KB; the limit is ` +
-      `${MAX_APPRAISAL_BYTES / KB} KB per article). Shorten your notes and try again.`,
+  const kb = Math.ceil(bytes / KB);
+  const limitKb = MAX_APPRAISAL_BYTES / KB;
+  throw new StorageError(
+    'too-large',
+    `This appraisal is too large to save (${kb} KB; the limit is ` +
+      `${limitKb} KB per article). Shorten your notes and try again.`,
+    { kb, limitKb },
   );
 }
 
@@ -438,15 +486,20 @@ export async function importAll(
   try {
     parsed = JSON.parse(json);
   } catch {
-    throw new Error('That file is not valid JSON. Choose a file exported by this extension.');
+    throw new StorageError(
+      'not-json',
+      'That file is not valid JSON. Choose a file exported by this extension.',
+    );
   }
   if (!isRecord(parsed)) {
-    throw new Error('That file is not a Journal Club Helper export.');
+    throw new StorageError('not-export', 'That file is not a Journal Club Helper export.');
   }
   const fileVersion = parsed['schemaVersion'];
   if (fileVersion !== EXPORT_SCHEMA_VERSION) {
-    throw new Error(
-      typeof fileVersion === 'number' && fileVersion < EXPORT_SCHEMA_VERSION
+    const older = typeof fileVersion === 'number' && fileVersion < EXPORT_SCHEMA_VERSION;
+    throw new StorageError(
+      older ? 'older-version' : 'other-version',
+      older
         ? 'That backup was written by an earlier version of this extension, before the appraisal ' +
             'checklists changed, and cannot be read. Nothing here has been altered.'
         : 'That export was written by a different version of this extension and cannot be read. ' +
@@ -459,11 +512,15 @@ export async function importAll(
   // emptied the store and then imported nothing.
   const incoming = parsed['appraisals'];
   if (!Array.isArray(incoming)) {
-    throw new Error('That file has no valid appraisal list. Nothing here has been changed.');
+    throw new StorageError(
+      'no-list',
+      'That file has no valid appraisal list. Nothing here has been changed.',
+    );
   }
   const settingsOnly = incoming.length === 0 && hasReadableSettings(parsed['settings']);
   if (incoming.length === 0 && !settingsOnly) {
-    throw new Error(
+    throw new StorageError(
+      'nothing-to-import',
       'That file contains no appraisals and no readable usage counts to restore. ' +
         'Nothing here has been changed.',
     );
@@ -484,7 +541,8 @@ export async function importAll(
   }
 
   if (usable.length === 0 && !settingsOnly) {
-    throw new Error(
+    throw new StorageError(
+      'none-readable',
       'None of the appraisals in that file could be read, so nothing was imported and nothing ' +
         'here has been changed.',
     );
@@ -545,10 +603,12 @@ export async function importAll(
     if (!settingsOnly) await evictOldest();
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Browser storage could not be updated.';
-    throw new Error(
+    throw new StorageError(
+      'import-stopped',
       `Import stopped: ${imported} appraisal(s) were written and ${skipped} skipped. ` +
         'Any earlier writes or removals were not rolled back. ' +
         detail,
+      { imported, skipped, cause: error },
     );
   }
   return settingsOnly ? { imported, skipped, settingsOnly: true } : { imported, skipped };
