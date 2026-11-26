@@ -88,6 +88,8 @@ describe('the catalogs', () => {
     const args = [3, 2, 'merge'];
     const argsFor: Record<string, unknown[]> = {
       'labels.subtypeLineFallback': ['factorial'],
+      'numbers.thrown': ['controlEvents (12) cannot exceed controlTotal (10)'],
+      'numbers.nntWithCi': ['NNT 3', '2–5'],
       'pico.markTitle': ['Population', 'numeric result', ['Outcome']],
     };
     // These print only a PMID, so they are the same in both languages.

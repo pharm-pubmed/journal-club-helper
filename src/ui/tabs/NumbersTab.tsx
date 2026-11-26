@@ -88,8 +88,14 @@ type FieldName =
   | 'ciHigh'
   | 'acrPercent';
 
+/**
+ * A message written when it is shown, not when it is found, so an error on
+ * screen follows a change of language (#82).
+ */
+type Message = (m: Messages) => string;
+
 /** Per-field messages plus a `form` slot for anything that names no single field. */
-type FieldErrors = Partial<Record<FieldName | 'form', string>>;
+type FieldErrors = Partial<Record<FieldName | 'form', Message>>;
 
 type Outcome =
   { ok: true; result: EffectMeasures; warnings: string[] } | { ok: false; errors: FieldErrors };
@@ -112,9 +118,9 @@ const ARG_FIELDS: readonly (readonly [string, FieldName])[] = [
   ['acr', 'acrPercent'],
 ];
 
-function errorsFromThrown(thrown: unknown, m: Messages): FieldErrors {
+function errorsFromThrown(thrown: unknown): FieldErrors {
   const raw = thrown instanceof Error ? thrown.message : String(thrown);
-  const message = m.numbers.thrown(raw);
+  const message: Message = (m) => m.numbers.thrown(raw);
   const errors: FieldErrors = {};
   for (const [argName, field] of ARG_FIELDS) {
     if (raw.startsWith(argName)) {
@@ -130,8 +136,11 @@ function errorsFromThrown(thrown: unknown, m: Messages): FieldErrors {
 
 interface ParsedField {
   value: number | null;
-  error: string | null;
+  error: Message | null;
 }
+
+/** The name a required-field message uses, chosen by the reader's language when shown. */
+type Label = (m: Messages) => string;
 
 function toNumber(raw: string): number | null {
   const trimmed = raw.trim();
@@ -140,39 +149,38 @@ function toNumber(raw: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-function percentField(raw: string, label: string, m: Messages): ParsedField {
-  if (raw.trim().length === 0) return { value: null, error: m.numbers.required(label) };
+function percentField(raw: string, label: Label): ParsedField {
+  if (raw.trim().length === 0) return { value: null, error: (m) => m.numbers.required(label(m)) };
   const value = toNumber(raw);
-  if (value === null) return { value: null, error: m.numbers.enterNumber };
-  if (value < 0 || value > 100) return { value: null, error: m.numbers.enterPercent };
+  if (value === null) return { value: null, error: (m) => m.numbers.enterNumber };
+  if (value < 0 || value > 100) return { value: null, error: (m) => m.numbers.enterPercent };
   return { value, error: null };
 }
 
-function countField(raw: string, label: string, minimum: number, m: Messages): ParsedField {
-  if (raw.trim().length === 0) return { value: null, error: m.numbers.required(label) };
+function countField(raw: string, label: Label, minimum: number): ParsedField {
+  if (raw.trim().length === 0) return { value: null, error: (m) => m.numbers.required(label(m)) };
   const value = toNumber(raw);
   if (value === null || !Number.isInteger(value)) {
-    return { value: null, error: m.numbers.enterWhole };
+    return { value: null, error: (m) => m.numbers.enterWhole };
   }
-  if (value < minimum) return { value: null, error: m.numbers.enterWholeMin(minimum) };
+  if (value < minimum) return { value: null, error: (m) => m.numbers.enterWholeMin(minimum) };
   return { value, error: null };
 }
 
-function ratioField(raw: string, label: string, m: Messages): ParsedField {
-  if (raw.trim().length === 0) return { value: null, error: m.numbers.required(label) };
+function ratioField(raw: string, label: Label): ParsedField {
+  if (raw.trim().length === 0) return { value: null, error: (m) => m.numbers.required(label(m)) };
   const value = toNumber(raw);
-  if (value === null) return { value: null, error: m.numbers.enterNumber };
-  if (value <= 0) return { value: null, error: m.numbers.enterRatio };
+  if (value === null) return { value: null, error: (m) => m.numbers.enterNumber };
+  if (value <= 0) return { value: null, error: (m) => m.numbers.enterRatio };
   return { value, error: null };
 }
 
 /* ----------------------------------------------------------------- calculation */
 
-function calculateRates(inputs: RatesInputs, m: Messages): Outcome {
-  const f = m.numbers.fieldName;
+function calculateRates(inputs: RatesInputs): Outcome {
   const errors: FieldErrors = {};
-  const cer = percentField(inputs.cerPercent, f.cer, m);
-  const eer = percentField(inputs.eerPercent, f.eer, m);
+  const cer = percentField(inputs.cerPercent, (m) => m.numbers.fieldName.cer);
+  const eer = percentField(inputs.eerPercent, (m) => m.numbers.fieldName.eer);
   if (cer.error !== null) errors.cerPercent = cer.error;
   if (eer.error !== null) errors.eerPercent = eer.error;
 
@@ -183,17 +191,28 @@ function calculateRates(inputs: RatesInputs, m: Messages): Outcome {
   try {
     return { ok: true, result: fromRates(cerValue / 100, eerValue / 100), warnings: [] };
   } catch (thrown) {
-    return { ok: false, errors: errorsFromThrown(thrown, m) };
+    return { ok: false, errors: errorsFromThrown(thrown) };
   }
 }
 
-function calculateCounts(inputs: CountsInputs, m: Messages): Outcome {
-  const f = m.numbers.fieldName;
+function calculateCounts(inputs: CountsInputs): Outcome {
   const errors: FieldErrors = {};
-  const controlEvents = countField(inputs.controlEvents, f.controlEvents, 0, m);
-  const controlTotal = countField(inputs.controlTotal, f.controlTotal, 1, m);
-  const interventionEvents = countField(inputs.interventionEvents, f.interventionEvents, 0, m);
-  const interventionTotal = countField(inputs.interventionTotal, f.interventionTotal, 1, m);
+  const controlEvents = countField(
+    inputs.controlEvents,
+    (m) => m.numbers.fieldName.controlEvents,
+    0,
+  );
+  const controlTotal = countField(inputs.controlTotal, (m) => m.numbers.fieldName.controlTotal, 1);
+  const interventionEvents = countField(
+    inputs.interventionEvents,
+    (m) => m.numbers.fieldName.interventionEvents,
+    0,
+  );
+  const interventionTotal = countField(
+    inputs.interventionTotal,
+    (m) => m.numbers.fieldName.interventionTotal,
+    1,
+  );
   if (controlEvents.error !== null) errors.controlEvents = controlEvents.error;
   if (controlTotal.error !== null) errors.controlTotal = controlTotal.error;
   if (interventionEvents.error !== null) errors.interventionEvents = interventionEvents.error;
@@ -208,19 +227,18 @@ function calculateCounts(inputs: CountsInputs, m: Messages): Outcome {
   try {
     return { ok: true, result: fromCounts(ce, ct, ie, it), warnings: [] };
   } catch (thrown) {
-    return { ok: false, errors: errorsFromThrown(thrown, m) };
+    return { ok: false, errors: errorsFromThrown(thrown) };
   }
 }
 
-function calculateRatio(inputs: RatioInputs, m: Messages): Outcome {
-  const f = m.numbers.fieldName;
+function calculateRatio(inputs: RatioInputs): Outcome {
   const errors: FieldErrors = {};
-  const estimate = ratioField(inputs.estimate, f.estimate(inputs.measure), m);
-  const acr = percentField(inputs.acrPercent, f.acr, m);
+  const estimate = ratioField(inputs.estimate, (m) => m.numbers.fieldName.estimate(inputs.measure));
+  const acr = percentField(inputs.acrPercent, (m) => m.numbers.fieldName.acr);
   if (estimate.error !== null) errors.estimate = estimate.error;
   if (acr.error !== null) errors.acrPercent = acr.error;
   else if (acr.value !== null && (acr.value <= 0 || acr.value >= 100)) {
-    errors.acrPercent = m.numbers.enterAcr;
+    errors.acrPercent = (m) => m.numbers.enterAcr;
     acr.value = null;
   }
 
@@ -229,13 +247,13 @@ function calculateRatio(inputs: RatioInputs, m: Messages): Outcome {
   const hasHigh = inputs.ciHigh.trim().length > 0;
   let ci: { low: number; high: number } | undefined;
   if (hasLow || hasHigh) {
-    const low = ratioField(inputs.ciLow, f.ciLow, m);
-    const high = ratioField(inputs.ciHigh, f.ciHigh, m);
+    const low = ratioField(inputs.ciLow, (m) => m.numbers.fieldName.ciLow);
+    const high = ratioField(inputs.ciHigh, (m) => m.numbers.fieldName.ciHigh);
     if (low.error !== null) {
-      errors.ciLow = hasLow ? low.error : m.numbers.bothEnds;
+      errors.ciLow = hasLow ? low.error : (m) => m.numbers.bothEnds;
     }
     if (high.error !== null) {
-      errors.ciHigh = hasHigh ? high.error : m.numbers.bothEnds;
+      errors.ciHigh = hasHigh ? high.error : (m) => m.numbers.bothEnds;
     }
     if (low.value !== null && high.value !== null) ci = { low: low.value, high: high.value };
   }
@@ -250,18 +268,18 @@ function calculateRatio(inputs: RatioInputs, m: Messages): Outcome {
     const { warnings, ...result } = measures;
     return { ok: true, result, warnings };
   } catch (thrown) {
-    return { ok: false, errors: errorsFromThrown(thrown, m) };
+    return { ok: false, errors: errorsFromThrown(thrown) };
   }
 }
 
-function calculate(mode: CalculatorMode, inputs: CalculatorInputs, m: Messages): Outcome {
+function calculate(mode: CalculatorMode, inputs: CalculatorInputs): Outcome {
   switch (mode) {
     case 'rates':
-      return calculateRates(inputs.rates, m);
+      return calculateRates(inputs.rates);
     case 'counts':
-      return calculateCounts(inputs.counts, m);
+      return calculateCounts(inputs.counts);
     case 'ratio':
-      return calculateRatio(inputs.ratio, m);
+      return calculateRatio(inputs.ratio);
   }
 }
 
@@ -598,7 +616,7 @@ export function NumbersTab() {
 
   /** The single place a result is written. Every caller is a direct user action. */
   const commit = (nextMode: CalculatorMode, nextInputs: CalculatorInputs): void => {
-    const outcome = calculate(nextMode, nextInputs, m);
+    const outcome = calculate(nextMode, nextInputs);
     if (outcome.ok) {
       setErrors({});
       actions.setNumbers({
@@ -838,7 +856,7 @@ export function NumbersTab() {
                 label={m.numbers.cerField}
                 suffix="%"
                 value={inputs.rates.cerPercent}
-                error={errors.cerPercent}
+                error={errors.cerPercent?.(m)}
                 onValue={(value) => editRates('cerPercent', value)}
               />
             </div>
@@ -849,7 +867,7 @@ export function NumbersTab() {
                 label={m.numbers.eerField}
                 suffix="%"
                 value={inputs.rates.eerPercent}
-                error={errors.eerPercent}
+                error={errors.eerPercent?.(m)}
                 onValue={(value) => editRates('eerPercent', value)}
               />
             </div>
@@ -865,14 +883,14 @@ export function NumbersTab() {
                   id="jch-numbers-control-events"
                   label={m.numbers.events}
                   value={inputs.counts.controlEvents}
-                  error={errors.controlEvents}
+                  error={errors.controlEvents?.(m)}
                   onValue={(value) => editCounts('controlEvents', value)}
                 />
                 <NumberField
                   id="jch-numbers-control-total"
                   label={m.numbers.participants}
                   value={inputs.counts.controlTotal}
-                  error={errors.controlTotal}
+                  error={errors.controlTotal?.(m)}
                   onValue={(value) => editCounts('controlTotal', value)}
                 />
               </div>
@@ -884,14 +902,14 @@ export function NumbersTab() {
                   id="jch-numbers-intervention-events"
                   label={m.numbers.events}
                   value={inputs.counts.interventionEvents}
-                  error={errors.interventionEvents}
+                  error={errors.interventionEvents?.(m)}
                   onValue={(value) => editCounts('interventionEvents', value)}
                 />
                 <NumberField
                   id="jch-numbers-intervention-total"
                   label={m.numbers.participants}
                   value={inputs.counts.interventionTotal}
-                  error={errors.interventionTotal}
+                  error={errors.interventionTotal?.(m)}
                   onValue={(value) => editCounts('interventionTotal', value)}
                 />
               </div>
@@ -929,7 +947,7 @@ export function NumbersTab() {
                 label={m.numbers.estimate}
                 placeholder="0.72"
                 value={inputs.ratio.estimate}
-                error={errors.estimate}
+                error={errors.estimate?.(m)}
                 onValue={(value) => editRatio('estimate', { estimate: value })}
               />
             </div>
@@ -939,7 +957,7 @@ export function NumbersTab() {
                 label={m.numbers.ciLow}
                 placeholder="0.61"
                 value={inputs.ratio.ciLow}
-                error={errors.ciLow}
+                error={errors.ciLow?.(m)}
                 onValue={(value) => editRatio('ciLow', { ciLow: value })}
               />
               <NumberField
@@ -947,7 +965,7 @@ export function NumbersTab() {
                 label={m.numbers.ciHigh}
                 placeholder="0.85"
                 value={inputs.ratio.ciHigh}
-                error={errors.ciHigh}
+                error={errors.ciHigh?.(m)}
                 onValue={(value) => editRatio('ciHigh', { ciHigh: value })}
               />
             </div>
@@ -958,7 +976,7 @@ export function NumbersTab() {
               inputRef={acrRef}
               hint={m.numbers.acrHint}
               value={inputs.ratio.acrPercent}
-              error={errors.acrPercent}
+              error={errors.acrPercent?.(m)}
               onValue={(value) => editRatio('acrPercent', { acrPercent: value })}
             />
           </div>
@@ -999,9 +1017,9 @@ export function NumbersTab() {
           </fieldset>
         ) : null}
 
-        {errors.form ? (
+        {errors.form !== undefined ? (
           <p class="numbers__error" role="alert">
-            {errors.form}
+            {errors.form(m)}
           </p>
         ) : null}
 

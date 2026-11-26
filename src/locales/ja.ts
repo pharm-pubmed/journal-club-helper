@@ -237,7 +237,7 @@ export const ja: Messages = {
     none: 'この抄録には数値の結果が見つかりませんでした',
     noneHint:
       '抄録では数値が文章に埋もれていたり、本文にしか書かれていなかったりします。下に手で入力してください。',
-    kindBadge: { 'percent-pair': '% の組', 'fraction-pair': 'n / N', ratio: '比' },
+    kindBadge: { 'percent-pair': '割合の組', 'fraction-pair': 'n / N', ratio: '比' },
     kindTitle: {
       'percent-pair': '割合（%）で示された 2 群のイベント発生率',
       'fraction-pair': '2 群それぞれのイベント数と人数',
@@ -248,7 +248,7 @@ export const ja: Messages = {
     inUse: '計算に使用中',
     calculator: '計算',
     modesLabel: '抄録から得られる数値の形',
-    mode: { rates: '割合', counts: '人数', ratio: '比' },
+    mode: { rates: '割合', counts: '件数', ratio: '比' },
     modeHint: {
       rates: '2 群のイベント発生率（%）。割合には群の人数が含まれないため、信頼区間は出せません。',
       counts: '各群のイベント数と人数。データから 95% 信頼区間を計算できるのは、この形だけです。',
@@ -291,8 +291,8 @@ export const ja: Messages = {
       nnt === null
         ? '2 群のイベント発生率が同じなので、NNT にする絶対差がありません。'
         : harm
-          ? `この研究では、対照ではなく介入を約 ${nnt} 人が受けると、イベントが 1 件多く起こります。`
-          : `この研究では、対照ではなく介入を約 ${nnt} 人が受けると、イベントが 1 件防がれます。`,
+          ? `この研究では、対照ではなく介入を約 ${nnt} 人に行うごとに、イベントが 1 件多く起こります。`
+          : `この研究では、対照ではなく介入を約 ${nnt} 人に行うごとに、イベントが 1 件防がれます。`,
     crossingTitle: 'このデータは利益とも害とも矛盾しません',
     crossing: (low: string, high: string, nntLow: number | null, nntHigh: number | null) => {
       const ends: string[] = [];
@@ -300,7 +300,7 @@ export const ja: Messages = {
       ends.push('中央でまったく差なし');
       if (nntHigh !== null) ends.push(`害側の端で NNTH ${nntHigh}`);
       return [
-        `ARR の 95% 信頼区間は ${low} から ${high} ポイントで、0 を含みます。`,
+        `ARR の 95% 信頼区間は ${low} から ${high} パーセントポイントで、0 を含みます。`,
         `そのため NNT の範囲は無限大をまたぎます：${ends.join('、次に')}。`,
         'このデータは利益とも害とも矛盾しないため、上の NNT の値だけを取り出して読まないでください。',
       ];
@@ -311,12 +311,12 @@ export const ja: Messages = {
     arr: '絶対リスク減少（ARR）',
     rri: '相対リスク増加（RRI）',
     rrr: '相対リスク減少（RRR）',
-    points: (value: string) => `${value} ポイント`,
+    points: (value: string) => `${value} パーセントポイント`,
     rrrUndefined: '定義できません（対照群にイベントがありません）',
     ciForArr: 'ARR の 95% 信頼区間',
-    ciRange: (low: string, high: string) => `${low}〜${high} ポイント`,
+    ciRange: (low: string, high: string) => `${low} から ${high} パーセントポイント`,
     ratesNoCi:
-      '2 つの割合には群の人数が含まれないため、この推定値には信頼区間がありません。抄録にイベント数と人数があれば、「人数」に切り替えると求められます。',
+      '2 つの割合には群の人数が含まれないため、この推定値には信頼区間がありません。抄録にイベント数と人数があれば、「件数」に切り替えると求められます。',
     required: (field: string) => `${field}を入力してください。`,
     enterNumber: '数値を入力してください。',
     enterPercent: '0〜100 の割合を入力してください。',
@@ -338,14 +338,22 @@ export const ja: Messages = {
       ciHigh: '信頼区間の上限',
     },
     thrown: (message: string) => {
+      // The English messages of effect-measures.ts; tests pin each pattern.
+      const exceeds = /\((\d+)\) cannot exceed \w+ \((\d+)\)/.exec(message);
+      if (exceeds) return `イベント数（${exceeds[1]}）が人数（${exceeds[2]}）を超えています。`;
       if (/implies an event rate above 100/.test(message)) {
-        return 'この比と対照群の発生率では、介入群の発生率が 100% を超えてしまいます。値を確認してください。';
+        return 'この比と想定する対照群イベント発生率では、介入群イベント発生率が 100% を超えてしまいます。値を確認してください。';
       }
-      if (/cannot exceed/.test(message)) return 'イベント数が人数を超えています。';
-      return '入力した値では計算できません。値を確認してください。';
+      if (/must be a proportion|must be a whole number|must be a ratio/.test(message)) {
+        return 'この欄の値は計算に使えません。値を確認してください。';
+      }
+      // Unknown to this catalog: the English says more than a guess would.
+      return message;
     },
     noDifference: (arr: string) => `差なし（ARR ${arr}）`,
-    rangeTo: '〜',
+    // Spaced, so the crossing form does not read as one continuous range.
+    rangeTo: ' 〜 ',
+    nntWithCi: (head: string, interval: string) => `${head}（95% 信頼区間 ${interval}）`,
     baselineWarning: (acr: string) =>
       `この絶対効果は、想定した対照群イベント発生率 ${acr} から推定したものです。治療しない場合のリスクがその値に近い患者さんにしか当てはまりません。`,
     oddsRatioWarning:
@@ -355,7 +363,7 @@ export const ja: Messages = {
     caseControlCaveat:
       '症例対照研究はアウトカムをもとに対象を選ぶため、症例群と対照群で曝露のあった人の割合はリスクではなく、そこから ARR、NNT、NNH は読み取れません。成り立つのは、研究が報告するオッズ比を、自分で選んだ基準のリスクに当てはめる方法です。',
     crossSectionalCaveat:
-      '横断研究はある一時点の有病率を測るため、これらの割合はリスクではなく有病率です。その差は有病率の差であり、そこから読んだ NNT や NNH は、起きた（または防いだ）イベントの数を表しません。',
+      '横断研究はある一時点の有病率を測るため、これらの割合はリスクではなく有病率です。その差は有病率の差であり、そこから読んだ NNT や NNH は、引き起こされた（または防がれた）イベントの数を表しません。',
     howSummary: '計算方法',
     how: [
       {
@@ -368,11 +376,11 @@ export const ja: Messages = {
       },
       {
         formula: 'NNT = 1 ÷ ARR（切り上げ）',
-        text: 'イベントを 1 件防ぐために何人を治療するか。人数に端数はないので切り上げます。ARR が負の場合も同じ計算をし、NNH（イベントが 1 件多く起こるまでに治療する人数）として示します。',
+        text: 'イベントを 1 件防ぐために何人を治療するか。人数に端数はないので切り上げます。ARR が負の場合も同じ計算をし、NNH（イベントが 1 件多く起こるのに要する治療人数）として示します。',
       },
       {
         formula: '95% 信頼区間',
-        text: '「人数」では、ARR の Wald 区間（リスク差 ± 1.96 標準誤差）を求め、逆数にして NNT の両端を出します。「比」では、比の区間を入力すると、推定値と同じ基準のリスクで同じように換算します。割合だけでは群の人数がわからないため、「割合」では点推定のみで区間は出ません。ARR の区間が 0 を含むと、NNT の両端は無限大をはさんで反対側になります。',
+        text: '「件数」では、ARR の Wald 区間（リスク差 ± 1.96 標準誤差）を求め、逆数にして NNT の両端を出します。「比」では、比の区間を入力すると、推定値と同じ基準のリスクで同じように換算します。割合だけでは群の人数がわからないため、「割合」では点推定のみで区間は出ません。ARR の区間が 0 を含むと、NNT の両端は無限大をはさんで反対側になります。',
       },
       {
         formula: 'RR または HR から：EER = 比 × ACR',

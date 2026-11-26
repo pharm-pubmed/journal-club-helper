@@ -379,6 +379,7 @@ export const en = {
     noDifference: (arr: string) => `No difference (ARR ${arr})`,
     /** Joins the ends of an NNT interval that passes through infinity. */
     rangeTo: ' to ',
+    nntWithCi: (head: string, interval: string) => `${head} (95% CI ${interval})`,
     baselineWarning: (acr: string) =>
       `This absolute effect is estimated from an assumed control event rate of ${acr}, so it only applies to patients whose untreated risk is close to that figure`,
     oddsRatioWarning:

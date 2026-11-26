@@ -49,7 +49,42 @@ describe('the Numbers tab in Japanese', () => {
     expect(localizedNnt(fromRates(0.2, 0.2), en)).toBe('No difference (ARR 0.0%)');
     expect(localizedNnt(fromRates(0.773, 0.674), ja)).toBe('NNT 11');
     const crossing = fromCounts(10, 100, 11, 100);
-    expect(localizedNnt(crossing, ja)).toBe('NNH 100 (95% CI NNTB 14〜∞〜NNTH 11)');
+    expect(localizedNnt(crossing, ja)).toBe('NNH 100（95% 信頼区間 NNTB 14 〜 ∞ 〜 NNTH 11）');
     expect(localizedNnt(crossing, en)).toBe('NNH 100 (95% CI NNTB 14 to ∞ to NNTH 11)');
+  });
+
+  // A CI bound of exactly 1.00 puts one end of the NNT interval at infinity.
+  it('translates a crossing interval with only one end, and an ordinary one', () => {
+    const upperAtOne = fromRatio('RR', 0.8, 0.2, { low: 0.64, high: 1 });
+    expect(localizedNnt(upperAtOne, en)).toBe('NNT 25 (95% CI NNTB 14 to ∞)');
+    expect(localizedNnt(upperAtOne, ja)).toBe('NNT 25（95% 信頼区間 NNTB 14 〜 ∞）');
+    const lowerAtOne = fromRatio('RR', 1.6, 0.2, { low: 1, high: 2.2 });
+    expect(localizedNnt(lowerAtOne, ja)).not.toMatch(/ to |95% CI/);
+    const ordinary = fromCounts(20, 100, 10, 100);
+    expect(localizedNnt(ordinary, ja)).toMatch(/^NNT \d+（95% 信頼区間 [\d–]+）$/);
+    expect(localizedNnt(ordinary, en)).toMatch(/^NNT \d+ \(95% CI [\d–]+\)$/);
+  });
+
+  // ja.numbers.thrown reads the English RangeError text of effect-measures.ts.
+  it.each([
+    ['events above the group size', () => fromCounts(12, 10, 1, 10), /12.*10/],
+    ['an event rate above 100%', () => fromRatio('RR', 3, 0.5), /100%/],
+    ['a proportion out of range', () => fromRates(2, 0.5), /値を確認/],
+    ['a ratio of zero', () => fromRatio('RR', 0, 0.2), /値を確認/],
+  ])('translates the arithmetic error for %s', (_name, run, expected) => {
+    let message = '';
+    try {
+      run();
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    expect(message).not.toBe('');
+    expect(en.numbers.thrown(message)).toBe(message);
+    expect(ja.numbers.thrown(message)).toMatch(expected);
+    expect(ja.numbers.thrown(message)).not.toMatch(/must|cannot|implies/);
+  });
+
+  it('explains every formula in both languages', () => {
+    expect(ja.numbers.how.map((entry) => entry.formula).length).toBe(en.numbers.how.length);
   });
 });
