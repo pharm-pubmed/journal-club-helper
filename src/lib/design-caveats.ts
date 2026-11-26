@@ -35,12 +35,12 @@
  */
 import type { CalculatorMode, StudyDesign } from './types';
 
-const CASE_CONTROL_CAVEAT =
+export const CASE_CONTROL_CAVEAT =
   'A case-control study samples on the outcome, so the proportions exposed among cases and ' +
   'among controls are not risks, and an ARR, NNT or NNH cannot be read from them. The route ' +
   'that holds is the odds ratio the study reports, applied to a baseline risk you choose.';
 
-const CROSS_SECTIONAL_CAVEAT =
+export const CROSS_SECTIONAL_CAVEAT =
   'A cross-sectional study measures prevalence at one point in time, so these proportions are ' +
   'prevalences, not risks. The difference between them is a difference in prevalence, and an ' +
   'NNT or NNH read from it does not count events caused or prevented.';

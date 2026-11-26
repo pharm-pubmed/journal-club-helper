@@ -266,6 +266,166 @@ export const en = {
     wrap: 'Wrap long lines',
   },
 
+  numbers: {
+    title: 'Absolute effect and NNT',
+    lead: 'Pick a result the abstract reports, or type one in. Nothing is calculated until you ask for it.',
+    detected: 'Detected in this abstract',
+    none: 'No numeric results detected in this abstract',
+    noneHint:
+      'Abstracts often bury the numbers in prose, or report them only in the full text. Enter them by hand below.',
+    kindBadge: { 'percent-pair': '% pair', 'fraction-pair': 'n / N', ratio: 'ratio' },
+    kindTitle: {
+      'percent-pair': 'A pair of event rates given as percentages',
+      'fraction-pair': 'Events and participants for two groups',
+      ratio: 'A relative measure: risk ratio, hazard ratio or odds ratio',
+    },
+    use: 'Use',
+    useLabel: (raw: string) => `Use ${raw} in the calculator`,
+    inUse: 'In the calculator',
+    calculator: 'Calculator',
+    modesLabel: 'What the abstract gives you',
+    mode: { rates: 'Rates', counts: 'Counts', ratio: 'Ratio' },
+    modeHint: {
+      rates: 'Two event rates as percentages. Percentages carry no group sizes, so there is no CI.',
+      counts:
+        'Events and participants in each group. The only mode that computes its own 95% CI from the data.',
+      ratio:
+        'An RR, HR or OR plus the baseline risk you want to apply it to. Enter the ratio’s 95% CI to carry it over.',
+    },
+    controlGroup: 'Control group',
+    interventionGroup: 'Intervention group',
+    cerField: 'Event rate (CER)',
+    eerField: 'Event rate (EER)',
+    events: 'Events',
+    participants: 'Participants',
+    measure: 'Measure',
+    measureLabel: {
+      RR: 'RR — risk ratio',
+      HR: 'HR — hazard ratio',
+      OR: 'OR — odds ratio',
+    },
+    estimate: 'Estimate',
+    ciLow: '95% CI lower (optional)',
+    ciHigh: '95% CI upper (optional)',
+    acr: 'Assumed control event rate (ACR)',
+    acrHint:
+      "The untreated risk you want to apply this ratio to — from this trial, a guideline, or the patient in front of you. Your judgement, not the paper's.",
+    whichControl: 'Which is the control group?',
+    firstInSentence: ' — first in the sentence',
+    secondInSentence: ' — second in the sentence',
+    noLongerMatch:
+      'The fields no longer match either value from the abstract. Pick one to load it again, or leave your own numbers in place.',
+    manualControl:
+      'Whatever is in the control fields is treated as the untreated arm. Swap them and a benefit becomes a harm, so it is worth a second look.',
+    swap: 'Swap control and intervention',
+    yourCall: 'The abstract does not say which arm is which, so this is your call.',
+    calculate: 'Calculate',
+    clear: 'Clear',
+    noResult:
+      'No result yet. Fill the fields and press Calculate, or press Use on a detected result.',
+    result: 'Result',
+    direction: (nnt: number | null, harm: boolean) =>
+      nnt === null
+        ? 'The two event rates are identical, so there is no absolute difference to turn into an NNT.'
+        : harm
+          ? `In this study, about ${nnt} patients would receive the intervention rather than the control for one extra event to occur.`
+          : `In this study, about ${nnt} patients would receive the intervention rather than the control for one event to be avoided.`,
+    crossingTitle: 'These data are compatible with benefit and with harm',
+    crossing: (low: string, high: string, nntLow: number | null, nntHigh: number | null) => {
+      const ends: string[] = [];
+      if (nntLow !== null) ends.push(`NNTB ${nntLow} at the benefit end`);
+      ends.push('no difference at all in the middle');
+      if (nntHigh !== null) ends.push(`NNTH ${nntHigh} at the harm end`);
+      return [
+        `The 95% confidence interval for the ARR runs from ${low} to ${high} percentage points, so it includes zero.`,
+        `That makes the NNT range pass through infinity: ${ends.join(', then ')}.`,
+        'These data are compatible with benefit and with harm, so the single NNT above should not be read on its own.',
+      ];
+    },
+    cer: 'Control event rate (CER)',
+    eer: 'Intervention event rate (EER)',
+    ari: 'Absolute risk increase (ARI)',
+    arr: 'Absolute risk reduction (ARR)',
+    rri: 'Relative risk increase (RRI)',
+    rrr: 'Relative risk reduction (RRR)',
+    points: (value: string) => `${value} points`,
+    rrrUndefined: 'Not defined (no events in the control group)',
+    ciForArr: '95% CI for the ARR',
+    ciRange: (low: string, high: string) => `${low} to ${high} points`,
+    ratesNoCi:
+      'Two percentages carry no group sizes, so this estimate has no confidence interval. If the abstract gives events and participants, switch to Counts to get one.',
+    required: (field: string) => `${field} is required.`,
+    enterNumber: 'Enter a number.',
+    enterPercent: 'Enter a percentage from 0 to 100.',
+    enterWhole: 'Enter a whole number.',
+    enterWholeMin: (minimum: number) => `Enter a whole number, ${minimum} or more.`,
+    enterRatio: 'Enter a ratio greater than 0.',
+    enterAcr: 'Enter a percentage above 0 and below 100.',
+    bothEnds: 'Enter both ends of the interval, or clear both.',
+    fieldName: {
+      cer: 'The control event rate',
+      eer: 'The intervention event rate',
+      controlEvents: 'Control events',
+      controlTotal: 'The control group size',
+      interventionEvents: 'Intervention events',
+      interventionTotal: 'The intervention group size',
+      estimate: (measure: string) => `The ${measure}`,
+      acr: 'The assumed control event rate',
+      ciLow: 'The lower CI bound',
+      ciHigh: 'The upper CI bound',
+    },
+    /** A message from the arithmetic module, which is written in English for readers. */
+    thrown: (message: string) => message,
+    noDifference: (arr: string) => `No difference (ARR ${arr})`,
+    /** Joins the ends of an NNT interval that passes through infinity. */
+    rangeTo: ' to ',
+    baselineWarning: (acr: string) =>
+      `This absolute effect is estimated from an assumed control event rate of ${acr}, so it only applies to patients whose untreated risk is close to that figure`,
+    oddsRatioWarning:
+      'Odds ratios overstate risk changes when the control event rate is high (above roughly 10–20 %)',
+    hazardRatioWarning:
+      'A hazard ratio applied to a cumulative rate is an approximation; the time horizon must match the control event rate',
+    caseControlCaveat:
+      'A case-control study samples on the outcome, so the proportions exposed among cases and among controls are not risks, and an ARR, NNT or NNH cannot be read from them. The route that holds is the odds ratio the study reports, applied to a baseline risk you choose.',
+    crossSectionalCaveat:
+      'A cross-sectional study measures prevalence at one point in time, so these proportions are prevalences, not risks. The difference between them is a difference in prevalence, and an NNT or NNH read from it does not count events caused or prevented.',
+    howSummary: 'How this is calculated',
+    how: [
+      {
+        formula: 'ARR = CER − EER',
+        text: 'The control group’s event rate minus the intervention group’s. Read it as events per 100 patients. This is the number the NNT comes from, and the one abstracts most often leave out.',
+      },
+      {
+        formula: 'RRR = ARR ÷ CER',
+        text: 'The same difference as a share of the control group’s risk. It looks the same whether the event was common or rare, which is how a relative reduction can make a tiny absolute effect sound large.',
+      },
+      {
+        formula: 'NNT = 1 ÷ ARR, rounded up',
+        text: 'How many patients would be treated for one extra event to be avoided. Rounded up, because part of a patient is not a patient. A negative ARR goes through the same arithmetic and is reported as an NNH: the number treated for one extra event to occur.',
+      },
+      {
+        formula: '95% CI',
+        text: 'In Counts mode, a Wald interval on the ARR (the risk difference plus or minus 1.96 standard errors), inverted to give the two NNT bounds. In Ratio mode, the ratio’s own interval, when you enter it, goes through the same conversion as the estimate at the same baseline risk. Percentages on their own carry no group sizes, so Rates mode gives a point estimate and no interval. When the ARR interval includes zero, the two NNT bounds sit on opposite sides of infinity.',
+      },
+      {
+        formula: 'From an RR or HR: EER = ratio × ACR',
+        text: 'A relative measure only becomes an absolute one once you supply the baseline risk it applies to. The same ratio gives a very different NNT in a high-risk and a low-risk population, so the assumed control event rate is your judgement, not the paper’s.',
+      },
+      {
+        formula: 'From an OR: EER = (OR × ACR) ÷ (1 − ACR + OR × ACR)',
+        text: 'An odds ratio has to be converted through the odds, so an OR and an RR of the same size do not give the same absolute effect. The gap widens as the event gets more common: above roughly 10–20% in the control group, reading an OR as if it were a risk ratio overstates the change in risk.',
+      },
+      {
+        formula: 'Hazard ratios',
+        text: 'A hazard ratio describes how fast events accumulate over time. Applying it to a single cumulative risk is an approximation, and it only holds if the control event rate you enter covers the same follow-up as the trial.',
+      },
+    ],
+    howFootnote:
+      'These figures describe the study population, not one patient in front of you. They are an aid to reading the paper, not a treatment recommendation.',
+    cochrane: 'Cochrane Handbook, chapter 12 §12.5',
+    cebm: 'CEBM Oxford: number needed to treat',
+  },
+
   pageButton: {
     label: 'Journal Club',
     title: 'Open the critical appraisal panel',
