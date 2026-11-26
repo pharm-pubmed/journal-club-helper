@@ -14,6 +14,7 @@ import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import type { PubMedArticle, StudyDesign } from '../../src/lib/types';
+import { applyPreference } from '../../src/ui/i18n';
 import { actions, initialState, store } from '../../src/ui/store';
 import { NumbersTab } from '../../src/ui/tabs/NumbersTab';
 
@@ -142,4 +143,92 @@ it('adds nothing to a trial', async () => {
   expect(resultBlock()).toContain('NNH 10');
   expect(document.body.textContent).not.toContain(CASE_CONTROL);
   expect(document.body.textContent).not.toContain(CROSS_SECTIONAL);
+});
+
+/* -------------------------------------------------------------- Japanese (#82) */
+
+/** Latin words a Japanese panel may show: notation, abbreviations and names. */
+const LATIN_ALLOWED = new Set(
+  'NNT NNH NNTB NNTH ARR ARI RRR RRI CER EER ACR RR HR OR CI Wald Cochrane Handbook CEBM Oxford'.split(
+    ' ',
+  ),
+);
+
+/** Latin words in the tab that are not on the list, outside the abstract's own text. */
+function strayLatin(): string[] {
+  const root = document.querySelector('.numbers');
+  if (!root) return ['no tab'];
+  const clone = root.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll('.numbers__raw, .numbers__sentence').forEach((node) => node.remove());
+  const words = (clone.textContent ?? '').match(/[A-Za-z]{2,}/g) ?? [];
+  return words.filter((word) => !LATIN_ALLOWED.has(word));
+}
+
+async function fill(id: string, value: string): Promise<void> {
+  const input = document.querySelector<HTMLInputElement>(`#${id}`);
+  if (!input) throw new Error(`no field ${id}`);
+  await act(() => {
+    input.value = value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
+async function switchTo(locale: 'en' | 'ja'): Promise<void> {
+  await act(() => applyPreference(locale));
+}
+
+it('shows no English words in Japanese, with results, a crossing interval and errors', async () => {
+  await mount('case-control');
+  await switchTo('ja');
+  try {
+    document.querySelectorAll('details').forEach((details) => {
+      details.open = true;
+    });
+    expect(strayLatin()).toEqual([]);
+
+    await use('40/200');
+    expect(resultBlock()).toContain('症例対照研究');
+    expect(strayLatin()).toEqual([]);
+
+    // RR 0.8 (0.64–1.00): one end of the NNT interval at infinity.
+    await use('odds ratio 2.25');
+    await act(() => {
+      const select = document.querySelector<HTMLSelectElement>('#jch-numbers-measure');
+      if (!select) throw new Error('no measure');
+      select.value = 'RR';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await fill('jch-numbers-estimate', '0.8');
+    await fill('jch-numbers-ci-low', '0.64');
+    await fill('jch-numbers-ci-high', '1');
+    await calculateWithAcr('20');
+    expect(document.querySelector('.numbers__nnt')?.textContent).toBe(
+      'NNT 25（95% 信頼区間 NNTB 14 〜 ∞）',
+    );
+    expect(strayLatin()).toEqual([]);
+
+    await fill('jch-numbers-estimate', '');
+    await act(() => document.querySelector<HTMLButtonElement>('.numbers__submit')?.click());
+    expect(document.querySelector('#jch-numbers-estimate-error')?.textContent).toContain(
+      '入力してください',
+    );
+    expect(strayLatin()).toEqual([]);
+  } finally {
+    await switchTo('en');
+  }
+});
+
+// An error found in one language is written again in the other when the reader switches.
+it('rewrites an error on screen when the language changes', async () => {
+  await mount('rct');
+  await act(() => document.querySelector<HTMLButtonElement>('.numbers__submit')?.click());
+  const error = () => document.querySelector('#jch-numbers-control-events-error')?.textContent;
+  expect(error()).toBe('Control events is required.');
+  await switchTo('ja');
+  try {
+    expect(error()).toBe('対照群のイベント数を入力してください。');
+  } finally {
+    await switchTo('en');
+  }
+  expect(error()).toBe('Control events is required.');
 });

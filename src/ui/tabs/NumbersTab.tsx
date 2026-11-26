@@ -25,15 +25,14 @@
  * meaning of that output is src/lib/design-caveats.ts: this file only places
  * its notes, and blocks nothing on account of them.
  */
-import type { Ref } from 'preact';
+import { Fragment, type Ref } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { candidatesCaveat, resultCaveat } from '../../lib/design-caveats';
-import { formatNnt, fromCounts, fromRates, fromRatio } from '../../lib/effect-measures';
+import { fromCounts, fromRates, fromRatio } from '../../lib/effect-measures';
 import { extractNumberCandidates } from '../../lib/number-extractor';
 import type {
   CalculatorMode,
   CountsInputs,
-  EffectCi,
   EffectMeasures,
   FractionPairCandidate,
   NumberCandidate,
@@ -44,6 +43,9 @@ import type {
   RatioInputs,
   RatioMeasure,
 } from '../../lib/types';
+import type { Messages } from '../../locales';
+import { localizeCaveat, localizeWarning, localizedNnt } from '../../locales/numbers';
+import { useMessages } from '../i18n';
 import { actions, effectiveDesign, emptyNumbers, store, useStore } from '../store';
 import './numbers.css';
 
@@ -58,39 +60,7 @@ const SENTENCE_LIMIT = 120;
 
 const MODES: readonly CalculatorMode[] = ['rates', 'counts', 'ratio'];
 
-const MODE_LABELS: Record<CalculatorMode, string> = {
-  rates: 'Rates',
-  counts: 'Counts',
-  ratio: 'Ratio',
-};
-
-const MODE_HINTS: Record<CalculatorMode, string> = {
-  rates: 'Two event rates as percentages. Percentages carry no group sizes, so there is no CI.',
-  counts:
-    'Events and participants in each group. The only mode that computes its own 95% CI from the data.',
-  ratio:
-    'An RR, HR or OR plus the baseline risk you want to apply it to. Enter the ratio’s 95% CI to carry it over.',
-};
-
 const RATIO_MEASURES: readonly RatioMeasure[] = ['RR', 'HR', 'OR'];
-
-const RATIO_MEASURE_LABELS: Record<RatioMeasure, string> = {
-  RR: 'RR — risk ratio',
-  HR: 'HR — hazard ratio',
-  OR: 'OR — odds ratio',
-};
-
-const KIND_BADGES: Record<NumberCandidate['kind'], string> = {
-  'percent-pair': '% pair',
-  'fraction-pair': 'n / N',
-  ratio: 'ratio',
-};
-
-const KIND_TITLES: Record<NumberCandidate['kind'], string> = {
-  'percent-pair': 'A pair of event rates given as percentages',
-  'fraction-pair': 'Events and participants for two groups',
-  ratio: 'A relative measure: risk ratio, hazard ratio or odds ratio',
-};
 
 /**
  * Which value the calculator treats as the control arm until the reader says
@@ -118,8 +88,14 @@ type FieldName =
   | 'ciHigh'
   | 'acrPercent';
 
+/**
+ * A message written when it is shown, not when it is found, so an error on
+ * screen follows a change of language (#82).
+ */
+type Message = (m: Messages) => string;
+
 /** Per-field messages plus a `form` slot for anything that names no single field. */
-type FieldErrors = Partial<Record<FieldName | 'form', string>>;
+type FieldErrors = Partial<Record<FieldName | 'form', Message>>;
 
 type Outcome =
   { ok: true; result: EffectMeasures; warnings: string[] } | { ok: false; errors: FieldErrors };
@@ -143,10 +119,11 @@ const ARG_FIELDS: readonly (readonly [string, FieldName])[] = [
 ];
 
 function errorsFromThrown(thrown: unknown): FieldErrors {
-  const message = thrown instanceof Error ? thrown.message : String(thrown);
+  const raw = thrown instanceof Error ? thrown.message : String(thrown);
+  const message: Message = (m) => m.numbers.thrown(raw);
   const errors: FieldErrors = {};
   for (const [argName, field] of ARG_FIELDS) {
-    if (message.startsWith(argName)) {
+    if (raw.startsWith(argName)) {
       errors[field] = message;
       return errors;
     }
@@ -159,8 +136,11 @@ function errorsFromThrown(thrown: unknown): FieldErrors {
 
 interface ParsedField {
   value: number | null;
-  error: string | null;
+  error: Message | null;
 }
+
+/** The name a required-field message uses, chosen by the reader's language when shown. */
+type Label = (m: Messages) => string;
 
 function toNumber(raw: string): number | null {
   const trimmed = raw.trim();
@@ -169,29 +149,29 @@ function toNumber(raw: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-function percentField(raw: string, label: string): ParsedField {
-  if (raw.trim().length === 0) return { value: null, error: `${label} is required.` };
+function percentField(raw: string, label: Label): ParsedField {
+  if (raw.trim().length === 0) return { value: null, error: (m) => m.numbers.required(label(m)) };
   const value = toNumber(raw);
-  if (value === null) return { value: null, error: 'Enter a number.' };
-  if (value < 0 || value > 100) return { value: null, error: 'Enter a percentage from 0 to 100.' };
+  if (value === null) return { value: null, error: (m) => m.numbers.enterNumber };
+  if (value < 0 || value > 100) return { value: null, error: (m) => m.numbers.enterPercent };
   return { value, error: null };
 }
 
-function countField(raw: string, label: string, minimum: number): ParsedField {
-  if (raw.trim().length === 0) return { value: null, error: `${label} is required.` };
+function countField(raw: string, label: Label, minimum: number): ParsedField {
+  if (raw.trim().length === 0) return { value: null, error: (m) => m.numbers.required(label(m)) };
   const value = toNumber(raw);
   if (value === null || !Number.isInteger(value)) {
-    return { value: null, error: 'Enter a whole number.' };
+    return { value: null, error: (m) => m.numbers.enterWhole };
   }
-  if (value < minimum) return { value: null, error: `Enter a whole number, ${minimum} or more.` };
+  if (value < minimum) return { value: null, error: (m) => m.numbers.enterWholeMin(minimum) };
   return { value, error: null };
 }
 
-function ratioField(raw: string, label: string): ParsedField {
-  if (raw.trim().length === 0) return { value: null, error: `${label} is required.` };
+function ratioField(raw: string, label: Label): ParsedField {
+  if (raw.trim().length === 0) return { value: null, error: (m) => m.numbers.required(label(m)) };
   const value = toNumber(raw);
-  if (value === null) return { value: null, error: 'Enter a number.' };
-  if (value <= 0) return { value: null, error: 'Enter a ratio greater than 0.' };
+  if (value === null) return { value: null, error: (m) => m.numbers.enterNumber };
+  if (value <= 0) return { value: null, error: (m) => m.numbers.enterRatio };
   return { value, error: null };
 }
 
@@ -199,8 +179,8 @@ function ratioField(raw: string, label: string): ParsedField {
 
 function calculateRates(inputs: RatesInputs): Outcome {
   const errors: FieldErrors = {};
-  const cer = percentField(inputs.cerPercent, 'The control event rate');
-  const eer = percentField(inputs.eerPercent, 'The intervention event rate');
+  const cer = percentField(inputs.cerPercent, (m) => m.numbers.fieldName.cer);
+  const eer = percentField(inputs.eerPercent, (m) => m.numbers.fieldName.eer);
   if (cer.error !== null) errors.cerPercent = cer.error;
   if (eer.error !== null) errors.eerPercent = eer.error;
 
@@ -217,10 +197,22 @@ function calculateRates(inputs: RatesInputs): Outcome {
 
 function calculateCounts(inputs: CountsInputs): Outcome {
   const errors: FieldErrors = {};
-  const controlEvents = countField(inputs.controlEvents, 'Control events', 0);
-  const controlTotal = countField(inputs.controlTotal, 'The control group size', 1);
-  const interventionEvents = countField(inputs.interventionEvents, 'Intervention events', 0);
-  const interventionTotal = countField(inputs.interventionTotal, 'The intervention group size', 1);
+  const controlEvents = countField(
+    inputs.controlEvents,
+    (m) => m.numbers.fieldName.controlEvents,
+    0,
+  );
+  const controlTotal = countField(inputs.controlTotal, (m) => m.numbers.fieldName.controlTotal, 1);
+  const interventionEvents = countField(
+    inputs.interventionEvents,
+    (m) => m.numbers.fieldName.interventionEvents,
+    0,
+  );
+  const interventionTotal = countField(
+    inputs.interventionTotal,
+    (m) => m.numbers.fieldName.interventionTotal,
+    1,
+  );
   if (controlEvents.error !== null) errors.controlEvents = controlEvents.error;
   if (controlTotal.error !== null) errors.controlTotal = controlTotal.error;
   if (interventionEvents.error !== null) errors.interventionEvents = interventionEvents.error;
@@ -241,12 +233,12 @@ function calculateCounts(inputs: CountsInputs): Outcome {
 
 function calculateRatio(inputs: RatioInputs): Outcome {
   const errors: FieldErrors = {};
-  const estimate = ratioField(inputs.estimate, `The ${inputs.measure}`);
-  const acr = percentField(inputs.acrPercent, 'The assumed control event rate');
+  const estimate = ratioField(inputs.estimate, (m) => m.numbers.fieldName.estimate(inputs.measure));
+  const acr = percentField(inputs.acrPercent, (m) => m.numbers.fieldName.acr);
   if (estimate.error !== null) errors.estimate = estimate.error;
   if (acr.error !== null) errors.acrPercent = acr.error;
   else if (acr.value !== null && (acr.value <= 0 || acr.value >= 100)) {
-    errors.acrPercent = 'Enter a percentage above 0 and below 100.';
+    errors.acrPercent = (m) => m.numbers.enterAcr;
     acr.value = null;
   }
 
@@ -255,13 +247,13 @@ function calculateRatio(inputs: RatioInputs): Outcome {
   const hasHigh = inputs.ciHigh.trim().length > 0;
   let ci: { low: number; high: number } | undefined;
   if (hasLow || hasHigh) {
-    const low = ratioField(inputs.ciLow, 'The lower CI bound');
-    const high = ratioField(inputs.ciHigh, 'The upper CI bound');
+    const low = ratioField(inputs.ciLow, (m) => m.numbers.fieldName.ciLow);
+    const high = ratioField(inputs.ciHigh, (m) => m.numbers.fieldName.ciHigh);
     if (low.error !== null) {
-      errors.ciLow = hasLow ? low.error : 'Enter both ends of the interval, or clear both.';
+      errors.ciLow = hasLow ? low.error : (m) => m.numbers.bothEnds;
     }
     if (high.error !== null) {
-      errors.ciHigh = hasHigh ? high.error : 'Enter both ends of the interval, or clear both.';
+      errors.ciHigh = hasHigh ? high.error : (m) => m.numbers.bothEnds;
     }
     if (low.value !== null && high.value !== null) ci = { low: low.value, high: high.value };
   }
@@ -403,34 +395,9 @@ function pointsText(rate: number): string {
   return `${(rate * 100).toFixed(1)}`;
 }
 
-function rrrText(rrr: number): string {
-  if (!Number.isFinite(rrr)) return 'Not defined (no events in the control group)';
+function rrrText(rrr: number, m: Messages): string {
+  if (!Number.isFinite(rrr)) return m.numbers.rrrUndefined;
   return percentText(Math.abs(rrr));
-}
-
-function directionSentence(result: EffectMeasures): string {
-  if (result.nnt === null) {
-    return 'The two event rates are identical, so there is no absolute difference to turn into an NNT.';
-  }
-  if (result.direction === 'harm') {
-    return `In this study, about ${result.nnt} patients would receive the intervention rather than the control for one extra event to occur.`;
-  }
-  return `In this study, about ${result.nnt} patients would receive the intervention rather than the control for one event to be avoided.`;
-}
-
-/** Plain words for the case the formatter renders as "NNTB x to ∞ to NNTH y". */
-function crossingSentences(ci: EffectCi): string[] {
-  const ends: string[] = [];
-  if (ci.nntLow !== null) ends.push(`NNTB ${ci.nntLow} at the benefit end`);
-  ends.push('no difference at all in the middle');
-  if (ci.nntHigh !== null) ends.push(`NNTH ${ci.nntHigh} at the harm end`);
-  return [
-    `The 95% confidence interval for the ARR runs from ${pointsText(ci.arrLow)} to ${pointsText(
-      ci.arrHigh,
-    )} percentage points, so it includes zero.`,
-    `That makes the NNT range pass through infinity: ${ends.join(', then ')}.`,
-    'These data are compatible with benefit and with harm, so the single NNT above should not be read on its own.',
-  ];
 }
 
 /* ------------------------------------------------------------------ components */
@@ -507,79 +474,31 @@ function NumberField({
 }
 
 function HowThisIsCalculated() {
+  const m = useMessages();
   return (
     <details class="numbers__how">
-      <summary class="numbers__how-summary">How this is calculated</summary>
+      <summary class="numbers__how-summary">{m.numbers.howSummary}</summary>
       <div class="numbers__how-body">
         <dl class="numbers__how-list">
-          <dt class="numbers__formula">ARR = CER − EER</dt>
-          <dd class="numbers__how-text">
-            The control group&rsquo;s event rate minus the intervention group&rsquo;s. Read it as
-            events per 100 patients. This is the number the NNT comes from, and the one abstracts
-            most often leave out.
-          </dd>
-
-          <dt class="numbers__formula">RRR = ARR ÷ CER</dt>
-          <dd class="numbers__how-text">
-            The same difference as a share of the control group&rsquo;s risk. It looks the same
-            whether the event was common or rare, which is how a relative reduction can make a tiny
-            absolute effect sound large.
-          </dd>
-
-          <dt class="numbers__formula">NNT = 1 ÷ ARR, rounded up</dt>
-          <dd class="numbers__how-text">
-            How many patients would be treated for one extra event to be avoided. Rounded up,
-            because part of a patient is not a patient. A negative ARR goes through the same
-            arithmetic and is reported as an NNH: the number treated for one extra event to occur.
-          </dd>
-
-          <dt class="numbers__formula">95% CI</dt>
-          <dd class="numbers__how-text">
-            In Counts mode, a Wald interval on the ARR (the risk difference plus or minus 1.96
-            standard errors), inverted to give the two NNT bounds. In Ratio mode, the ratio&rsquo;s
-            own interval, when you enter it, goes through the same conversion as the estimate at the
-            same baseline risk. Percentages on their own carry no group sizes, so Rates mode gives a
-            point estimate and no interval. When the ARR interval includes zero, the two NNT bounds
-            sit on opposite sides of infinity.
-          </dd>
-
-          <dt class="numbers__formula">From an RR or HR: EER = ratio × ACR</dt>
-          <dd class="numbers__how-text">
-            A relative measure only becomes an absolute one once you supply the baseline risk it
-            applies to. The same ratio gives a very different NNT in a high-risk and a low-risk
-            population, so the assumed control event rate is your judgement, not the paper&rsquo;s.
-          </dd>
-
-          <dt class="numbers__formula">From an OR: EER = (OR × ACR) ÷ (1 − ACR + OR × ACR)</dt>
-          <dd class="numbers__how-text">
-            An odds ratio has to be converted through the odds, so an OR and an RR of the same size
-            do not give the same absolute effect. The gap widens as the event gets more common:
-            above roughly 10–20% in the control group, reading an OR as if it were a risk ratio
-            overstates the change in risk.
-          </dd>
-
-          <dt class="numbers__formula">Hazard ratios</dt>
-          <dd class="numbers__how-text">
-            A hazard ratio describes how fast events accumulate over time. Applying it to a single
-            cumulative risk is an approximation, and it only holds if the control event rate you
-            enter covers the same follow-up as the trial.
-          </dd>
+          {m.numbers.how.map((entry) => (
+            <Fragment key={entry.formula}>
+              <dt class="numbers__formula">{entry.formula}</dt>
+              <dd class="numbers__how-text">{entry.text}</dd>
+            </Fragment>
+          ))}
         </dl>
 
-        <p class="numbers__how-text">
-          These figures describe the study population, not one patient in front of you. They are an
-          aid to reading the paper, not a treatment recommendation.
-        </p>
+        <p class="numbers__how-text">{m.numbers.howFootnote}</p>
 
         <ul class="numbers__links">
           <li>
             <a href={COCHRANE_URL} target="_blank" rel="noreferrer noopener">
-              Cochrane Handbook, chapter 12 §12.5
+              {m.numbers.cochrane}
             </a>
           </li>
           <li>
             <a href={CEBM_URL} target="_blank" rel="noreferrer noopener">
-              CEBM Oxford: number needed to treat
+              {m.numbers.cebm}
             </a>
           </li>
         </ul>
@@ -597,70 +516,64 @@ interface ResultPanelProps {
 }
 
 function ResultPanel({ mode, result, warnings, caveat }: ResultPanelProps) {
+  const m = useMessages();
   const ci = result.ci;
   const harm = result.direction === 'harm';
   return (
     <section class="numbers__result" aria-labelledby="jch-numbers-result">
       <h3 class="numbers__heading" id="jch-numbers-result">
-        Result
+        {m.numbers.result}
       </h3>
 
-      <p class={harm ? 'numbers__nnt numbers__nnt--harm' : 'numbers__nnt'}>{formatNnt(result)}</p>
-      <p class="numbers__direction">{directionSentence(result)}</p>
+      <p class={harm ? 'numbers__nnt numbers__nnt--harm' : 'numbers__nnt'}>
+        {localizedNnt(result, m)}
+      </p>
+      <p class="numbers__direction">{m.numbers.direction(result.nnt, harm)}</p>
 
       {/* Straight after the sentence it qualifies, so the two are read together. */}
-      {caveat === null ? null : <p class="numbers__callout">{caveat}</p>}
+      {caveat === null ? null : <p class="numbers__callout">{localizeCaveat(caveat, m)}</p>}
 
       {ci?.crossesInfinity ? (
         <div class="numbers__callout numbers__callout--flip">
-          <strong class="numbers__callout-title">
-            These data are compatible with benefit and with harm
-          </strong>
-          {crossingSentences(ci).map((sentence) => (
-            <p class="numbers__callout-text" key={sentence}>
-              {sentence}
-            </p>
-          ))}
+          <strong class="numbers__callout-title">{m.numbers.crossingTitle}</strong>
+          {m.numbers
+            .crossing(pointsText(ci.arrLow), pointsText(ci.arrHigh), ci.nntLow, ci.nntHigh)
+            .map((sentence) => (
+              <p class="numbers__callout-text" key={sentence}>
+                {sentence}
+              </p>
+            ))}
         </div>
       ) : null}
 
       <dl class="numbers__stats">
-        <dt class="numbers__stat-label">Control event rate (CER)</dt>
+        <dt class="numbers__stat-label">{m.numbers.cer}</dt>
         <dd class="numbers__stat-value">{percentText(result.cer)}</dd>
 
-        <dt class="numbers__stat-label">Intervention event rate (EER)</dt>
+        <dt class="numbers__stat-label">{m.numbers.eer}</dt>
         <dd class="numbers__stat-value">{percentText(result.eer)}</dd>
 
-        <dt class="numbers__stat-label">
-          {harm ? 'Absolute risk increase (ARI)' : 'Absolute risk reduction (ARR)'}
-        </dt>
-        <dd class="numbers__stat-value">{`${pointsText(Math.abs(result.arr))} points`}</dd>
+        <dt class="numbers__stat-label">{harm ? m.numbers.ari : m.numbers.arr}</dt>
+        <dd class="numbers__stat-value">{m.numbers.points(pointsText(Math.abs(result.arr)))}</dd>
 
-        <dt class="numbers__stat-label">
-          {result.rrr < 0 ? 'Relative risk increase (RRI)' : 'Relative risk reduction (RRR)'}
-        </dt>
-        <dd class="numbers__stat-value">{rrrText(result.rrr)}</dd>
+        <dt class="numbers__stat-label">{result.rrr < 0 ? m.numbers.rri : m.numbers.rrr}</dt>
+        <dd class="numbers__stat-value">{rrrText(result.rrr, m)}</dd>
 
         {ci ? (
           <>
-            <dt class="numbers__stat-label">95% CI for the ARR</dt>
+            <dt class="numbers__stat-label">{m.numbers.ciForArr}</dt>
             <dd class="numbers__stat-value">
-              {`${pointsText(ci.arrLow)} to ${pointsText(ci.arrHigh)} points`}
+              {m.numbers.ciRange(pointsText(ci.arrLow), pointsText(ci.arrHigh))}
             </dd>
           </>
         ) : null}
       </dl>
 
-      {mode === 'rates' ? (
-        <p class="numbers__callout">
-          Two percentages carry no group sizes, so this estimate has no confidence interval. If the
-          abstract gives events and participants, switch to Counts to get one.
-        </p>
-      ) : null}
+      {mode === 'rates' ? <p class="numbers__callout">{m.numbers.ratesNoCi}</p> : null}
 
       {warnings.map((warning) => (
         <p class="numbers__callout" key={warning}>
-          {warning}
+          {localizeWarning(warning, m)}
         </p>
       ))}
     </section>
@@ -670,6 +583,7 @@ function ResultPanel({ mode, result, warnings, caveat }: ResultPanelProps) {
 /* ------------------------------------------------------------------------ tab */
 
 export function NumbersTab() {
+  const m = useMessages();
   const article = useStore((s) => s.article);
   const numbers = useStore((s) => s.numbers);
   const design = useStore(effectiveDesign);
@@ -857,26 +771,22 @@ export function NumbersTab() {
   return (
     <section class="numbers" aria-labelledby="jch-numbers-title">
       <h2 class="numbers__title" id="jch-numbers-title">
-        Absolute effect and NNT
+        {m.numbers.title}
       </h2>
-      <p class="numbers__lead">
-        Pick a result the abstract reports, or type one in. Nothing is calculated until you ask for
-        it.
-      </p>
+      <p class="numbers__lead">{m.numbers.lead}</p>
 
       <section class="numbers__block" aria-labelledby="jch-numbers-candidates">
         <h3 class="numbers__heading" id="jch-numbers-candidates">
-          Detected in this abstract
+          {m.numbers.detected}
         </h3>
         {/* Shown with or without candidates: typing the same pair by hand is the same mistake. */}
-        {candidatesNote === null ? null : <p class="numbers__callout">{candidatesNote}</p>}
+        {candidatesNote === null ? null : (
+          <p class="numbers__callout">{localizeCaveat(candidatesNote, m)}</p>
+        )}
         {candidates.length === 0 ? (
           <>
-            <p class="numbers__empty">No numeric results detected in this abstract</p>
-            <p class="numbers__hint">
-              Abstracts often bury the numbers in prose, or report them only in the full text. Enter
-              them by hand below.
-            </p>
+            <p class="numbers__empty">{m.numbers.none}</p>
+            <p class="numbers__hint">{m.numbers.noneHint}</p>
           </>
         ) : (
           <ul class="numbers__candidates">
@@ -890,21 +800,21 @@ export function NumbersTab() {
                   key={`${candidate.kind}:${candidate.start}:${candidate.end}`}
                 >
                   <div class="numbers__candidate-head">
-                    <span class="numbers__badge" title={KIND_TITLES[candidate.kind]}>
-                      {KIND_BADGES[candidate.kind]}
+                    <span class="numbers__badge" title={m.numbers.kindTitle[candidate.kind]}>
+                      {m.numbers.kindBadge[candidate.kind]}
                     </span>
                     <span class="numbers__raw">{candidate.raw}</span>
                     <button
                       class="button numbers__use"
                       type="button"
                       onClick={() => useCandidate(candidate)}
-                      aria-label={`Use ${candidate.raw} in the calculator`}
+                      aria-label={m.numbers.useLabel(candidate.raw)}
                     >
-                      Use
+                      {m.numbers.use}
                     </button>
                   </div>
                   <p class="numbers__sentence">{truncate(candidate.sentence, SENTENCE_LIMIT)}</p>
-                  {active ? <p class="numbers__in-use">In the calculator</p> : null}
+                  {active ? <p class="numbers__in-use">{m.numbers.inUse}</p> : null}
                 </li>
               );
             })}
@@ -920,9 +830,9 @@ export function NumbersTab() {
           commit(state.mode, state.inputs);
         }}
       >
-        <h3 class="numbers__heading">Calculator</h3>
+        <h3 class="numbers__heading">{m.numbers.calculator}</h3>
 
-        <div class="numbers__modes" role="group" aria-label="What the abstract gives you">
+        <div class="numbers__modes" role="group" aria-label={m.numbers.modesLabel}>
           {MODES.map((candidateMode) => (
             <button
               class="numbers__mode"
@@ -931,33 +841,33 @@ export function NumbersTab() {
               aria-pressed={candidateMode === mode}
               onClick={() => selectMode(candidateMode)}
             >
-              {MODE_LABELS[candidateMode]}
+              {m.numbers.mode[candidateMode]}
             </button>
           ))}
         </div>
-        <p class="numbers__hint">{MODE_HINTS[mode]}</p>
+        <p class="numbers__hint">{m.numbers.modeHint[mode]}</p>
 
         {mode === 'rates' ? (
           <div class="numbers__groups">
             <div class="numbers__group numbers__group--control">
-              <h4 class="numbers__group-title">Control group</h4>
+              <h4 class="numbers__group-title">{m.numbers.controlGroup}</h4>
               <NumberField
                 id="jch-numbers-cer"
-                label="Event rate (CER)"
+                label={m.numbers.cerField}
                 suffix="%"
                 value={inputs.rates.cerPercent}
-                error={errors.cerPercent}
+                error={errors.cerPercent?.(m)}
                 onValue={(value) => editRates('cerPercent', value)}
               />
             </div>
             <div class="numbers__group numbers__group--intervention">
-              <h4 class="numbers__group-title">Intervention group</h4>
+              <h4 class="numbers__group-title">{m.numbers.interventionGroup}</h4>
               <NumberField
                 id="jch-numbers-eer"
-                label="Event rate (EER)"
+                label={m.numbers.eerField}
                 suffix="%"
                 value={inputs.rates.eerPercent}
-                error={errors.eerPercent}
+                error={errors.eerPercent?.(m)}
                 onValue={(value) => editRates('eerPercent', value)}
               />
             </div>
@@ -967,39 +877,39 @@ export function NumbersTab() {
         {mode === 'counts' ? (
           <div class="numbers__groups">
             <div class="numbers__group numbers__group--control">
-              <h4 class="numbers__group-title">Control group</h4>
+              <h4 class="numbers__group-title">{m.numbers.controlGroup}</h4>
               <div class="numbers__row">
                 <NumberField
                   id="jch-numbers-control-events"
-                  label="Events"
+                  label={m.numbers.events}
                   value={inputs.counts.controlEvents}
-                  error={errors.controlEvents}
+                  error={errors.controlEvents?.(m)}
                   onValue={(value) => editCounts('controlEvents', value)}
                 />
                 <NumberField
                   id="jch-numbers-control-total"
-                  label="Participants"
+                  label={m.numbers.participants}
                   value={inputs.counts.controlTotal}
-                  error={errors.controlTotal}
+                  error={errors.controlTotal?.(m)}
                   onValue={(value) => editCounts('controlTotal', value)}
                 />
               </div>
             </div>
             <div class="numbers__group numbers__group--intervention">
-              <h4 class="numbers__group-title">Intervention group</h4>
+              <h4 class="numbers__group-title">{m.numbers.interventionGroup}</h4>
               <div class="numbers__row">
                 <NumberField
                   id="jch-numbers-intervention-events"
-                  label="Events"
+                  label={m.numbers.events}
                   value={inputs.counts.interventionEvents}
-                  error={errors.interventionEvents}
+                  error={errors.interventionEvents?.(m)}
                   onValue={(value) => editCounts('interventionEvents', value)}
                 />
                 <NumberField
                   id="jch-numbers-intervention-total"
-                  label="Participants"
+                  label={m.numbers.participants}
                   value={inputs.counts.interventionTotal}
-                  error={errors.interventionTotal}
+                  error={errors.interventionTotal?.(m)}
                   onValue={(value) => editCounts('interventionTotal', value)}
                 />
               </div>
@@ -1012,7 +922,7 @@ export function NumbersTab() {
             <div class="numbers__row">
               <div class="numbers__field">
                 <label class="numbers__label" for="jch-numbers-measure">
-                  Measure
+                  {m.numbers.measure}
                 </label>
                 <select
                   class="numbers__select"
@@ -1027,46 +937,46 @@ export function NumbersTab() {
                 >
                   {RATIO_MEASURES.map((measure) => (
                     <option value={measure} key={measure}>
-                      {RATIO_MEASURE_LABELS[measure]}
+                      {m.numbers.measureLabel[measure]}
                     </option>
                   ))}
                 </select>
               </div>
               <NumberField
                 id="jch-numbers-estimate"
-                label="Estimate"
+                label={m.numbers.estimate}
                 placeholder="0.72"
                 value={inputs.ratio.estimate}
-                error={errors.estimate}
+                error={errors.estimate?.(m)}
                 onValue={(value) => editRatio('estimate', { estimate: value })}
               />
             </div>
             <div class="numbers__row">
               <NumberField
                 id="jch-numbers-ci-low"
-                label="95% CI lower (optional)"
+                label={m.numbers.ciLow}
                 placeholder="0.61"
                 value={inputs.ratio.ciLow}
-                error={errors.ciLow}
+                error={errors.ciLow?.(m)}
                 onValue={(value) => editRatio('ciLow', { ciLow: value })}
               />
               <NumberField
                 id="jch-numbers-ci-high"
-                label="95% CI upper (optional)"
+                label={m.numbers.ciHigh}
                 placeholder="0.85"
                 value={inputs.ratio.ciHigh}
-                error={errors.ciHigh}
+                error={errors.ciHigh?.(m)}
                 onValue={(value) => editRatio('ciHigh', { ciHigh: value })}
               />
             </div>
             <NumberField
               id="jch-numbers-acr"
-              label="Assumed control event rate (ACR)"
+              label={m.numbers.acr}
               suffix="%"
               inputRef={acrRef}
-              hint="The untreated risk you want to apply this ratio to — from this trial, a guideline, or the patient in front of you. Your judgement, not the paper's."
+              hint={m.numbers.acrHint}
               value={inputs.ratio.acrPercent}
-              error={errors.acrPercent}
+              error={errors.acrPercent?.(m)}
               onValue={(value) => editRatio('acrPercent', { acrPercent: value })}
             />
           </div>
@@ -1074,7 +984,7 @@ export function NumbersTab() {
 
         {mode !== 'ratio' ? (
           <fieldset class="numbers__assign">
-            <legend class="numbers__assign-legend">Which is the control group?</legend>
+            <legend class="numbers__assign-legend">{m.numbers.whichControl}</legend>
             {pairCandidate !== null ? (
               <>
                 {(['first', 'second'] as const).map((side) => (
@@ -1087,55 +997,45 @@ export function NumbersTab() {
                     />
                     <span class="numbers__choice-text">
                       <span class="numbers__choice-value">{armText(pairCandidate, side)}</span>
-                      {side === 'first' ? ' — first in the sentence' : ' — second in the sentence'}
+                      {side === 'first' ? m.numbers.firstInSentence : m.numbers.secondInSentence}
                     </span>
                   </label>
                 ))}
                 {controlSide === null ? (
-                  <p class="numbers__hint">
-                    The fields no longer match either value from the abstract. Pick one to load it
-                    again, or leave your own numbers in place.
-                  </p>
+                  <p class="numbers__hint">{m.numbers.noLongerMatch}</p>
                 ) : null}
               </>
             ) : (
               <div class="numbers__assign-manual">
-                <p class="numbers__hint">
-                  Whatever is in the control fields is treated as the untreated arm. Swap them and a
-                  benefit becomes a harm, so it is worth a second look.
-                </p>
+                <p class="numbers__hint">{m.numbers.manualControl}</p>
                 <button class="button" type="button" onClick={swapGroups}>
-                  Swap control and intervention
+                  {m.numbers.swap}
                 </button>
               </div>
             )}
-            <p class="numbers__hint">
-              The abstract does not say which arm is which, so this is your call.
-            </p>
+            <p class="numbers__hint">{m.numbers.yourCall}</p>
           </fieldset>
         ) : null}
 
-        {errors.form ? (
+        {errors.form !== undefined ? (
           <p class="numbers__error" role="alert">
-            {errors.form}
+            {errors.form(m)}
           </p>
         ) : null}
 
         <div class="numbers__actions">
           <button class="button numbers__submit" type="submit">
-            Calculate
+            {m.numbers.calculate}
           </button>
           <button class="button" type="button" onClick={clearAll}>
-            Clear
+            {m.numbers.clear}
           </button>
         </div>
       </form>
 
       <div class="numbers__output" aria-live="polite">
         {result === null ? (
-          <p class="numbers__hint">
-            No result yet. Fill the fields and press Calculate, or press Use on a detected result.
-          </p>
+          <p class="numbers__hint">{m.numbers.noResult}</p>
         ) : (
           <ResultPanel
             mode={mode}
