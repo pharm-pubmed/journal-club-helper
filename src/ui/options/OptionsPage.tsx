@@ -32,6 +32,7 @@ import type { Appraisal, Settings } from '../../lib/storage';
 import type { AppraisalsReplacedMessage } from '../../lib/types';
 import { applyPreference, useLocale, useMessages } from '../i18n';
 import type { Messages } from '../../locales';
+import { describeError } from '../../locales/errors';
 import './options.css';
 
 /** The published policy, generated from docs/PRIVACY.md (HANDOVER §3, _Landing site_). */
@@ -47,8 +48,9 @@ const RECENT_SHOWN = 5;
 
 /* ------------------------------------------------------------------ helpers */
 
-function messageOf(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message ? error.message : fallback;
+/** What went wrong, in the reader's language when the error says enough (#82). */
+function messageOf(error: unknown, fallback: string, m: Messages): string {
+  return describeError(error, m, fallback);
 }
 
 function formatDate(ms: number, locale: Locale, m: Messages): string {
@@ -150,7 +152,7 @@ export function OptionsPage() {
       // The counters shown below live in the same record, so read it back too.
       setSettings(await loadSettings());
     } catch (error) {
-      setMessage({ tone: 'error', text: messageOf(error, m.options.languageSaveError) });
+      setMessage({ tone: 'error', text: messageOf(error, m.options.languageSaveError, m) });
     }
   }
 
@@ -167,7 +169,7 @@ export function OptionsPage() {
       setLoadError(null);
     } catch (error) {
       setAppraisals([]);
-      setLoadError(messageOf(error, messagesRef.current.options.loadError));
+      setLoadError(messageOf(error, messagesRef.current.options.loadError, messagesRef.current));
     }
   }, []);
 
@@ -186,7 +188,7 @@ export function OptionsPage() {
         text: m.options.exported(appraisals?.length ?? 0),
       });
     } catch (error) {
-      setMessage({ tone: 'error', text: messageOf(error, m.options.exportError) });
+      setMessage({ tone: 'error', text: messageOf(error, m.options.exportError, m) });
     } finally {
       setBusy(false);
     }
@@ -226,7 +228,7 @@ export function OptionsPage() {
       await refresh();
       setMessage({
         tone: 'error',
-        text: messageOf(error, m.options.importError),
+        text: messageOf(error, m.options.importError, m),
       });
     } finally {
       setBusy(false);
@@ -253,7 +255,7 @@ export function OptionsPage() {
     } catch (error) {
       await announceAppraisalsReplaced();
       await refresh();
-      setMessage({ tone: 'error', text: messageOf(error, m.options.deleteError) });
+      setMessage({ tone: 'error', text: messageOf(error, m.options.deleteError, m) });
     } finally {
       setBusy(false);
     }
