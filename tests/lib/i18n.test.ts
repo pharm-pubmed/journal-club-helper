@@ -66,7 +66,16 @@ describe('the catalogs', () => {
     walkEn(en);
     // Names and abbreviations that are the same in both languages.
     // Language names are written in their own language in both catalogs.
-    const same = new Set(['Journal Club Helper', 'PICO', 'English', '日本語']);
+    // Formulas and notation read the same in both languages.
+    const same = new Set([
+      'Journal Club Helper',
+      'PICO',
+      'English',
+      '日本語',
+      'n / N',
+      'ARR = CER − EER',
+      'RRR = ARR ÷ CER',
+    ]);
     for (const text of strings) {
       expect(text.trim()).not.toBe('');
       if (english.has(text)) expect(same, `untranslated: ${text}`).toContain(text);
@@ -79,6 +88,8 @@ describe('the catalogs', () => {
     const args = [3, 2, 'merge'];
     const argsFor: Record<string, unknown[]> = {
       'labels.subtypeLineFallback': ['factorial'],
+      'numbers.thrown': ['controlEvents (12) cannot exceed controlTotal (10)'],
+      'numbers.nntWithCi': ['NNT 3', '2–5'],
       'pico.markTitle': ['Population', 'numeric result', ['Outcome']],
     };
     // These print only a PMID, so they are the same in both languages.

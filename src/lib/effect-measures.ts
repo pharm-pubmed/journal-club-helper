@@ -29,15 +29,15 @@ const Z_95 = 1.96;
  */
 const RECIPROCAL_PRECISION = 12;
 
-const BASELINE_RISK_WARNING_PREFIX =
+export const BASELINE_RISK_WARNING_PREFIX =
   'This absolute effect is estimated from an assumed control event rate of ';
-const BASELINE_RISK_WARNING_SUFFIX =
+export const BASELINE_RISK_WARNING_SUFFIX =
   ', so it only applies to patients whose untreated risk is close to that figure';
 
-const ODDS_RATIO_WARNING =
+export const ODDS_RATIO_WARNING =
   'Odds ratios overstate risk changes when the control event rate is high (above roughly 10–20 %)';
 
-const HAZARD_RATIO_WARNING =
+export const HAZARD_RATIO_WARNING =
   'A hazard ratio applied to a cumulative rate is an approximation; the time horizon must match the control event rate';
 
 /* ------------------------------------------------------------------ validation */
