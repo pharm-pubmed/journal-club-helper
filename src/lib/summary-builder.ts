@@ -70,6 +70,7 @@ import {
   VERDICT_LABELS,
   designLabel,
 } from '../ui/labels';
+import { en } from '../locales/en';
 
 export interface SummaryOptions {
   /** Appears in the closing disclaimer; normally `PRODUCT_NAME`. */
@@ -343,7 +344,7 @@ function designHeadline(a: Appraisal): string {
   // statement about the classifier and reads wrong next to a design the user
   // chose by hand.
   if (a.designOverride !== null) return DESIGN_OPTION_LABELS[a.designOverride];
-  return designLabel(effectiveDesign(a), null);
+  return designLabel(effectiveDesign(a), null, en);
 }
 
 /**

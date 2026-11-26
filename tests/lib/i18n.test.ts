@@ -77,12 +77,20 @@ describe('the catalogs', () => {
   // stand-in values and compare the two languages' answers.
   it('translate every function message', () => {
     const args = [3, 2, 'merge'];
+    const argsFor: Record<string, unknown[]> = {
+      'labels.subtypeLineFallback': ['factorial'],
+      'pico.markTitle': ['Population', 'numeric result', ['Outcome']],
+    };
     // These print only a PMID, so they are the same in both languages.
     const same = new Set(['header.pmid']);
     const walk = (enNode: unknown, jaNode: unknown, path: string): void => {
       if (typeof enNode === 'function' && typeof jaNode === 'function') {
-        const english = String((enNode as (...a: unknown[]) => unknown)(...args));
-        const japanese = String((jaNode as (...a: unknown[]) => unknown)(...args));
+        const english = String(
+          (enNode as (...a: unknown[]) => unknown)(...(argsFor[path] ?? args)),
+        );
+        const japanese = String(
+          (jaNode as (...a: unknown[]) => unknown)(...(argsFor[path] ?? args)),
+        );
         expect(japanese.trim(), path).not.toBe('');
         if (!same.has(path)) expect(japanese, path).not.toBe(english);
         return;

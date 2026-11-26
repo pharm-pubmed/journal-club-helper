@@ -6,6 +6,17 @@
  * function, because Japanese has none and English needs them.
  */
 
+import type {
+  ChecklistSection,
+  DesignConfidence,
+  DesignEvidence,
+  EvidenceNeed,
+  PicoField,
+  SourceScope,
+  StudyDesign,
+  Verdict,
+} from '../lib/types';
+
 function plural(count: number, one: string, many: string): string {
   return `${count.toLocaleString()} ${count === 1 ? one : many}`;
 }
@@ -65,6 +76,194 @@ export const en = {
     retry: 'Retry',
     nothingToAppraise: 'Nothing to appraise on this page',
     looking: 'Looking for a PubMed abstract…',
+  },
+
+  labels: {
+    design: {
+      rct: 'Randomized controlled trial',
+      'non-randomized-trial': 'Non-randomized trial',
+      cohort: 'Cohort study',
+      'case-control': 'Case-control study',
+      'cross-sectional': 'Cross-sectional study',
+      'sr-ma': 'Systematic review / meta-analysis',
+      diagnostic: 'Diagnostic accuracy study',
+      unclear: 'Not detected',
+    } satisfies Record<StudyDesign, string>,
+    /** "Not detected" describes the classifier; as a choice it reads wrong. */
+    designUnclearOption: 'Unclear / other',
+    subtype: {
+      parallel: 'parallel',
+      crossover: 'crossover',
+      cluster: 'cluster',
+      'non-inferiority': 'non-inferiority',
+      'systematic-review': 'systematic review',
+      'meta-analysis': 'meta-analysis',
+      'network-meta-analysis': 'network meta-analysis',
+    } as Record<string, string>,
+    subtypeLine: {
+      'non-inferiority': 'Non-inferiority design',
+      equivalence: 'Equivalence design',
+      crossover: 'Crossover design',
+      cluster: 'Cluster-randomised design',
+      parallel: 'Parallel-group design',
+      'systematic-review': 'Systematic review',
+      'meta-analysis': 'Meta-analysis',
+      'network-meta-analysis': 'Network meta-analysis',
+    } as Record<string, string>,
+    subtypeLineFallback: (subtype: string) =>
+      `${subtype.charAt(0).toUpperCase()}${subtype.slice(1)} design`,
+    designWithSubtype: (design: string, subtype: string) => `${design} (${subtype})`,
+    confidence: {
+      high: 'Detected from publication type',
+      medium: 'Detected from abstract keywords',
+      low: 'Not detected',
+    } satisfies Record<DesignConfidence, string>,
+    evidenceKind: {
+      'publication-type': 'publication type',
+      keyword: 'abstract keyword',
+    } satisfies Record<DesignEvidence['kind'], string>,
+    section: {
+      'internal-validity': 'Internal validity',
+      applicability: 'Applicability',
+    } satisfies Record<ChecklistSection, string>,
+    sourceScope: {
+      abstract: 'Abstract only',
+      'full-text': 'Full text',
+      supplement: 'Supplement',
+      protocol: 'Protocol',
+      registry: 'Trial registry',
+      other: 'Other source',
+    } satisfies Record<SourceScope, string>,
+    evidenceNeed: {
+      abstract: 'Usually answerable from the abstract.',
+      'full-text': 'Usually needs the full text — an abstract rarely has this detail.',
+      'protocol-or-registry':
+        'Usually needs the protocol, the statistical analysis plan or the trial registry.',
+    } satisfies Record<EvidenceNeed, string>,
+    verdict: { yes: 'Yes', no: 'No', unclear: 'Unclear' } satisfies Record<Verdict, string>,
+    pico: {
+      P: 'Population',
+      I: 'Intervention',
+      C: 'Comparison',
+      O: 'Outcome',
+    } satisfies Record<PicoField, string>,
+  },
+
+  design: {
+    key: 'Study design:',
+    setManually: 'Set manually',
+    noSubtype: 'No subtype',
+    evidence: (count: number) => `Evidence (${count})`,
+    design: 'Design',
+    subtype: 'Subtype',
+    reset: 'Reset to detected',
+    notDetectedHint:
+      'Nothing in the publication types or the abstract wording matched a study design. Choose one below so the checklist and the export match this article.',
+    suggested: (what: string) => `Detection suggested ${what}.`,
+    foundNoSubtype: 'Detection found no subtype.',
+  },
+
+  pico: {
+    title: 'Clinical question',
+    intro:
+      'Write the question in your own words. The highlights below are phrases matched by simple cue words — suggestions, not extraction. They miss a great deal, so selecting text yourself is the main way to fill these in.',
+    placeholder: {
+      P: 'e.g. adults admitted with pneumonia',
+      I: 'e.g. 5 days of oral amoxicillin',
+      C: 'e.g. placebo, or 10 days of the same drug',
+      O: 'e.g. death within 30 days',
+    } satisfies Record<PicoField, string>,
+    clear: 'Clear',
+    clearField: (field: string) => `Clear ${field}`,
+    markTitle: (field: string, reason: string, also: string[]) => {
+      const cue =
+        reason === 'numeric result'
+          ? 'it reports a number in the results'
+          : `the abstract says “${reason}”`;
+      const tail = also.length > 0 ? ` The same words also matched ${also.join(' and ')}.` : '';
+      return `Suggested for ${field} because ${cue}.${tail}`;
+    },
+    markLabel: (text: string, field: string) => `Add “${text}” to ${field}`,
+    added: (field: string) => `Added to ${field}.`,
+    alsoAddTo: 'Also add to',
+    addSelectionTo: 'Add the selection to',
+    abstract: 'Abstract',
+    showCandidates: 'Show candidates',
+    viewerNote: 'A copy of the abstract. The PubMed page itself is never changed.',
+    helpSummary: 'How to pull text into a field',
+    help: [
+      'Click a highlighted phrase to add it to its field.',
+      'Select any text in the abstract to choose a field for it.',
+      'Keyboard: Tab to a highlight and press Enter. To select free text, turn on caret browsing (F7), select with Shift and the arrow keys, then press Enter.',
+      'Adding to a field that already has text appends to it; nothing is overwritten.',
+    ],
+    fromTitle: 'From the title',
+    addTitleTo: (field: string) => `Add the title to ${field}`,
+    abstractText: 'Abstract text',
+    chooserLabel: 'Send this phrase to a PICO field',
+    addTo: (field: string) => `Add to ${field}`,
+    close: 'Close',
+    noAbstract:
+      'This page has no abstract text, so there is nothing to highlight. The four fields above still work.',
+  },
+
+  validity: {
+    title: 'Critical appraisal',
+    sectionLede: {
+      'internal-validity':
+        'How far the study can answer its own question. Judge the methods. Where your source does not say, that is a limit on what you can check, not a fault you have found.',
+      applicability:
+        'A different question from the ones above: whether an answer this study supports would transfer to your patient. A study can be sound here and still not apply, or apply and still be shaky.',
+    } satisfies Record<ChecklistSection, string>,
+    unanswered: 'Unanswered',
+    clear: 'Clear',
+    clearAnswer: (item: string) => `Clear the answer for ${item}`,
+    readIn: 'Read in',
+    inherited: (scope: string) => `${scope} — appraisal default`,
+    lookFor: 'What to look for',
+    why: 'Why it matters',
+    note: 'Note',
+    addNote: 'Add a note',
+    noteFor: (item: string) => `Note for ${item}`,
+    notePlaceholder: 'What you would raise about this point',
+    extraChecks: 'Extra checks, added to the list above',
+    recordedNotScored: 'Recorded, not scored',
+    answered: (answered: number, total: number) => `${answered} of ${total} answered`,
+    tally: (count: number, verdict: string) => `${count} ${verdict}`,
+    scopeTitle: 'What are you working from?',
+    scopeHint:
+      'Saved with the appraisal and used as the default for every item, so a reader of the export knows what these judgements were based on.',
+    lede: 'Unclear means the source in front of you does not say. It is an honest answer about your evidence, not a mark against the study.',
+    helpSummary: 'What Yes, No and Unclear mean',
+    designNotDetected:
+      'Study design was not detected. Pick one in the header or use this generic checklist.',
+  },
+
+  export: {
+    title: 'One-page summary',
+    noArticle: 'No PubMed article is bound to this panel, so there is nothing to export yet.',
+    bottomLine: 'Bottom line — in your own words',
+    bottomLineHint: (product: string) =>
+      `One or two sentences: what you think this paper shows, and how much weight you would put on it. ${product} never writes this for you — it is copied into the summary exactly as you type it, and left blank if you leave it blank.`,
+    bottomLinePlaceholder:
+      'e.g. Large absolute benefit, but the trial was stopped early and outcome assessment was not blinded, so I would read the full text before trusting the size of the effect.',
+    copyMarkdown: 'Copy Markdown',
+    copyText: 'Copy plain text',
+    download: 'Download .md',
+    copied: {
+      markdown: 'Markdown copied to the clipboard.',
+      text: 'Plain text copied to the clipboard.',
+    },
+    saved: (filename: string) => `${filename} saved to your downloads folder.`,
+    copyBlocked: (reason: string | null) =>
+      `This browser blocked the copy${reason === null ? '' : ` (${reason})`}.`,
+    noClipboard: 'This browser gives the panel no clipboard access.',
+    clipboardFallback:
+      'You can still select the text in the preview below and copy it yourself (Ctrl+C, or Cmd+C on a Mac), or use Download .md.',
+    buildFailed: (reason: string | null) =>
+      `Could not build the file${reason === null ? '' : ` (${reason})`}. You can copy the preview below instead.`,
+    preview: 'Preview — exactly what the buttons copy',
+    wrap: 'Wrap long lines',
   },
 
   pageButton: {

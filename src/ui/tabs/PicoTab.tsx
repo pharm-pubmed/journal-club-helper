@@ -32,7 +32,8 @@ import type { ComponentChild } from 'preact';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { findPicoCandidates } from '../../lib/pico-candidates';
 import type { AbstractSection, PicoCandidate, PicoField } from '../../lib/types';
-import { PICO_LABELS } from '../labels';
+import type { Messages } from '../../locales';
+import { useMessages } from '../i18n';
 import { actions, useStore } from '../store';
 import './pico.css';
 
@@ -45,17 +46,6 @@ const KEYS: Record<PicoField, 'p' | 'i' | 'c' | 'o'> = { P: 'p', I: 'i', C: 'c',
 
 /** Tie-break for the overlap rule; also the order of the legend and the chooser. */
 const RANK: Record<PicoField, number> = { P: 0, I: 1, C: 2, O: 3 };
-
-/**
- * Examples, not defaults: these are placeholders and never become a value.
- * Kept short because a 320px panel shows about 40 characters per line.
- */
-const PLACEHOLDERS: Record<PicoField, string> = {
-  P: 'e.g. adults admitted with pneumonia',
-  I: 'e.g. 5 days of oral amoxicillin',
-  C: 'e.g. placebo, or 10 days of the same drug',
-  O: 'e.g. death within 30 days',
-};
 
 /** Matches the width in pico.css; used to keep the chooser inside the panel. */
 const CHOOSER_WIDTH = 168;
@@ -133,16 +123,12 @@ function buildMarks(candidates: readonly PicoCandidate[]): AbstractMark[] {
   return marks;
 }
 
-function markTitle(mark: AbstractMark): string {
-  const cue =
-    mark.reason === 'numeric result'
-      ? 'it reports a number in the results'
-      : `the abstract says “${mark.reason}”`;
-  const also =
-    mark.alternatives.length > 0
-      ? ` The same words also matched ${mark.alternatives.map((f) => PICO_LABELS[f]).join(' and ')}.`
-      : '';
-  return `Suggested for ${PICO_LABELS[mark.field]} because ${cue}.${also}`;
+function markTitle(mark: AbstractMark, m: Messages): string {
+  return m.pico.markTitle(
+    m.labels.pico[mark.field],
+    mark.reason,
+    mark.alternatives.map((field) => m.labels.pico[field]),
+  );
 }
 
 /* --------------------------------------------------------------------- blocks */
@@ -236,9 +222,10 @@ interface PicoInputProps {
 }
 
 function PicoInput({ field, value }: PicoInputProps) {
+  const m = useMessages();
   const ref = useRef<HTMLTextAreaElement>(null);
   const id = `jch-pico-${KEYS[field]}`;
-  const name = PICO_LABELS[field];
+  const name = m.labels.pico[field];
 
   // Click-to-fill writes straight to the store, so the box has to regrow on any
   // change of value, not only while the reader is typing into it.
@@ -260,9 +247,9 @@ function PicoInput({ field, value }: PicoInputProps) {
             class="pico-field__clear"
             type="button"
             onClick={() => actions.setPicoField(field, '')}
-            aria-label={`Clear ${name}`}
+            aria-label={m.pico.clearField(name)}
           >
-            Clear
+            {m.pico.clear}
           </button>
         ) : null}
       </div>
@@ -272,7 +259,7 @@ function PicoInput({ field, value }: PicoInputProps) {
         class="pico-field__input"
         rows={2}
         value={value}
-        placeholder={PLACEHOLDERS[field]}
+        placeholder={m.pico.placeholder[field]}
         onInput={(event) => {
           actions.setPicoField(field, event.currentTarget.value);
           autoGrow(event.currentTarget);
@@ -293,6 +280,7 @@ interface AbstractBlockProps {
 }
 
 function AbstractBlock({ abstract, block, marks, showCandidates, onActivate }: AbstractBlockProps) {
+  const m = useMessages();
   const nodes: ComponentChild[] = [];
 
   if (!showCandidates) {
@@ -312,8 +300,8 @@ function AbstractBlock({ abstract, block, marks, showCandidates, onActivate }: A
           class={`pico-mark pico-mark--${KEYS[mark.field]}`}
           role="button"
           tabIndex={0}
-          title={markTitle(mark)}
-          aria-label={`Add “${preview(mark.text)}” to ${PICO_LABELS[mark.field]}`}
+          title={markTitle(mark, m)}
+          aria-label={m.pico.markLabel(preview(mark.text), m.labels.pico[mark.field])}
           onClick={(event) => onActivate(mark, event.currentTarget, true)}
           onKeyDown={(event) => {
             if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -345,6 +333,7 @@ function AbstractBlock({ abstract, block, marks, showCandidates, onActivate }: A
 /* ------------------------------------------------------------------- the tab */
 
 export function PicoTab() {
+  const m = useMessages();
   const article = useStore((s) => s.article);
   const pico = useStore((s) => s.pico);
 
@@ -392,7 +381,7 @@ export function PicoTab() {
 
   const send = (field: PicoField, text: string): void => {
     actions.appendPicoField(field, collapseSpace(text));
-    setStatus(`Added to ${PICO_LABELS[field]}.`);
+    setStatus(m.pico.added(m.labels.pico[field]));
   };
 
   const openChooser = (
@@ -416,7 +405,7 @@ export function PicoTab() {
     send(mark.field, mark.text);
     if (mark.alternatives.length > 0) {
       const rect = element.getBoundingClientRect();
-      openChooser(rect, mark.text, mark.alternatives, 'Also add to', !viaPointer);
+      openChooser(rect, mark.text, mark.alternatives, m.pico.alsoAddTo, !viaPointer);
     } else {
       setChooser(null);
     }
@@ -431,7 +420,7 @@ export function PicoTab() {
       if (closeWhenEmpty) setChooser(null);
       return;
     }
-    openChooser(found.rect, found.text, [], 'Add the selection to', fromKeyboard);
+    openChooser(found.rect, found.text, [], m.pico.addSelectionTo, fromKeyboard);
   };
 
   // A click anywhere outside the abstract and the chooser dismisses it. Clicks
@@ -466,13 +455,9 @@ export function PicoTab() {
   return (
     <section class="pico" aria-labelledby="jch-pico-title">
       <h2 class="pico__title" id="jch-pico-title">
-        Clinical question
+        {m.pico.title}
       </h2>
-      <p class="pico__intro">
-        Write the question in your own words. The highlights below are phrases matched by simple cue
-        words — suggestions, not extraction. They miss a great deal, so selecting text yourself is
-        the main way to fill these in.
-      </p>
+      <p class="pico__intro">{m.pico.intro}</p>
 
       <div class="pico__fields">
         {FIELDS.map((field) => (
@@ -497,7 +482,7 @@ export function PicoTab() {
               <span class="pico-viewer__chevron" aria-hidden="true">
                 {viewerOpen ? '▾' : '▸'}
               </span>
-              Abstract
+              {m.pico.abstract}
             </button>
             <label class="pico-viewer__switch">
               <input
@@ -506,14 +491,12 @@ export function PicoTab() {
                 checked={showCandidates}
                 onChange={(event) => setShowCandidates(event.currentTarget.checked)}
               />
-              Show candidates
+              {m.pico.showCandidates}
             </label>
           </div>
 
           <div class="pico-viewer__body" id="jch-pico-viewer-body" hidden={!viewerOpen}>
-            <p class="pico-viewer__note">
-              A copy of the abstract. The PubMed page itself is never changed.
-            </p>
+            <p class="pico-viewer__note">{m.pico.viewerNote}</p>
 
             {showCandidates ? (
               <ul class="pico-legend">
@@ -522,7 +505,7 @@ export function PicoTab() {
                     <span class="pico-legend__swatch" aria-hidden="true">
                       {field}
                     </span>
-                    {PICO_LABELS[field]}
+                    {m.labels.pico[field]}
                     <span class="pico-legend__count">{counts[field]}</span>
                   </li>
                 ))}
@@ -530,24 +513,18 @@ export function PicoTab() {
             ) : null}
 
             <details class="pico-help">
-              <summary class="pico-help__summary">How to pull text into a field</summary>
+              <summary class="pico-help__summary">{m.pico.helpSummary}</summary>
               <ul class="pico-help__list">
-                <li>Click a highlighted phrase to add it to its field.</li>
-                <li>Select any text in the abstract to choose a field for it.</li>
-                <li>
-                  Keyboard: Tab to a highlight and press Enter. To select free text, turn on caret
-                  browsing (F7), select with Shift and the arrow keys, then press Enter.
-                </li>
-                <li>
-                  Adding to a field that already has text appends to it; nothing is overwritten.
-                </li>
+                {m.pico.help.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
               </ul>
             </details>
 
             {titleOffer !== null && showCandidates ? (
               <div class="pico-title-offer">
                 <p class="pico-title-offer__text">
-                  <span class="pico-title-offer__label">From the title</span>
+                  <span class="pico-title-offer__label">{m.pico.fromTitle}</span>
                   {titleOffer.text}
                 </p>
                 <div class="pico-title-offer__actions">
@@ -556,8 +533,8 @@ export function PicoTab() {
                       key={field}
                       class={`pico-choice pico-choice--${KEYS[field]}`}
                       type="button"
-                      title={PICO_LABELS[field]}
-                      aria-label={`Add the title to ${PICO_LABELS[field]}`}
+                      title={m.labels.pico[field]}
+                      aria-label={m.pico.addTitleTo(m.labels.pico[field])}
                       onClick={() => send(field, titleOffer.text)}
                     >
                       {`→ ${field}`}
@@ -571,7 +548,7 @@ export function PicoTab() {
               class="pico-abstract"
               ref={hostRef}
               role="region"
-              aria-label="Abstract text"
+              aria-label={m.pico.abstractText}
               tabIndex={0}
               onMouseUp={() => syncSelection(true, false)}
               onKeyUp={(event) => {
@@ -609,7 +586,7 @@ export function PicoTab() {
                   class="pico-chooser"
                   ref={chooserRef}
                   role="group"
-                  aria-label="Send this phrase to a PICO field"
+                  aria-label={m.pico.chooserLabel}
                   title={preview(chooser.text)}
                   style={{ top: `${chooser.top}px`, left: `${chooser.left}px` }}
                   onKeyDown={(event) => {
@@ -628,8 +605,8 @@ export function PicoTab() {
                           chooser.suggested.includes(field) ? ' pico-choice--suggested' : ''
                         }`}
                         type="button"
-                        title={PICO_LABELS[field]}
-                        aria-label={`Add to ${PICO_LABELS[field]}`}
+                        title={m.labels.pico[field]}
+                        aria-label={m.pico.addTo(m.labels.pico[field])}
                         onClick={() => {
                           send(field, chooser.text);
                           closeChooser(true);
@@ -641,7 +618,7 @@ export function PicoTab() {
                     <button
                       class="pico-chooser__close"
                       type="button"
-                      aria-label="Close"
+                      aria-label={m.pico.close}
                       onClick={() => closeChooser(true)}
                     >
                       ×
@@ -653,10 +630,7 @@ export function PicoTab() {
           </div>
         </section>
       ) : (
-        <p class="pico__empty">
-          This page has no abstract text, so there is nothing to highlight. The four fields above
-          still work.
-        </p>
+        <p class="pico__empty">{m.pico.noAbstract}</p>
       )}
     </section>
   );

@@ -56,6 +56,180 @@ export const ja: Messages = {
     looking: 'PubMed の抄録を探しています…',
   },
 
+  labels: {
+    design: {
+      rct: 'ランダム化比較試験',
+      'non-randomized-trial': '非ランダム化試験',
+      cohort: 'コホート研究',
+      'case-control': '症例対照研究',
+      'cross-sectional': '横断研究',
+      'sr-ma': 'システマティックレビュー／メタアナリシス',
+      diagnostic: '診断精度研究',
+      unclear: '判定できず',
+    },
+    designUnclearOption: '不明・その他',
+    subtype: {
+      parallel: '並行群間',
+      crossover: 'クロスオーバー',
+      cluster: 'クラスター',
+      'non-inferiority': '非劣性',
+      'systematic-review': 'システマティックレビュー',
+      'meta-analysis': 'メタアナリシス',
+      'network-meta-analysis': 'ネットワークメタアナリシス',
+    },
+    subtypeLine: {
+      'non-inferiority': '非劣性デザイン',
+      equivalence: '同等性デザイン',
+      crossover: 'クロスオーバーデザイン',
+      cluster: 'クラスターランダム化デザイン',
+      parallel: '並行群間デザイン',
+      'systematic-review': 'システマティックレビュー',
+      'meta-analysis': 'メタアナリシス',
+      'network-meta-analysis': 'ネットワークメタアナリシス',
+    },
+    subtypeLineFallback: (subtype: string) => `${subtype} デザイン`,
+    designWithSubtype: (design: string, subtype: string) => `${design}（${subtype}）`,
+    confidence: {
+      high: '文献の種類（publication type）から判定',
+      medium: '抄録の語句から判定',
+      low: '判定できず',
+    },
+    evidenceKind: { 'publication-type': '文献の種類', keyword: '抄録の語句' },
+    section: { 'internal-validity': '内的妥当性', applicability: '適用可能性' },
+    sourceScope: {
+      abstract: '抄録のみ',
+      'full-text': '本文',
+      supplement: '補足資料',
+      protocol: 'プロトコル',
+      registry: '試験登録',
+      other: 'その他の資料',
+    },
+    evidenceNeed: {
+      abstract: 'たいていは抄録で答えられます。',
+      'full-text': 'たいていは本文が必要です。抄録にここまで書かれることはまれです。',
+      'protocol-or-registry': 'たいていはプロトコル、統計解析計画書、または試験登録が必要です。',
+    },
+    verdict: { yes: 'はい', no: 'いいえ', unclear: '不明' },
+    pico: { P: '対象', I: '介入', C: '比較', O: 'アウトカム' },
+  },
+
+  design: {
+    key: '研究デザイン:',
+    setManually: '手動で設定',
+    noSubtype: '細分類なし',
+    evidence: (count: number) => `根拠（${count}）`,
+    design: 'デザイン',
+    subtype: '細分類',
+    reset: '判定結果に戻す',
+    notDetectedHint:
+      '文献の種類にも抄録の語句にも、研究デザインに当てはまるものがありませんでした。チェックリストと出力をこの論文に合わせるため、下から選んでください。',
+    suggested: (what: string) => `自動判定の結果は「${what}」でした。`,
+    foundNoSubtype: '自動判定では細分類は見つかりませんでした。',
+  },
+
+  pico: {
+    title: '臨床疑問',
+    intro:
+      '臨床疑問を自分の言葉で書いてください。下の強調表示は、手がかりになる語句を機械的に拾った候補で、内容を抽出したものではありません。拾えないものも多いので、自分で文章を選択して入れるのが基本です。',
+    placeholder: {
+      P: '例：肺炎で入院した成人',
+      I: '例：アモキシシリン内服 5 日間',
+      C: '例：プラセボ、または同じ薬を 10 日間',
+      O: '例：30 日以内の死亡',
+    },
+    clear: '消去',
+    clearField: (field: string) => `「${field}」を消去`,
+    markTitle: (field: string, reason: string, also: string[]) => {
+      const cue =
+        reason === 'numeric result' ? '結果の数値を含むため' : `抄録に “${reason}” とあるため`;
+      const tail =
+        also.length > 0
+          ? `同じ箇所は${also.map((name) => `「${name}」`).join('と')}の候補でもあります。`
+          : '';
+      return `${cue}、「${field}」の候補にしています。${tail}`;
+    },
+    markLabel: (text: string, field: string) => `“${text}” を「${field}」に追加`,
+    added: (field: string) => `「${field}」に追加しました。`,
+    alsoAddTo: 'ほかの欄にも追加',
+    addSelectionTo: '選択した文章の追加先',
+    abstract: '抄録',
+    showCandidates: '候補を表示',
+    viewerNote: '抄録の写しです。PubMed のページ自体は変更しません。',
+    helpSummary: '文章を欄に入れる方法',
+    help: [
+      '強調表示された語句をクリックすると、その欄に追加されます。',
+      '抄録の文章を選択すると、追加先の欄を選べます。',
+      'キーボード：Tab で強調表示に移動して Enter を押します。自由に選択するには、カーソルブラウジング（F7）をオンにし、Shift と矢印キーで選択して Enter を押します。',
+      'すでに文章がある欄には、後ろに追加されます。上書きはしません。',
+    ],
+    fromTitle: 'タイトルから',
+    addTitleTo: (field: string) => `タイトルを「${field}」に追加`,
+    abstractText: '抄録の本文',
+    chooserLabel: 'この語句を入れる PICO の欄を選ぶ',
+    addTo: (field: string) => `「${field}」に追加`,
+    close: '閉じる',
+    noAbstract: 'このページには抄録がないため、強調表示はありません。上の 4 つの欄は使えます。',
+  },
+
+  validity: {
+    title: '批判的吟味',
+    sectionLede: {
+      'internal-validity':
+        'この研究が、自ら立てた疑問にどこまで答えられるかを見ます。方法を評価してください。手元の資料に書かれていない場合、それは確認できる範囲の限界であって、研究の欠点が見つかったわけではありません。',
+      applicability:
+        '上とは別の問いです。この研究から言えることが、目の前の患者さんにも当てはまるかを見ます。研究として確かでも当てはまらないことがあり、当てはまりそうでも研究として不確かなことがあります。',
+    },
+    unanswered: '未回答',
+    clear: '取り消す',
+    clearAnswer: (item: string) => `「${item}」の回答を取り消す`,
+    readIn: '確認した資料',
+    inherited: (scope: string) => `${scope}（全体の設定）`,
+    lookFor: '確認するポイント',
+    why: 'なぜ重要か',
+    note: 'メモ',
+    addNote: 'メモを追加',
+    noteFor: (item: string) => `「${item}」のメモ`,
+    notePlaceholder: 'この点について議論したいこと',
+    extraChecks: '上の項目に加えて確認する項目',
+    recordedNotScored: '記録のみ（評価には含めません）',
+    answered: (answered: number, total: number) => `${total} 項目中 ${answered} 項目に回答`,
+    tally: (count: number, verdict: string) => `${verdict} ${count}`,
+    scopeTitle: 'どの資料をもとに吟味していますか？',
+    scopeHint:
+      '吟味と一緒に保存され、すべての項目の初期設定になります。出力を読む人に、何をもとに判断したかが伝わります。',
+    lede: '「不明」は、手元の資料に書かれていないという意味です。根拠についての正直な答えであって、研究の減点ではありません。',
+    helpSummary: '「はい」「いいえ」「不明」の意味',
+    designNotDetected:
+      '研究デザインを判定できませんでした。上の欄で選ぶか、この汎用チェックリストを使ってください。',
+  },
+
+  export: {
+    title: '1 枚の要約',
+    noArticle: 'このパネルに PubMed の論文が読み込まれていないため、出力できるものがありません。',
+    bottomLine: '結論（自分の言葉で）',
+    bottomLineHint: (product: string) =>
+      `この論文から何が言えると考えるか、それをどの程度重視するかを、1〜2 文で書いてください。${product} が代わりに書くことはありません。入力したとおりに要約に入り、空欄なら空欄のままです。`,
+    bottomLinePlaceholder:
+      '例：絶対効果は大きいが、試験は早期中止され、アウトカム評価も盲検化されていない。効果の大きさを信じる前に本文を確認したい。',
+    copyMarkdown: 'Markdown をコピー',
+    copyText: 'テキストをコピー',
+    download: '.md をダウンロード',
+    copied: {
+      markdown: 'Markdown をクリップボードにコピーしました。',
+      text: 'テキストをクリップボードにコピーしました。',
+    },
+    saved: (filename: string) => `${filename} をダウンロードフォルダに保存しました。`,
+    copyBlocked: (reason: string | null) =>
+      `ブラウザがコピーを許可しませんでした${reason === null ? '' : `（${reason}）`}。`,
+    noClipboard: 'このブラウザでは、パネルからクリップボードを使えません。',
+    clipboardFallback:
+      '下のプレビューの文章を選択して自分でコピーするか（Ctrl+C、Mac では Cmd+C）、「.md をダウンロード」を使ってください。',
+    buildFailed: (reason: string | null) =>
+      `ファイルを作れませんでした${reason === null ? '' : `（${reason}）`}。代わりに下のプレビューをコピーできます。`,
+    preview: 'プレビュー（ボタンでコピーされる内容そのもの）',
+    wrap: '長い行を折り返す',
+  },
+
   pageButton: {
     label: '抄読会',
     title: '批判的吟味のパネルを開く',

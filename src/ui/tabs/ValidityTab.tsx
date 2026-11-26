@@ -41,14 +41,8 @@ import {
   visibleItems,
 } from '../../lib/checklist-schema';
 import type { ChecklistItem, InfoPanel, ItemAnswer, SourceScope, Verdict } from '../../lib/types';
-import {
-  EVIDENCE_NEED_HINTS,
-  SECTION_LABELS,
-  SOURCE_SCOPE_LABELS,
-  SOURCE_SCOPE_ORDER,
-  VERDICT_LABELS,
-  designLabel,
-} from '../labels';
+import { useMessages } from '../i18n';
+import { SOURCE_SCOPE_ORDER, designLabel } from '../labels';
 import { actions, effectiveDesign, effectiveSubtype, useStore } from '../store';
 import './validity.css';
 
@@ -60,14 +54,6 @@ const UNANSWERED: ItemAnswer = Object.freeze(emptyAnswer());
 
 /** The per-item source <option> that means "whatever the appraisal is scoped to". */
 const INHERIT = '';
-
-/** One line each, so the two scored sections cannot be read as the same question. */
-const SECTION_LEDE: Record<string, string> = {
-  'internal-validity':
-    'How far the study can answer its own question. Judge the methods. Where your source does not say, that is a limit on what you can check, not a fault you have found.',
-  applicability:
-    'A different question from the ones above: whether an answer this study supports would transfer to your patient. A study can be sound here and still not apply, or apply and still be shaky.',
-};
 
 /** Only ever valid source strings reach the store, without a cast. */
 function toScope(value: string): SourceScope | null {
@@ -93,6 +79,7 @@ interface ValidityItemProps {
 }
 
 function ValidityItem({ checklistId, item, number, answer, scope }: ValidityItemProps) {
+  const m = useMessages();
   // The note disclosure opens on demand, and also whenever a note already
   // exists (restored from storage). It is deliberately not closed again when
   // the text is deleted, so the box cannot collapse under the caret.
@@ -114,15 +101,15 @@ function ValidityItem({ checklistId, item, number, answer, scope }: ValidityItem
       <div class="validity-item__head">
         <span class="validity-item__concept">{`${number} · ${label}`}</span>
         {answer.verdict === null ? (
-          <span class="validity-item__flag">Unanswered</span>
+          <span class="validity-item__flag">{m.validity.unanswered}</span>
         ) : (
           <button
             class="validity-item__clear"
             type="button"
             onClick={() => actions.setVerdict(checklistId, item.id, null)}
-            aria-label={`Clear the answer for ${label}`}
+            aria-label={m.validity.clearAnswer(label)}
           >
-            Clear
+            {m.validity.clear}
           </button>
         )}
       </div>
@@ -140,14 +127,14 @@ function ValidityItem({ checklistId, item, number, answer, scope }: ValidityItem
                 checked={answer.verdict === verdict}
                 onChange={() => actions.setVerdict(checklistId, item.id, verdict)}
               />
-              <span class="validity-choice__face">{VERDICT_LABELS[verdict]}</span>
+              <span class="validity-choice__face">{m.labels.verdict[verdict]}</span>
             </label>
           ))}
         </div>
       </fieldset>
 
       <label class={`validity-source${inherited ? '' : ' validity-source--custom'}`}>
-        <span class="validity-source__label">Read in</span>
+        <span class="validity-source__label">{m.validity.readIn}</span>
         <select
           class="validity-source__select"
           value={answer.source ?? INHERIT}
@@ -159,22 +146,22 @@ function ValidityItem({ checklistId, item, number, answer, scope }: ValidityItem
         >
           {/* The scope name leads, so the inherited source survives the ellipsis
               when the select is narrower than the wording. */}
-          <option value={INHERIT}>{`${SOURCE_SCOPE_LABELS[scope]} — appraisal default`}</option>
+          <option value={INHERIT}>{m.validity.inherited(m.labels.sourceScope[scope])}</option>
           {SOURCE_SCOPE_ORDER.map((option) => (
             <option key={option} value={option}>
-              {SOURCE_SCOPE_LABELS[option]}
+              {m.labels.sourceScope[option]}
             </option>
           ))}
         </select>
       </label>
 
       {/* Not a warning about the study: a note about what this source can settle. */}
-      {needsMore ? <p class="validity-item__need">{EVIDENCE_NEED_HINTS[item.needs]}</p> : null}
+      {needsMore ? <p class="validity-item__need">{m.labels.evidenceNeed[item.needs]}</p> : null}
 
       <div class="validity-item__tools">
         {lookFor.length > 0 ? (
           <details class="validity-disclosure">
-            <summary class="validity-disclosure__summary">What to look for</summary>
+            <summary class="validity-disclosure__summary">{m.validity.lookFor}</summary>
             <ul class="validity-disclosure__body validity-looks">
               {lookFor.map((clue) => (
                 <li key={clue} class="validity-looks__item">
@@ -185,7 +172,7 @@ function ValidityItem({ checklistId, item, number, answer, scope }: ValidityItem
           </details>
         ) : null}
         <details class="validity-disclosure">
-          <summary class="validity-disclosure__summary">Why it matters</summary>
+          <summary class="validity-disclosure__summary">{m.validity.why}</summary>
           <p class="validity-disclosure__body">{item.why}</p>
         </details>
         <details
@@ -193,14 +180,16 @@ function ValidityItem({ checklistId, item, number, answer, scope }: ValidityItem
           open={noteOpen || hasNote}
           onToggle={(event) => setNoteOpen(event.currentTarget.open)}
         >
-          <summary class="validity-disclosure__summary">{hasNote ? 'Note' : 'Add a note'}</summary>
+          <summary class="validity-disclosure__summary">
+            {hasNote ? m.validity.note : m.validity.addNote}
+          </summary>
           <div class="validity-disclosure__body">
             <textarea
               class="validity-note"
               rows={3}
               value={answer.note}
-              aria-label={`Note for ${label}`}
-              placeholder="What you would raise about this point"
+              aria-label={m.validity.noteFor(label)}
+              placeholder={m.validity.notePlaceholder}
               onInput={(event) =>
                 actions.setValidityAnswer(checklistId, item.id, { note: event.currentTarget.value })
               }
@@ -238,6 +227,7 @@ interface BlockViewProps {
 }
 
 function BlockView({ block, checklistId, start, answers, scope }: BlockViewProps) {
+  const m = useMessages();
   const items = (
     <ol class="validity__items">
       {block.items.map((item, index) => (
@@ -260,7 +250,7 @@ function BlockView({ block, checklistId, start, answers, scope }: BlockViewProps
       <div class="validity-section__head">
         <h3 class="validity-section__title">{block.title}</h3>
         {block.kind === 'group' ? (
-          <span class="validity-section__badge">Extra checks, added to the list above</span>
+          <span class="validity-section__badge">{m.validity.extraChecks}</span>
         ) : null}
       </div>
       {block.lede ? <p class="validity-section__lede">{block.lede}</p> : null}
@@ -283,13 +273,14 @@ interface InfoPanelViewProps {
  * not a finding that marks a study down.
  */
 function InfoPanelView({ panel, values }: InfoPanelViewProps) {
+  const m = useMessages();
   return (
     <section class="validity-info" aria-labelledby="jch-validity-info-title">
       <div class="validity-info__head">
         <h3 class="validity-info__title" id="jch-validity-info-title">
           {panel.title}
         </h3>
-        <span class="validity-info__badge">Recorded, not scored</span>
+        <span class="validity-info__badge">{m.validity.recordedNotScored}</span>
       </div>
       <p class="validity-info__prompt">{panel.prompt}</p>
       <p class="validity-info__why">{panel.why}</p>
@@ -322,6 +313,7 @@ function InfoPanelView({ panel, values }: InfoPanelViewProps) {
 /* ----------------------------------------------------------------------- tab */
 
 export function ValidityTab() {
+  const m = useMessages();
   const design = useStore(effectiveDesign);
   const subtype = useStore(effectiveSubtype);
   // The whole record is selected rather than one checklist's slice: `useStore`
@@ -351,8 +343,8 @@ export function ValidityTab() {
     blocks.push({
       key: 'internal-validity',
       kind: 'internal-validity',
-      title: SECTION_LABELS['internal-validity'],
-      lede: SECTION_LEDE['internal-validity'],
+      title: m.labels.section['internal-validity'],
+      lede: m.validity.sectionLede['internal-validity'],
       items: internal,
     });
   }
@@ -369,8 +361,8 @@ export function ValidityTab() {
     blocks.push({
       key: 'applicability',
       kind: 'applicability',
-      title: SECTION_LABELS.applicability,
-      lede: SECTION_LEDE.applicability,
+      title: m.labels.section.applicability,
+      lede: m.validity.sectionLede.applicability,
       items: applicability,
     });
   }
@@ -402,19 +394,19 @@ export function ValidityTab() {
   // carried in the line and the ones given colour. A tally of zero is dropped
   // rather than printed as "0 No".
   const parts: { key: string; text: string; tone: string }[] = [
-    { key: 'answered', text: `${answered} of ${scored.length} answered`, tone: '' },
+    { key: 'answered', text: m.validity.answered(answered, scored.length), tone: '' },
   ];
   if (noCount > 0) {
     parts.push({
       key: 'no',
-      text: `${noCount} ${VERDICT_LABELS.no}`,
+      text: m.validity.tally(noCount, m.labels.verdict.no),
       tone: ' validity__count--no',
     });
   }
   if (unclearCount > 0) {
     parts.push({
       key: 'unclear',
-      text: `${unclearCount} ${VERDICT_LABELS.unclear}`,
+      text: m.validity.tally(unclearCount, m.labels.verdict.unclear),
       tone: ' validity__count--unclear',
     });
   }
@@ -423,10 +415,10 @@ export function ValidityTab() {
     <section class="validity" aria-labelledby="jch-validity-title">
       <div class="validity__head">
         <h2 class="validity__title" id="jch-validity-title">
-          Critical appraisal
+          {m.validity.title}
         </h2>
         {design === 'unclear' ? null : (
-          <p class="validity__design">{designLabel(design, subtype)}</p>
+          <p class="validity__design">{designLabel(design, subtype, m)}</p>
         )}
       </div>
 
@@ -445,7 +437,7 @@ export function ValidityTab() {
 
       <div class="validity-scope">
         <label class="validity-scope__label">
-          <span class="validity-scope__title">What are you working from?</span>
+          <span class="validity-scope__title">{m.validity.scopeTitle}</span>
           <select
             class="validity-scope__select"
             value={scope}
@@ -456,39 +448,29 @@ export function ValidityTab() {
           >
             {SOURCE_SCOPE_ORDER.map((option) => (
               <option key={option} value={option}>
-                {SOURCE_SCOPE_LABELS[option]}
+                {m.labels.sourceScope[option]}
               </option>
             ))}
           </select>
         </label>
-        <p class="validity-scope__hint">
-          Saved with the appraisal and used as the default for every item, so a reader of the export
-          knows what these judgements were based on.
-        </p>
+        <p class="validity-scope__hint">{m.validity.scopeHint}</p>
       </div>
 
-      <p class="validity__lede">
-        Unclear means the source in front of you does not say. It is an honest answer about your
-        evidence, not a mark against the study.
-      </p>
+      <p class="validity__lede">{m.validity.lede}</p>
 
       <details class="validity-help">
-        <summary class="validity-help__summary">What Yes, No and Unclear mean</summary>
+        <summary class="validity-help__summary">{m.validity.helpSummary}</summary>
         <dl class="validity-help__list">
           {VERDICTS.map((verdict) => (
             <Fragment key={verdict}>
-              <dt class="validity-help__term">{VERDICT_LABELS[verdict]}</dt>
+              <dt class="validity-help__term">{m.labels.verdict[verdict]}</dt>
               <dd class="validity-help__desc">{VERDICT_HELP[verdict]}</dd>
             </Fragment>
           ))}
         </dl>
       </details>
 
-      {design === 'unclear' ? (
-        <p class="validity__hint">
-          Study design was not detected. Pick one in the header or use this generic checklist.
-        </p>
-      ) : null}
+      {design === 'unclear' ? <p class="validity__hint">{m.validity.designNotDetected}</p> : null}
 
       {checklist.note ? <p class="validity__note">{checklist.note}</p> : null}
 
