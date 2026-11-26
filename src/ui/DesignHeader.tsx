@@ -14,14 +14,11 @@
  * otherwise unreachable when the classifier misses the wording.
  */
 import { STUDY_DESIGNS } from '../lib/types';
-import type { DesignClassification, DesignEvidence, StudyDesign } from '../lib/types';
+import type { DesignClassification, StudyDesign } from '../lib/types';
 import { useDesign } from './hooks/useDesign';
-import {
-  CONFIDENCE_LABELS,
-  DESIGN_LABELS,
-  DESIGN_OPTION_LABELS,
-  SUBTYPE_DESIGN_LINES,
-} from './labels';
+import type { Messages } from '../locales';
+import { useMessages } from './i18n';
+import { subtypeLine } from './labels';
 import { useStore } from './store';
 import './design-header.css';
 
@@ -34,12 +31,6 @@ const SUBTYPE_SELECT_ID = 'jch-subtype-override';
  * — `null` means "no override", i.e. whatever detection found still stands.
  */
 const NO_SUBTYPE = '';
-
-/** Read inline after the phrase itself: `randomized · abstract keyword`. */
-const EVIDENCE_KIND_LABELS: Record<DesignEvidence['kind'], string> = {
-  'publication-type': 'publication type',
-  keyword: 'abstract keyword',
-};
 
 /**
  * Trials and reviews are the only designs with subtypes that change the
@@ -67,18 +58,8 @@ const SUBTYPE_CHOICES: Partial<Record<StudyDesign, readonly string[]>> = {
   'sr-ma': REVIEW_SUBTYPES,
 };
 
-const NOT_DETECTED_HINT =
-  'Nothing in the publication types or the abstract wording matched a study design. Choose one below so the checklist and the export match this article.';
-
 function toDesign(value: string): StudyDesign | null {
   return STUDY_DESIGNS.find((design) => design === value) ?? null;
-}
-
-/** A subtype nobody wrote a line for still has to read as a line, not vanish. */
-function subtypeLine(subtype: string): string {
-  return (
-    SUBTYPE_DESIGN_LINES[subtype] ?? `${subtype.charAt(0).toUpperCase()}${subtype.slice(1)} design`
-  );
 }
 
 /**
@@ -90,21 +71,23 @@ function detectionNote(
   detected: DesignClassification,
   design: StudyDesign,
   subtype: string | null,
+  m: Messages,
 ): string | null {
   if (detected.design !== design) {
-    const line = detected.subtype === null ? '' : ` · ${subtypeLine(detected.subtype)}`;
-    return `Detection suggested ${DESIGN_LABELS[detected.design]}${line}.`;
+    const line = detected.subtype === null ? '' : ` · ${subtypeLine(detected.subtype, m)}`;
+    return m.design.suggested(`${m.labels.design[detected.design]}${line}`);
   }
   // An explicit "no subtype" is the empty string; for this comparison it is the
   // same nothing as a detection that found none.
   const inForce = subtype === NO_SUBTYPE ? null : subtype;
   if (inForce === detected.subtype) return null;
   return detected.subtype === null
-    ? 'Detection found no subtype.'
-    : `Detection suggested ${subtypeLine(detected.subtype)}.`;
+    ? m.design.foundNoSubtype
+    : m.design.suggested(subtypeLine(detected.subtype, m));
 }
 
 export function DesignHeader() {
+  const m = useMessages();
   // The bound article outlives an unsupported tab, so the design must not be
   // shown next to a header that says "open an abstract".
   const ready = useStore((s) => s.status === 'ready');
@@ -127,15 +110,19 @@ export function DesignHeader() {
   const detected = classification && classification.design !== 'unclear' ? classification : null;
   const evidence = classification?.evidence ?? [];
   const badge = isOverridden
-    ? 'Set manually'
+    ? m.design.setManually
     : detected
-      ? CONFIDENCE_LABELS[detected.confidence]
+      ? m.labels.confidence[detected.confidence]
       : null;
-  const note = detected ? detectionNote(detected, design, subtype) : null;
+  const note = detected ? detectionNote(detected, design, subtype, m) : null;
 
   const choices = SUBTYPE_CHOICES[design] ?? null;
   // A subtype the reader cleared still has to show as their doing, not as silence.
-  const subtypeText = subtype ? subtypeLine(subtype) : isSubtypeOverridden ? 'No subtype' : null;
+  const subtypeText = subtype
+    ? subtypeLine(subtype, m)
+    : isSubtypeOverridden
+      ? m.design.noSubtype
+      : null;
   // The subtype the detection would supply if every override were dropped.
   const fallbackSubtype = isOverridden ? null : detectedSubtype;
   // An unrecognised subtype is still listed, or the select would quietly show
@@ -155,8 +142,8 @@ export function DesignHeader() {
   return (
     <div class="design">
       <p class="design__line">
-        <span class="design__key">Study design:</span>{' '}
-        <span class="design__name">{DESIGN_LABELS[design]}</span>
+        <span class="design__key">{m.design.key}</span>{' '}
+        <span class="design__name">{m.labels.design[design]}</span>
       </p>
 
       {subtypeText === null ? null : (
@@ -165,7 +152,7 @@ export function DesignHeader() {
           {isSubtypeOverridden ? (
             <>
               {' · '}
-              <span class="design__badge design__badge--manual">Set manually</span>
+              <span class="design__badge design__badge--manual">{m.design.setManually}</span>
             </>
           ) : null}
         </p>
@@ -179,18 +166,18 @@ export function DesignHeader() {
         </p>
       )}
 
-      {!isOverridden && !detected ? <p class="design__hint">{NOT_DETECTED_HINT}</p> : null}
+      {!isOverridden && !detected ? <p class="design__hint">{m.design.notDetectedHint}</p> : null}
 
       {evidence.length > 0 ? (
         <details class="design__evidence">
-          <summary class="design__evidence-summary">Evidence ({evidence.length})</summary>
+          <summary class="design__evidence-summary">{m.design.evidence(evidence.length)}</summary>
           {note === null ? null : <p class="design__evidence-note">{note}</p>}
           <ul class="design__evidence-list">
             {evidence.map((item) => (
               <li class="design__evidence-item" key={`${item.kind}:${item.value}`}>
                 <span class="design__evidence-value">{item.value}</span>
                 {' · '}
-                <span class="design__evidence-kind">{EVIDENCE_KIND_LABELS[item.kind]}</span>
+                <span class="design__evidence-kind">{m.labels.evidenceKind[item.kind]}</span>
               </li>
             ))}
           </ul>
@@ -199,7 +186,7 @@ export function DesignHeader() {
 
       <div class="design__controls">
         <label class="design__label" for={DESIGN_SELECT_ID}>
-          Design
+          {m.design.design}
         </label>
         <select
           id={DESIGN_SELECT_ID}
@@ -212,7 +199,7 @@ export function DesignHeader() {
         >
           {STUDY_DESIGNS.map((option) => (
             <option key={option} value={option}>
-              {DESIGN_OPTION_LABELS[option]}
+              {option === 'unclear' ? m.labels.designUnclearOption : m.labels.design[option]}
             </option>
           ))}
         </select>
@@ -220,7 +207,7 @@ export function DesignHeader() {
         {choices === null ? null : (
           <>
             <label class="design__label" for={SUBTYPE_SELECT_ID}>
-              Subtype
+              {m.design.subtype}
             </label>
             <select
               id={SUBTYPE_SELECT_ID}
@@ -228,13 +215,13 @@ export function DesignHeader() {
               value={subtype ?? NO_SUBTYPE}
               onChange={(event) => chooseSubtype(event.currentTarget.value)}
             >
-              <option value={NO_SUBTYPE}>No subtype</option>
+              <option value={NO_SUBTYPE}>{m.design.noSubtype}</option>
               {listed.map((option) => (
                 <option key={option} value={option}>
-                  {subtypeLine(option)}
+                  {subtypeLine(option, m)}
                 </option>
               ))}
-              {extra === null ? null : <option value={extra}>{subtypeLine(extra)}</option>}
+              {extra === null ? null : <option value={extra}>{subtypeLine(extra, m)}</option>}
             </select>
           </>
         )}
@@ -246,7 +233,7 @@ export function DesignHeader() {
               type="button"
               onClick={isOverridden ? reset : resetSubtype}
             >
-              Reset to detected
+              {m.design.reset}
             </button>
           </div>
         ) : null}

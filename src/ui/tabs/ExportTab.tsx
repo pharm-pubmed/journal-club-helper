@@ -30,6 +30,8 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { incrementCounter } from '../../lib/counters';
 import { buildSummaryMarkdown, buildSummaryText } from '../../lib/summary-builder';
 import type { Appraisal } from '../../lib/types';
+import type { Messages } from '../../locales';
+import { useMessages } from '../i18n';
 import { PRODUCT_NAME } from '../labels';
 import { actions, store, toAppraisal, useStore } from '../store';
 import './export.css';
@@ -38,18 +40,6 @@ const SUMMARY_OPTIONS = { productName: PRODUCT_NAME };
 
 /** How long "Copied" stays up. Errors are not cleared on a timer. */
 const CONFIRMATION_MS = 2500;
-
-/**
- * A blocked clipboard must never be a dead end: the text is already on screen,
- * selectable, and the download does not need the clipboard at all.
- */
-const CLIPBOARD_FALLBACK =
-  'You can still select the text in the preview below and copy it yourself (Ctrl+C, or Cmd+C on a Mac), or use Download .md.';
-
-const NO_ARTICLE = 'No PubMed article is bound to this panel, so there is nothing to export yet.';
-
-const BOTTOM_LINE_PLACEHOLDER =
-  'e.g. Large absolute benefit, but the trial was stopped early and outcome assessment was not blinded, so I would read the full text before trusting the size of the effect.';
 
 type Tone = 'ok' | 'error';
 
@@ -70,13 +60,12 @@ function reasonOf(error: unknown): string | null {
   return error instanceof Error && error.message ? error.message : null;
 }
 
-function copyFailure(error: unknown): string {
-  const reason = reasonOf(error);
-  const head =
-    reason === null
-      ? 'This browser blocked the copy.'
-      : `This browser blocked the copy (${reason}).`;
-  return `${head} ${CLIPBOARD_FALLBACK}`;
+/**
+ * A blocked clipboard must never be a dead end: the text is already on screen,
+ * selectable, and the download does not need the clipboard at all.
+ */
+function copyFailure(error: unknown, m: Messages): string {
+  return `${m.export.copyBlocked(reasonOf(error))} ${m.export.clipboardFallback}`;
 }
 
 /**
@@ -100,6 +89,7 @@ function downloadMarkdown(markdown: string, filename: string): void {
 /* ---------------------------------------------------------------------- tab */
 
 export function ExportTab() {
+  const m = useMessages();
   // The whole state: every tab feeds the summary, so there is no narrower slice
   // to select. The store hands out a new object on each change, which is what
   // drives the preview below.
@@ -157,7 +147,7 @@ export function ExportTab() {
   function copy(format: 'markdown' | 'text'): void {
     const current = currentAppraisal();
     if (current === null) {
-      announce('error', NO_ARTICLE);
+      announce('error', m.export.noArticle);
       return;
     }
 
@@ -165,14 +155,13 @@ export function ExportTab() {
       format === 'markdown'
         ? buildSummaryMarkdown(current, SUMMARY_OPTIONS)
         : buildSummaryText(current, SUMMARY_OPTIONS);
-    const label = format === 'markdown' ? 'Markdown' : 'Plain text';
 
     // Undefined outside a secure context, and a stub without writeText in some
     // embedded browsers, so both are checked before it is called.
     const clipboard: Clipboard | undefined =
       typeof navigator === 'undefined' ? undefined : navigator.clipboard;
     if (!clipboard || typeof clipboard.writeText !== 'function') {
-      announce('error', `This browser gives the panel no clipboard access. ${CLIPBOARD_FALLBACK}`);
+      announce('error', `${m.export.noClipboard} ${m.export.clipboardFallback}`);
       return;
     }
 
@@ -181,25 +170,25 @@ export function ExportTab() {
       // Synchronous inside the click handler: see the note at the top of the file.
       write = clipboard.writeText(text);
     } catch (error) {
-      announce('error', copyFailure(error));
+      announce('error', copyFailure(error, m));
       return;
     }
 
     void write.then(
       () => {
-        announce('ok', `${label} copied to the clipboard.`);
+        announce('ok', m.export.copied[format]);
         // Counted only once the text is really on the clipboard: a denied copy
         // is not an export, and spec §7 shows this number back to the user.
         void incrementCounter('exports');
       },
-      (error: unknown) => announce('error', copyFailure(error)),
+      (error: unknown) => announce('error', copyFailure(error, m)),
     );
   }
 
   function download(): void {
     const current = currentAppraisal();
     if (current === null) {
-      announce('error', NO_ARTICLE);
+      announce('error', m.export.noArticle);
       return;
     }
 
@@ -207,16 +196,10 @@ export function ExportTab() {
     try {
       downloadMarkdown(buildSummaryMarkdown(current, SUMMARY_OPTIONS), filename);
     } catch (error) {
-      const reason = reasonOf(error);
-      announce(
-        'error',
-        reason === null
-          ? 'Could not build the file. You can copy the preview below instead.'
-          : `Could not build the file (${reason}). You can copy the preview below instead.`,
-      );
+      announce('error', m.export.buildFailed(reasonOf(error)));
       return;
     }
-    announce('ok', `${filename} saved to your downloads folder.`);
+    announce('ok', m.export.saved(filename));
     void incrementCounter('exports');
   }
 
@@ -224,9 +207,9 @@ export function ExportTab() {
     return (
       <section class="export" aria-labelledby="jch-export-title">
         <h2 class="export__title" id="jch-export-title">
-          One-page summary
+          {m.export.title}
         </h2>
-        <p class="export__empty">{NO_ARTICLE}</p>
+        <p class="export__empty">{m.export.noArticle}</p>
       </section>
     );
   }
@@ -234,24 +217,22 @@ export function ExportTab() {
   return (
     <section class="export" aria-labelledby="jch-export-title">
       <h2 class="export__title" id="jch-export-title">
-        One-page summary
+        {m.export.title}
       </h2>
 
       <div class="export__field">
         <label class="export__label" for="jch-bottom-line">
-          Bottom line — in your own words
+          {m.export.bottomLine}
         </label>
         <p class="export__hint" id="jch-bottom-line-hint">
-          One or two sentences: what you think this paper shows, and how much weight you would put
-          on it. {PRODUCT_NAME} never writes this for you — it is copied into the summary exactly as
-          you type it, and left blank if you leave it blank.
+          {m.export.bottomLineHint(PRODUCT_NAME)}
         </p>
         <textarea
           class="export__textarea"
           id="jch-bottom-line"
           rows={4}
           value={state.bottomLine}
-          placeholder={BOTTOM_LINE_PLACEHOLDER}
+          placeholder={m.export.bottomLinePlaceholder}
           aria-describedby="jch-bottom-line-hint"
           onInput={(event) => actions.setBottomLine(event.currentTarget.value)}
         />
@@ -263,13 +244,13 @@ export function ExportTab() {
           type="button"
           onClick={() => copy('markdown')}
         >
-          Copy Markdown
+          {m.export.copyMarkdown}
         </button>
         <button class="button export__button" type="button" onClick={() => copy('text')}>
-          Copy plain text
+          {m.export.copyText}
         </button>
         <button class="button export__button" type="button" onClick={download}>
-          Download .md
+          {m.export.download}
         </button>
       </div>
 
@@ -283,7 +264,7 @@ export function ExportTab() {
 
       <div class="export__preview-head">
         <span class="export__preview-label" id="jch-export-preview-label">
-          Preview — exactly what the buttons copy
+          {m.export.preview}
         </span>
         <label class="export__wrap">
           <input
@@ -291,7 +272,7 @@ export function ExportTab() {
             checked={wrapped}
             onChange={(event) => setWrapped(event.currentTarget.checked)}
           />
-          Wrap long lines
+          {m.export.wrap}
         </label>
       </div>
 
