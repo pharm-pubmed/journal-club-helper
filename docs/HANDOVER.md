@@ -190,7 +190,7 @@ Written before the first submission, so each step is a plan, not yet a record. C
 **Before the first submission, once:**
 
 1. The dedicated Google account exists (#30, §1), never the personal one. It has 2-Step Verification on, which publishing requires, and it has paid the developer registration fee.
-2. In the dashboard's account settings: the publisher name, a verified contact email (the project's address from #30), and the trader or non-trader declaration the EU requires.
+2. In the dashboard's account settings: the publisher name, a verified contact email (the project's address from #30), and the trader or non-trader declaration the EU requires. The free version is declared a **non-trader** (§7, _Non-trader until billing_).
 3. The repository has moved to the organization and is public (#30, §7), so every URL below is final.
 4. The landing page and the privacy policy are live over HTTPS (#29, #28). To name the site as the listing's official URL, verify `https://<org>.github.io/journal-club-helper/` in Google Search Console under the publisher account as a URL-prefix property (HTML tag method). Whether the dashboard offers a URL-prefix property on `github.io` is unverified; if it does not, leave the official URL empty, which the listing allows.
 5. No placeholder is left. This prints nothing:
@@ -457,6 +457,7 @@ As of 2026-09, `pubmed.ncbi.nlm.nih.gov` answers `curl` with a JavaScript proof-
   - The zip's contents are byte-identical to a build of c67da2e. On that build, `pnpm test:e2e:live` gave 8 passed and 2 skipped. The first test took 2.7 minutes; what it was waiting for, and whether a person passed PubMed's check, was not recorded.
   - The draft release carries the results. It stays a draft until the store item is live (§3, store step 8).
 - 2026-11-15: **The name leaves PubMed out (#79), so v0.3.0 was rebuilt.** The owner decided before the first submission: `Journal Club Helper: Critical Appraisal`, the fallback `docs/STORE-LISTING.md` already named. `check:manifest` now rejects the word anywhere in the name. The draft's zip was replaced with one built at 799c367 (SHA-256 `a8c67074…`), and the same script was run again. Every recorded value matched the first pass except the extension ID, and the F3 re-open timed out again and passed again in a separate session. The release notes first said "Manual QA passed"; they were corrected on 2026-11-24. `pnpm test:e2e:live` gave 8 passed and 2 skipped. The owner's choices for the data-disclosure form are still to come; `CHROMEWEBSTORE.md` _Data handling_ has the recommended ticks.
+- 2026-11-28: **Non-trader declaration (#31).** The identity check for a trader account rejected the owner's My Number card as unclear, and the owner has no passport or separate driving licence. Google's trader page says verified trader information is shown to store users, and one developer reported their home address on the listing. The owner decided to declare non-trader for the free version and to switch to trader before billing (§7, _Non-trader until billing_).
 
 ## 7. Decisions and why
 
@@ -637,6 +638,26 @@ Today the repository URL appears in exactly one shipped place, `src/ui/options/O
 - Numbers were kept. Issues #1–#70 were recreated in order: every issue was transferred with its comments, labels and milestone, and each pull-request number got a closed, locked issue naming the rewritten merge commit. So every `#nn` in these documents still means the same thing.
 - The v0.1.0 release was recreated with the same zip and notes, with the commit IDs updated.
 - Local clones from before 2026-11-15 have the old history: clone again rather than pulling. The repository's local `user.email` is now the noreply address, so new commits do not reintroduce the personal one.
+
+### Non-trader until billing — decided 2026-11-28
+
+The account is declared a **non-trader** under the EU Digital Services Act, for the free version.
+
+**Why:**
+
+- Identity verification is asked only of traders, according to the Chrome Extensions DevRel answer in the chromium-extensions group (2024-08). The owner's My Number card was rejected as unclear, and no other photo ID was available.
+- Google's trader page says verified trader information "is available to users of the Chrome Web Store", with no EU-only limit. One developer reported their home address showing on the listing.
+- The free version charges nothing, shows no ads and sells nothing.
+
+**What it costs:** EU users are told that consumer-protection rights do not apply to a non-trader. The status is self-declared and the developer's responsibility. Google's page does not mention monetization, but selling the Pro export (#39, #36) is very likely "acting for purposes relating to trade", so a non-trader declaration cannot cover it.
+
+**Before billing goes live (#36):**
+
+- Switch the account to trader, and pass identity verification.
+- Decide what address is shown first: a virtual office, a company, or the home address.
+- Check Japan's Act on Specified Commercial Transactions (特定商取引法), which also requires a seller's name, address and phone number for online sales. Not yet researched: when they may be withheld, and whether a virtual office qualifies.
+
+None of this was legal advice; it records the owner's decision and the sources read.
 
 ### No custom domain for now — decided 2026-11-15
 
