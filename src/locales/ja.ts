@@ -14,6 +14,63 @@ function recordsPhrase(readable: number, unreadable: number): string {
   return `吟味 ${n(readable)} 件と、${hidden}`;
 }
 
+/** Checklist item headings (#82). Checked against every concept in the checklists by a test. */
+const CONCEPTS: Record<string, string> = {
+  'accuracy-with-precision': '精度を伴う正確度',
+  'allocation-concealment': '割付の隠蔵',
+  'allocation-sequence': '割付順序の生成',
+  'analysis-population': '解析対象集団',
+  applicability: '適用可能性',
+  'appropriateness-of-pooling': '統合の妥当性',
+  'assay-sensitivity': '検出感度（assay sensitivity）',
+  'baseline-balance': 'ベースラインの均衡',
+  'case-definition': '症例の定義',
+  'certainty-of-evidence': 'エビデンスの確実性',
+  'complete-verification': '参照基準による確定の網羅性',
+  completeness: 'データの完全性',
+  confounding: '交絡',
+  'control-selection': '対照の選び方',
+  'design-appropriateness': '研究デザインの適切さ',
+  'duplicate-screening': '独立した 2 名による選択',
+  'effect-measure': '効果指標',
+  'exposure-ascertainment': '曝露の確認',
+  'exposure-classification': '曝露の分類',
+  'exposure-deviation': '曝露からの逸脱',
+  'flow-and-timing': '患者の流れとタイミング',
+  'focused-question': '明確な臨床疑問',
+  heterogeneity: '異質性',
+  interpretation: '解釈',
+  'interpretation-blinding': '結果判定の盲検化',
+  'intervention-deviations': '意図した介入からの逸脱',
+  'matching-and-adjustment': 'マッチングと調整',
+  measurement: '測定',
+  'measurement-validity': '測定の妥当性',
+  'missing-data': '欠測データ',
+  'missing-outcome-data': 'アウトカムデータの欠測',
+  'non-inferiority-analysis-sets': '非劣性の解析対象集団',
+  'non-inferiority-interpretation': '非劣性の解釈',
+  'non-inferiority-margin': '非劣性マージン',
+  'outcome-measurement': 'アウトカムの測定',
+  participation: '参加率',
+  'patient-selection': '患者の選択',
+  precision: '精度',
+  prespecification: '事前規定',
+  'prespecified-question': '事前に規定された疑問',
+  'prespecified-threshold': '事前に規定された閾値',
+  prevalence: '有病率',
+  'recall-and-interviewer-bias': '想起バイアスと面接者バイアス',
+  'reference-standard': '参照基準',
+  'residual-confounding': '残余交絡',
+  'sampling-frame': '抽出枠',
+  'search-comprehensiveness': '検索の網羅性',
+  selection: '対象の選択',
+  'selection-into-study': '研究への組み入れ',
+  'selective-reporting': '選択的報告',
+  'small-study-effects': '小規模研究効果',
+  'study-quality': '個々の研究の質',
+  temporality: '時間的前後関係',
+};
+
 export const ja: Messages = {
   common: {
     productName: 'Journal Club Helper',
@@ -111,6 +168,8 @@ export const ja: Messages = {
     },
     verdict: { yes: 'はい', no: 'いいえ', unclear: '不明' },
     pico: { P: '対象', I: '介入', C: '比較', O: 'アウトカム' },
+    /** The heading of each checklist item, keyed by its `concept`. */
+    concept: (concept: string): string => CONCEPTS[concept] ?? concept,
   },
 
   design: {

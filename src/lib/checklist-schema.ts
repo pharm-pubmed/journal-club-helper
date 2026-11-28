@@ -29,6 +29,15 @@ import rctJson from '../data/checklists/rct.json';
 import srMaJson from '../data/checklists/sr-ma.json';
 import unclearJson from '../data/checklists/unclear.json';
 import verdictsJson from '../data/verdict-help/verdicts.json';
+import caseControlJa from '../data/checklists/ja/case-control.json';
+import cohortJa from '../data/checklists/ja/cohort.json';
+import crossSectionalJa from '../data/checklists/ja/cross-sectional.json';
+import diagnosticJa from '../data/checklists/ja/diagnostic.json';
+import rctJa from '../data/checklists/ja/rct.json';
+import srMaJa from '../data/checklists/ja/sr-ma.json';
+import unclearJa from '../data/checklists/ja/unclear.json';
+import verdictsJa from '../data/verdict-help/ja/verdicts.json';
+import type { Locale } from './i18n';
 
 export type {
   Checklist,
@@ -94,42 +103,78 @@ function toChecklist(raw: RawChecklist): Checklist {
   };
 }
 
-const rct = toChecklist(rctJson);
-const cohort = toChecklist(cohortJson);
-const caseControl = toChecklist(caseControlJson);
-const crossSectional = toChecklist(crossSectionalJson);
-const srMa = toChecklist(srMaJson);
-const diagnostic = toChecklist(diagnosticJson);
-const unclear = toChecklist(unclearJson);
-
-/** Display order in the UI: the specific designs first, the generic one last. */
-const ALL: readonly Checklist[] = [
-  rct,
-  cohort,
-  caseControl,
-  crossSectional,
-  srMa,
-  diagnostic,
-  unclear,
-];
-
 /**
- * Keyed by string rather than by `StudyDesign` so a design string restored from
- * an older stored appraisal cannot index into the record unchecked.
- *
- * `non-randomized-trial` deliberately resolves to the RCT checklist (issue #1,
- * decision B5): design detection can produce that design, but the same items
- * apply — see the checklist-level note on rct.json.
+ * One set per language (#82). The Japanese files mirror the English ones item
+ * for item: same ids, sections and evidence needs, only the wording differs,
+ * so an answer saved in one language is the same answer in the other.
+ * `tests/lib/checklist-schema.test.ts` checks that they stay in step.
  */
-const BY_DESIGN: Readonly<Record<string, Checklist>> = {
-  rct,
-  'non-randomized-trial': rct,
-  cohort,
-  'case-control': caseControl,
-  'cross-sectional': crossSectional,
-  'sr-ma': srMa,
-  diagnostic,
-  unclear,
+interface ChecklistSet {
+  all: readonly Checklist[];
+  byDesign: Readonly<Record<string, Checklist>>;
+  unclear: Checklist;
+}
+
+function buildSet(raw: {
+  rct: RawChecklist;
+  cohort: RawChecklist;
+  caseControl: RawChecklist;
+  crossSectional: RawChecklist;
+  srMa: RawChecklist;
+  diagnostic: RawChecklist;
+  unclear: RawChecklist;
+}): ChecklistSet {
+  const rct = toChecklist(raw.rct);
+  const cohort = toChecklist(raw.cohort);
+  const caseControl = toChecklist(raw.caseControl);
+  const crossSectional = toChecklist(raw.crossSectional);
+  const srMa = toChecklist(raw.srMa);
+  const diagnostic = toChecklist(raw.diagnostic);
+  const unclear = toChecklist(raw.unclear);
+  return {
+    // Display order in the UI: the specific designs first, the generic one last.
+    all: [rct, cohort, caseControl, crossSectional, srMa, diagnostic, unclear],
+    /*
+     * Keyed by string rather than by `StudyDesign` so a design string restored
+     * from an older stored appraisal cannot index into the record unchecked.
+     *
+     * `non-randomized-trial` deliberately resolves to the RCT checklist (issue
+     * #1, decision B5): design detection can produce that design, but the same
+     * items apply — see the checklist-level note on rct.json.
+     */
+    byDesign: {
+      rct,
+      'non-randomized-trial': rct,
+      cohort,
+      'case-control': caseControl,
+      'cross-sectional': crossSectional,
+      'sr-ma': srMa,
+      diagnostic,
+      unclear,
+    },
+    unclear,
+  };
+}
+
+const SETS: Record<Locale, ChecklistSet> = {
+  en: buildSet({
+    rct: rctJson,
+    cohort: cohortJson,
+    caseControl: caseControlJson,
+    crossSectional: crossSectionalJson,
+    srMa: srMaJson,
+    diagnostic: diagnosticJson,
+    unclear: unclearJson,
+  }),
+  ja: buildSet({
+    rct: rctJa,
+    cohort: cohortJa,
+    caseControl: caseControlJa,
+    crossSectional: crossSectionalJa,
+    srMa: srMaJa,
+    diagnostic: diagnosticJa,
+    unclear: unclearJa,
+  }),
 };
 
 /**
@@ -141,9 +186,14 @@ const BY_DESIGN: Readonly<Record<string, Checklist>> = {
  * replacement: a non-inferiority trial still has to survive randomisation,
  * concealment and missing data like any other.
  */
-export function getChecklist(design: StudyDesign, subtype?: string | null): Checklist {
-  const found: Checklist | undefined = BY_DESIGN[design];
-  const checklist = found ?? unclear;
+export function getChecklist(
+  design: StudyDesign,
+  subtype?: string | null,
+  locale: Locale = 'en',
+): Checklist {
+  const set = SETS[locale];
+  const found: Checklist | undefined = set.byDesign[design];
+  const checklist = found ?? set.unclear;
   const groups = applicableGroups(checklist, subtype ?? null);
   if (groups.length === (checklist.groups?.length ?? 0)) return checklist;
   return groups.length === 0 ? withoutGroups(checklist) : { ...checklist, groups };
@@ -197,9 +247,16 @@ export function needsMoreThan(item: ChecklistItem, scope: SourceScope): boolean 
 }
 
 /** Every distinct checklist, in display order. The array is a copy; the checklists are shared. */
-export function allChecklists(): Checklist[] {
-  return [...ALL];
+export function allChecklists(locale: Locale = 'en'): Checklist[] {
+  return [...SETS[locale].all];
 }
 
 /** Shared copy explaining what Yes / No / Unclear mean (spec §4.4, `src/data/verdict-help/`). */
 export const VERDICT_HELP: VerdictHelp = verdictsJson;
+
+const VERDICT_HELP_BY_LOCALE: Record<Locale, VerdictHelp> = { en: verdictsJson, ja: verdictsJa };
+
+/** What Yes / No / Unclear mean, in the reader's language. */
+export function verdictHelp(locale: Locale): VerdictHelp {
+  return VERDICT_HELP_BY_LOCALE[locale];
+}

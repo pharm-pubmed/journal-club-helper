@@ -147,6 +147,11 @@ export const en = {
       C: 'Comparison',
       O: 'Outcome',
     } satisfies Record<PicoField, string>,
+    /** The heading of each checklist item: "allocation-concealment" → "Allocation concealment". */
+    concept: (concept: string): string => {
+      const words = concept.replace(/-/g, ' ');
+      return words.charAt(0).toUpperCase() + words.slice(1);
+    },
   },
 
   design: {

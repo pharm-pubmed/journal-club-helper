@@ -22,6 +22,7 @@ import {
   VERDICT_HELP,
   allChecklists,
   getChecklist,
+  verdictHelp,
   visibleItems,
   type Checklist,
   type ChecklistItem,
@@ -30,6 +31,7 @@ import {
   type InfoPanel,
 } from '../../src/lib/checklist-schema';
 import { STUDY_DESIGNS, type StudyDesign } from '../../src/lib/types';
+import { ja } from '../../src/locales/ja';
 import forbiddenFixture from '../fixtures/forbidden-phrases.json';
 
 const CHECKLIST_DIR = fileURLToPath(new URL('../../src/data/checklists/', import.meta.url));
@@ -648,5 +650,81 @@ describe('original wording guard', () => {
     const original =
       'Can you see how many participants finished the study, and whether the losses were similar across the groups?';
     expect(closestForbidden(original).score).toBeLessThan(SIMILARITY_THRESHOLD);
+  });
+});
+
+/* ---------------------------------------------------------- Japanese (#82) */
+
+/**
+ * The Japanese files must mirror the English ones item for item: an answer is
+ * stored under the item id, so a reader who switches language keeps every
+ * answer only if both sets share ids, sections and evidence needs.
+ */
+describe('the Japanese checklists', () => {
+  const KEPT = new Set(['id', 'concept', 'section', 'needs', 'subtypes', 'version']);
+  const LATIN_RUN = /[A-Za-z]+(?:[ -][A-Za-z]+){3,}/;
+
+  function compare(en: unknown, ja: unknown, path: string, texts: string[]): void {
+    expect(typeof ja, path).toBe(typeof en);
+    expect(Array.isArray(ja), path).toBe(Array.isArray(en));
+    if (Array.isArray(en)) {
+      expect((ja as unknown[]).length, path).toBe(en.length);
+      en.forEach((value, i) => compare(value, (ja as unknown[])[i], `${path}[${i}]`, texts));
+      return;
+    }
+    if (en !== null && typeof en === 'object') {
+      expect(Object.keys(ja as object), path).toEqual(Object.keys(en));
+      for (const [key, value] of Object.entries(en)) {
+        const inner = (ja as Record<string, unknown>)[key];
+        if (KEPT.has(key) || (key === 'id' && typeof value === 'string')) {
+          expect(inner, `${path}.${key}`).toEqual(value);
+        } else {
+          compare(value, inner, `${path}.${key}`, texts);
+        }
+      }
+      return;
+    }
+    if (typeof en === 'string') texts.push(`${path}: ${ja as string}`);
+  }
+
+  it.each(EXPECTED_FILES)('ja/%s.json mirrors the English file and is translated', (name) => {
+    const en: unknown = JSON.parse(readFileSync(`${CHECKLIST_DIR}${name}.json`, 'utf8'));
+    const ja: unknown = JSON.parse(readFileSync(`${CHECKLIST_DIR}ja/${name}.json`, 'utf8'));
+    const texts: string[] = [];
+    compare(en, ja, name, texts);
+    expect(texts.length).toBeGreaterThan(0);
+    for (const text of texts) {
+      expect(text, 'empty translation').not.toMatch(/: $/);
+      expect(text, 'no Japanese in it').toMatch(/[ぁ-んァ-ン一-龥]/);
+      expect(text, 'a run of English words').not.toMatch(LATIN_RUN);
+    }
+  });
+
+  it('resolves the same items in Japanese as in English, for every design and subtype', () => {
+    for (const design of STUDY_DESIGNS) {
+      for (const subtype of [null, 'non-inferiority', 'parallel']) {
+        const en = getChecklist(design, subtype, 'en');
+        const ja = getChecklist(design, subtype, 'ja');
+        expect(visibleItems(ja).map((item) => item.id)).toEqual(
+          visibleItems(en).map((item) => item.id),
+        );
+        expect(ja.title).not.toBe(en.title);
+      }
+    }
+  });
+
+  it('gives every item concept a Japanese heading', () => {
+    const concepts = new Set(allItems.map((item) => item.concept));
+    for (const concept of concepts) {
+      expect(ja.labels.concept(concept), concept).toMatch(/[ぁ-んァ-ン一-龥]/);
+    }
+  });
+
+  it('explains Yes, No and Unclear in Japanese', () => {
+    const help = verdictHelp('ja');
+    for (const line of [help.yes, help.no, help.unclear]) {
+      expect(line).toMatch(/[ぁ-んァ-ン一-龥]/);
+    }
+    expect(verdictHelp('en')).toEqual(VERDICT_HELP);
   });
 });

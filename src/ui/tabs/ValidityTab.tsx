@@ -33,15 +33,15 @@
 import { Fragment } from 'preact';
 import { useState } from 'preact/hooks';
 import {
-  VERDICT_HELP,
   emptyAnswer,
   getChecklist,
   itemsInSection,
   needsMoreThan,
+  verdictHelp,
   visibleItems,
 } from '../../lib/checklist-schema';
 import type { ChecklistItem, InfoPanel, ItemAnswer, SourceScope, Verdict } from '../../lib/types';
-import { useMessages } from '../i18n';
+import { useLocale, useMessages } from '../i18n';
 import { SOURCE_SCOPE_ORDER, designLabel } from '../labels';
 import { actions, effectiveDesign, effectiveSubtype, useStore } from '../store';
 import './validity.css';
@@ -58,12 +58,6 @@ const INHERIT = '';
 /** Only ever valid source strings reach the store, without a cast. */
 function toScope(value: string): SourceScope | null {
   return SOURCE_SCOPE_ORDER.find((scope) => scope === value) ?? null;
-}
-
-/** "allocation-concealment" -> "Allocation concealment" */
-function conceptLabel(concept: string): string {
-  const words = concept.replace(/-/g, ' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 /* ---------------------------------------------------------------------- item */
@@ -85,7 +79,7 @@ function ValidityItem({ checklistId, item, number, answer, scope }: ValidityItem
   // the text is deleted, so the box cannot collapse under the caret.
   const [noteOpen, setNoteOpen] = useState(false);
 
-  const label = conceptLabel(item.concept);
+  const label = m.labels.concept(item.concept);
   const hasNote = answer.note.length > 0;
   const state = answer.verdict ?? 'unanswered';
   const groupName = `jch-verdict-${checklistId}-${item.id}`;
@@ -325,7 +319,8 @@ export function ValidityTab() {
 
   // The subtype is what adds the subtype-specific group; without it the group
   // is not in the returned checklist at all, so nothing here has to filter.
-  const checklist = getChecklist(design, subtype);
+  const { locale } = useLocale();
+  const checklist = getChecklist(design, subtype, locale);
   const answers = validity[checklist.id];
 
   const internal = itemsInSection(checklist, 'internal-validity');
@@ -464,7 +459,7 @@ export function ValidityTab() {
           {VERDICTS.map((verdict) => (
             <Fragment key={verdict}>
               <dt class="validity-help__term">{m.labels.verdict[verdict]}</dt>
-              <dd class="validity-help__desc">{VERDICT_HELP[verdict]}</dd>
+              <dd class="validity-help__desc">{verdictHelp(locale)[verdict]}</dd>
             </Fragment>
           ))}
         </dl>
