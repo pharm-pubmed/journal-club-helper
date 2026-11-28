@@ -713,6 +713,20 @@ describe('the Japanese checklists', () => {
     }
   });
 
+  // The funding panel is the same text in every English checklist, so it is
+  // one translation too; four translators had drifted apart on it.
+  it('uses one translation of the funding panel everywhere', () => {
+    const panels = new Set(
+      EXPECTED_FILES.map((name) =>
+        JSON.stringify(
+          (JSON.parse(readFileSync(`${CHECKLIST_DIR}ja/${name}.json`, 'utf8')) as { info: unknown })
+            .info,
+        ),
+      ),
+    );
+    expect(panels.size).toBe(1);
+  });
+
   it('gives every item concept a Japanese heading', () => {
     const concepts = new Set(allItems.map((item) => item.concept));
     for (const concept of concepts) {
